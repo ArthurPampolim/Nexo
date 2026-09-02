@@ -1,0 +1,1214 @@
+  :root {
+    --primary-color: #6200ea;
+    --bg-color: #f2f5f9;
+    --card-bg: #ffffff;
+    --text-main: #333333;
+    --text-muted: #888888;
+    --success-color: #4CAF50;
+    --danger-color: #F44336;
+    --border-color: #eeeeee;
+  }
+
+  * {
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+
+  body {
+    background-color: var(--bg-color);
+    margin: 0;
+    padding: 0;
+    color: var(--text-main);
+  }
+
+  /* Top Nav */
+  .top-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 40px;
+    background-color: var(--bg-color);
+  }
+
+  .nav-center,
+  .nav-left,
+  .nav-right {
+    flex: 1;
+    display: flex;
+  }
+
+  .nav-center {
+    justify-content: center;
+  }
+
+  .nav-right {
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+  }
+
+  .month-selector {
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  .user-profile .avatar {
+    width: 35px;
+    height: 35px;
+    background-color: #ccc;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-weight: bold;
+    position: relative;
+  }
+
+  .user-profile .crown-icon {
+    position: absolute;
+    top: -8px;
+    right: -5px;
+    color: #333;
+    font-size: 12px;
+  }
+
+  .user-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #111;
+  }
+
+  /* Month Picker Button & Modal */
+  .month-picker-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: white;
+    border: 1px solid #ddd;
+    padding: 8px 18px;
+    border-radius: 24px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+  }
+
+  .month-picker-btn:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    box-shadow: 0 4px 12px rgba(98, 0, 234, 0.12);
+  }
+
+  .month-picker-card {
+    max-width: 360px !important;
+    padding: 24px !important;
+    border-radius: 20px !important;
+  }
+
+  .month-picker-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 0 5px;
+  }
+
+  .picker-year-title {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: #111;
+  }
+
+  .nav-arrow-btn {
+    background: #f0f2f5;
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #444;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .nav-arrow-btn:hover {
+    background: var(--primary-color);
+    color: white;
+  }
+
+  .month-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .month-cell {
+    padding: 12px 6px;
+    text-align: center;
+    border-radius: 12px;
+    background: #f7f8fa;
+    border: 1px solid #eef0f4;
+    font-weight: 600;
+    font-size: 13px;
+    color: #555;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .month-cell:hover {
+    background: #ede7f6;
+    color: var(--primary-color);
+    border-color: #d1c4e9;
+  }
+
+  .month-cell.selected {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 10px rgba(98, 0, 234, 0.3);
+  }
+
+  .month-picker-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    border-top: 1px solid #eee;
+    padding-top: 16px;
+  }
+
+  .btn-picker-secondary {
+    background: none;
+    border: none;
+    color: var(--primary-color);
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 6px 12px;
+    border-radius: 6px;
+  }
+
+  .btn-picker-secondary:hover {
+    background: #f3e5f5;
+  }
+
+  .btn-picker-cancel {
+    background: none;
+    border: none;
+    color: #777;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 6px 12px;
+    border-radius: 6px;
+  }
+
+  .btn-picker-cancel:hover {
+    color: #333;
+    background: #f0f0f0;
+  }
+
+  /* Navigation Tabs */
+  .app-tab-nav {
+    max-width: 1200px;
+    margin: 0 auto 10px auto;
+    padding: 0 15px;
+    display: flex;
+    gap: 10px;
+    border-bottom: 2px solid #e2e8f0;
+  }
+
+  .app-tab-btn {
+    background: none;
+    border: none;
+    padding: 12px 24px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 8px 8px 0 0;
+  }
+
+  .app-tab-btn:hover {
+    color: var(--primary-color);
+    background: rgba(98, 0, 234, 0.04);
+  }
+
+  .app-tab-btn.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+    background: rgba(98, 0, 234, 0.08);
+  }
+
+  /* Transaction Filter Pills */
+  .tx-filter-pills {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+    margin-bottom: 15px;
+  }
+
+  .tx-filter-btn {
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    color: #475569;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .tx-filter-btn:hover {
+    background: #e2e8f0;
+    color: #1e293b;
+  }
+
+  .tx-filter-btn.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    box-shadow: 0 2px 6px rgba(98, 0, 234, 0.25);
+  }
+
+  /* Header & Botões Globais */
+  .dashboard-title-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 10px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .dashboard-title-container h2 {
+    font-size: 24px;
+    color: #111;
+    margin: 0;
+    font-weight: 500;
+  }
+
+  .btn-text {
+    background: none;
+    border: none;
+    color: var(--primary-color);
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 14px;
+  }
+
+  /* 4 Cartões Superiores */
+  .summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 0 15px;
+  }
+
+  .summary-card {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border: 1px solid #eaeaea;
+    transition: transform 0.2s;
+  }
+
+  .summary-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  .card-icon {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .icon-blue {
+    background-color: #2196F3;
+  }
+
+  .icon-green {
+    background-color: var(--success-color);
+  }
+
+  .icon-red {
+    background-color: var(--danger-color);
+  }
+
+  .icon-dark-green {
+    background-color: #00796B;
+  }
+
+  .card-info {
+    flex-grow: 1;
+  }
+
+  .card-label {
+    font-size: 14px;
+    color: #777;
+    margin-bottom: 5px;
+    font-weight: 500;
+  }
+
+  .card-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: #111;
+    margin: 0;
+  }
+
+  /* Carrossel de Contas */
+  .accounts-section {
+    margin-bottom: 20px;
+  }
+
+  .accounts-carousel {
+    display: flex;
+    gap: 15px;
+    overflow-x: auto;
+    padding: 5px 15px 15px 15px;
+    max-width: 1200px;
+    margin: 0 auto;
+    scrollbar-width: thin;
+  }
+
+  .accounts-carousel::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  .accounts-carousel::-webkit-scrollbar-thumb {
+    background-color: #ccc;
+    border-radius: 10px;
+  }
+
+  .account-mini-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 15px 20px;
+    min-width: 220px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+    border: 1px solid #eaeaea;
+    flex-shrink: 0;
+    border-left: 4px solid var(--primary-color);
+  }
+
+  .account-mini-card .acc-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: #555;
+    margin-bottom: 8px;
+  }
+
+  .account-mini-card .acc-balance {
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  /* Grid (Colunas de Dados) */
+  .dashboard-layout {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 30px;
+    padding: 0 15px 50px;
+  }
+
+  @media (min-width: 768px) {
+    .dashboard-layout {
+      grid-template-columns: 1fr 2fr;
+    }
+  }
+
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+  }
+
+  .section-header h3 {
+    margin: 0;
+    font-size: 16px;
+    color: var(--text-muted);
+  }
+
+  /* Listas e Itens (Transações/Custos) */
+  ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .transaction-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--card-bg);
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+    border: 1px solid var(--border-color);
+  }
+
+  .item-details strong {
+    display: block;
+    font-size: 15px;
+    margin-bottom: 4px;
+  }
+
+  .item-value {
+    font-weight: bold;
+    font-size: 16px;
+    margin-right: 15px;
+  }
+
+  .text-green {
+    color: #4CAF50 !important;
+    font-weight: 600;
+  }
+
+  .text-red {
+    color: #F44336 !important;
+    font-weight: 600;
+  }
+
+  .text-blue {
+    color: #2196F3 !important;
+    font-weight: 600;
+  }
+
+  .btn-delete {
+    background: none;
+    border: none;
+    color: #ff5252;
+    cursor: pointer;
+    padding: 5px;
+  }
+
+  /* Metas */
+  .goal-card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 15px;
+    border: 1px solid var(--border-color);
+  }
+
+  .goal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .goal-header h4 {
+    margin: 0;
+    font-size: 15px;
+  }
+
+  .goal-percentage {
+    font-weight: bold;
+    color: var(--primary-color);
+    font-size: 14px;
+  }
+
+  .progress-container {
+    width: 100%;
+    height: 8px;
+    background: #e0e0e0;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--primary-color);
+    border-radius: 4px;
+    transition: width 0.5s ease;
+  }
+
+  .goal-footer {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  /* Botão Flutuante (+) */
+  .fab {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    background-color: var(--primary-color);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 24px;
+    border: none;
+    box-shadow: 0 4px 10px rgba(98, 0, 234, 0.3);
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+
+  .fab:hover {
+    transform: scale(1.05);
+  }
+
+  /* Modais e Formulários */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+
+  .modal-content {
+    background: white;
+    padding: 25px;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 450px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .hidden {
+    display: none;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .modal-header h2 {
+    margin: 0;
+    font-size: 20px;
+  }
+
+  .close-btn {
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: #888;
+    cursor: pointer;
+  }
+
+  .form-group {
+    margin-bottom: 15px;
+  }
+
+  .form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    font-size: 14px;
+  }
+
+  .form-group input,
+  .form-group select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+  }
+
+  .form-group input:focus,
+  .form-group select:focus {
+    border-color: var(--primary-color);
+  }
+
+  .btn-primary {
+    width: 100%;
+    padding: 12px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 10px;
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  .type-toggle {
+    display: flex;
+    gap: 10px;
+  }
+
+  .radio-label {
+    flex: 1;
+    text-align: center;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+  }
+
+  .radio-label:has(input:checked).transfer {
+    background-color: #e3f2fd;
+    border-color: #2196F3;
+    color: #2196F3;
+  }
+
+  .radio-label:has(input:checked).expense {
+    background-color: #ffebee;
+    border-color: var(--danger-color);
+    color: var(--danger-color);
+  }
+
+  .radio-label:has(input:checked).income {
+    background-color: #e8f5e9;
+    border-color: var(--success-color);
+    color: var(--success-color);
+  }
+
+  .radio-label input {
+    display: none;
+  }
+
+  /* ========================================= */
+  /* TABELA DE TRANSAÇÕES (DATA GRID)          */
+  /* ========================================= */
+  .tx-table-container {
+    overflow-x: auto;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+  }
+
+  .tx-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    text-align: left;
+  }
+
+  .tx-th {
+    padding: 14px 15px;
+    background: #f4f6f8;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 600;
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+  }
+
+  .tx-td {
+    padding: 14px 15px;
+    border-bottom: 1px solid var(--border-color);
+    color: #333;
+    font-size: 13.5px;
+    vertical-align: middle;
+  }
+
+  .tx-tr:hover {
+    background-color: #f8fafc;
+  }
+
+  .tx-tr:last-child .tx-td {
+    border-bottom: none;
+  }
+
+  /* Checkbox e Status */
+  .tx-checkbox {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--primary-color);
+  }
+
+  .status-icon {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    color: white;
+    font-size: 11px;
+  }
+
+  .status-paid {
+    background-color: #4CAF50;
+  }
+
+  .status-pending {
+    background-color: #9e9e9e;
+  }
+
+  /* Categorias Coloridas */
+  .cat-badge-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .cat-icon-circle {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    color: white;
+    font-size: 13px;
+  }
+
+  /* Botão Menu (3 pontinhos) e Ações */
+  .action-btn-group {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .tx-tr:hover .action-btn-group {
+    opacity: 1;
+  }
+
+  /* Aparece só ao passar o mouse */
+
+  /* ========================================= */
+  /* NOVO FAB MENU (BOTÃO NOVO E OPÇÕES)       */
+  /* ========================================= */
+  .fab-container {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+
+  .fab-extended {
+    background-color: #6200ea;
+    color: white;
+    border: none;
+    border-radius: 28px;
+    padding: 0 24px;
+    height: 56px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(98, 0, 234, 0.3);
+    cursor: pointer;
+    transition: transform 0.2s, background-color 0.2s;
+  }
+
+  .fab-extended:hover {
+    transform: scale(1.05);
+    background-color: #5000cc;
+  }
+
+  .fab-menu {
+    background: white;
+    border-radius: 16px;
+    padding: 8px 0;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+    min-width: 220px;
+    transform-origin: bottom right;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    opacity: 1;
+    transform: scale(1);
+    border: 1px solid #eaeaea;
+  }
+
+  .fab-menu.hidden {
+    opacity: 0;
+    transform: scale(0.8);
+    pointer-events: none;
+  }
+
+  .fab-menu-item {
+    background: none;
+    border: none;
+    padding: 14px 20px;
+    width: 100%;
+    text-align: left;
+    font-size: 15px;
+    color: #555;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    transition: background 0.2s;
+    font-weight: 500;
+  }
+
+  .fab-menu-item:hover {
+    background: #f8fafc;
+    color: #111;
+  }
+
+  .fab-menu-item i {
+    font-size: 16px;
+    width: 20px;
+    text-align: center;
+  }
+
+  /* ========================================= */
+  /* AJUSTE VISUAL DO CAMPO VALOR (PRINT)      */
+  /* ========================================= */
+  #transaction-form input[name="valor"],
+  #transfer-form input[name="valor"],
+  #cc-trans-form input[name="valor"] {
+    font-size: 32px;
+    font-weight: 600;
+    border: none;
+    border-bottom: 2px solid #ccc;
+    border-radius: 0;
+    padding: 10px 0;
+    background: transparent;
+    box-shadow: none;
+    color: #333;
+    transition: all 0.3s;
+  }
+
+  #transaction-form input[name="valor"]:focus,
+  #transfer-form input[name="valor"]:focus,
+  #cc-trans-form input[name="valor"]:focus {
+    outline: none;
+  }
+
+  /* ========================================= */
+  /* CUSTOMIZAÇÃO CHOICES.JS (SELECTS MODERNOS)*/
+  /* ========================================= */
+  .choices[data-type*="select-one"] .choices__inner {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid #ccc;
+    border-radius: 0;
+    padding: 10px 0;
+    min-height: 44px;
+    font-size: 16px;
+    font-family: inherit;
+    color: #333;
+    font-weight: 500;
+  }
+
+  .choices[data-type*="select-one"].is-focused .choices__inner {
+    border-bottom-color: var(--primary-color);
+  }
+
+  .choices__list--dropdown {
+    border: 1px solid #eaeaea;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    margin-top: 5px;
+    padding: 5px;
+  }
+
+  .choices__list--dropdown .choices__item--selectable {
+    padding: 12px 16px;
+    font-size: 14.5px;
+    border-radius: 8px;
+    margin-bottom: 2px;
+  }
+
+  .choices__list--dropdown .choices__item--selectable.is-highlighted {
+    background-color: #f8fafc;
+    color: var(--primary-color);
+  }
+
+  .choices[data-type*="select-one"]::after {
+    border-color: #888 transparent transparent transparent;
+    right: 5px;
+  }
+
+  /* ========================================= */
+  /* WIZARD DE PLANEJAMENTO MENSAL             */
+  /* ========================================= */
+  .plan-main-btn {
+    background: white;
+    border: 1px solid var(--primary-color);
+    color: var(--primary-color);
+    border-radius: 16px;
+    padding: 30px 20px;
+    width: 220px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.2s;
+    box-shadow: 0 4px 12px rgba(98, 0, 234, 0.05);
+  }
+
+  .plan-main-btn:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: translateY(-3px);
+  }
+
+  .plan-main-btn.secondary {
+    border-color: #cbd5e1;
+    color: #475569;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+  }
+
+  .plan-main-btn.secondary:hover {
+    background: #f8fafc;
+    color: #1e293b;
+    border-color: #94a3b8;
+  }
+
+  .wizard-card {
+    background: white;
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+    border: 1px solid #f1f5f9;
+  }
+
+  .big-input {
+    border: none;
+    border-bottom: 2px solid #ccc;
+    font-size: 28px;
+    font-weight: 600;
+    padding: 5px 0;
+    background: transparent;
+    outline: none;
+    transition: border-color 0.3s;
+  }
+
+  .big-input:focus {
+    border-bottom-color: var(--primary-color);
+  }
+
+  .big-input.text-primary {
+    color: var(--primary-color);
+  }
+
+  .wizard-result-box {
+    background: #f3e5f5;
+    border-radius: 12px;
+    padding: 25px;
+    margin-top: 20px;
+  }
+
+  .wizard-next-btn {
+    background: #e2e8f0;
+    color: #64748b;
+    border: none;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .wizard-next-btn:hover {
+    background: var(--primary-color);
+    color: white;
+  }
+
+  /* ========================================= */
+  /* PASSO 2: CATEGORIZAÇÃO WIZARD             */
+  /* ========================================= */
+  .wizard-split-layout {
+    display: flex;
+    gap: 30px;
+    align-items: flex-start;
+  }
+
+  .wizard-left-col {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .wizard-right-col {
+    width: 340px;
+    position: sticky;
+    top: 20px;
+    flex-shrink: 0;
+  }
+
+  .wiz-cat-card {
+    background: white;
+    border: 1px solid #eaeaea;
+    border-radius: 16px;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+    transition: border-color 0.2s;
+  }
+
+  .wiz-cat-card:hover {
+    border-color: #ccc;
+  }
+
+  .wiz-cat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-size: 18px;
+  }
+
+  .wiz-cat-input-group {
+    text-align: right;
+  }
+
+  .wiz-cat-input-group label {
+    display: block;
+    font-size: 12px;
+    color: #555;
+    margin-bottom: 2px;
+    font-weight: 500;
+  }
+
+  .wiz-cat-input {
+    width: 140px;
+    text-align: right;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--primary-color);
+    border: none;
+    border-bottom: 2px solid var(--primary-color);
+    padding: 5px 0;
+    background: transparent;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .wizard-summary-card {
+    background: white;
+    border-radius: 20px;
+    padding: 25px;
+    box-shadow: 0 4px 25px rgba(0, 0, 0, 0.05);
+    border: 1px solid #f1f5f9;
+  }
+
+  /* Gráfico Circular de Progresso via CSS */
+  .progress-ring {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: conic-gradient(var(--primary-color) 0%, #f1f5f9 0%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: background 0.3s;
+  }
+
+  .progress-ring::before {
+    content: "";
+    width: 50px;
+    height: 50px;
+    background: white;
+    border-radius: 50%;
+  }
+
+  @media (max-width: 768px) {
+    .wizard-split-layout {
+      flex-direction: column;
+    }
+
+    .wizard-right-col {
+      width: 100%;
+      position: static;
+    }
+  }
+
+  /* ========================================= */
+  /* CARTÕES SELECIONÁVEIS (PASSO 3 WIZARD)    */
+  /* ========================================= */
+  .radio-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid #eaeaea;
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 15px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .radio-card:hover {
+    border-color: var(--primary-color);
+  }
+
+  .radio-card.active {
+    border: 2px solid var(--primary-color);
+    background: rgba(98, 0, 234, 0.02);
+  }
+
+  .radio-card.active strong {
+    color: var(--primary-color) !important;
+  }
+
+  .rc-radio input {
+    accent-color: var(--primary-color);
+    transform: scale(1.3);
+    cursor: pointer;
+  }
