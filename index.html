@@ -24,6 +24,22 @@
 </head>
 
 <body>
+  <div id="login-screen"
+    style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #f3f4f6; z-index: 9999; display: flex; align-items: center; justify-content: center;">
+    <div
+      style="background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center;">
+      <h2 style="color: var(--primary-color); margin-bottom: 20px;">Nexo Login</h2>
+      <form id="login-form">
+        <input type="email" id="login-email" placeholder="E-mail" required
+          style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px;" />
+        <input type="password" id="login-password" placeholder="Senha" required
+          style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px;" />
+        <button type="submit" id="login-btn" class="btn-primary" style="width: 100%;">Entrar</button>
+      </form>
+      <p id="login-error" style="color: red; margin-top: 15px; display: none; font-size: 14px;"></p>
+    </div>
+  </div>
+
   <!-- NAVEGAÇÃO SUPERIOR -->
   <nav class="top-nav">
     <div class="nav-left"></div>
@@ -32,6 +48,10 @@
         <i class="far fa-calendar-alt" style="color: var(--primary-color);"></i>
         <span id="selected-month-label">Agosto 2026</span>
         <i class="fas fa-chevron-down" style="font-size: 11px; margin-left: 2px; color: #888;"></i>
+      </button>
+      <button onclick="AppController.logout()"
+        style="background: none; border: none; color: #ef4444; cursor: pointer; font-weight: 600; margin-left: 20px;">
+        <i class="fas fa-sign-out-alt"></i> Sair
       </button>
     </div>
     <div class="nav-right user-profile">
@@ -966,6 +986,26 @@
         <button type="submit" id="fc-pay-btn" class="btn-primary"><i class="fas fa-check-circle"
             style="margin-right: 6px;"></i>Confirmar Pagamento</button>
       </form>
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; font-size: 14px; margin-bottom: 5px;">Categoria da Despesa?</label>
+        <select name="categoria" required
+          style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+          <option value="" disabled selected>Selecione...</option>
+          <option value="Moradia / Contas">Moradia / Contas</option>
+          <option value="Alimentação">Alimentação</option>
+          <option value="Transporte">Transporte</option>
+          <option value="Saúde">Saúde</option>
+          <option value="Educação">Educação</option>
+          <option value="Lazer">Lazer</option>
+          <option value="Supermercado">Supermercado</option>
+          <option value="Investimentos">Investimentos</option>
+          <option value="Bar / Restaurante">Bar / Restaurante</option>
+          <option value="Eletrônicos">Eletrônicos</option>
+          <option value="Roupas">Roupas</option>
+          <option value="Salário">Salário</option>
+          <option value="Outros">Outros</option>
+        </select>
+      </div>
     </div>
   </div>
 

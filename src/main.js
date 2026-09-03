@@ -1,5 +1,8 @@
 import { db } from './firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { auth } from './firebase.js';
+import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from "firebase/auth";
+
 
 const AppController = (function () {
   // VARIÁVEL PARA O GRÁFICO
@@ -187,32 +190,49 @@ const AppController = (function () {
     });
   }
   function init() {
-    updateTriggerLabel();
-    loadGoals(); loadFixedCosts(); loadAccounts(); loadCreditData(); loadPlanning();
-
-    // INÍCIO - Configuração do Calendário
-    const dateConfigs = {
-      locale: "pt",
-      dateFormat: "Y-m-d", // Como os dados serão salvos na planilha
-      altInput: true,
-      altFormat: "d/m/Y",  // Como você verá na tela (ex: 13/08/2026)
-      disableMobile: true  // Força esse visual bonito mesmo no celular
-    };
-
-    flatpickr("#dataTransacao", dateConfigs);
-    flatpickr("#cct-data", dateConfigs);
-    flatpickr("#goal-form input[name='dataLimite']", dateConfigs);
-    // FIM - Configuração do Calendário
-
-    // Fecha o menu FAB se clicar em qualquer lugar fora dele
-    document.addEventListener('click', function (event) {
-      const container = document.querySelector('.fab-container');
-      if (container && !container.contains(event.target)) {
-        closeFabMenu();
-      }
-    });
-    upgradeSelects(); // Inicializa os selects estáticos (como Categorias e Parcelas)
+    try {
+      loadAccounts();
+      loadTransactions();
+      loadGoals();
+      loadFixedCosts();
+      loadCreditData();
+      loadPlanning();
+    } catch (e) {
+      console.error("Erro na inicialização:", e);
+    }
   }
+
+  // Monitor de Sessão: Tranca ou destranca a tela
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      document.getElementById('login-screen').style.display = 'none';
+      init(); // Só baixa os dados do banco se tiver permissão
+    } else {
+      document.getElementById('login-screen').style.display = 'flex';
+    }
+  });
+
+  // Evento do formulário de Login
+  document.getElementById('login-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('login-email').value;
+    const pass = document.getElementById('login-password').value;
+    const btn = document.getElementById('login-btn');
+    const errorMsg = document.getElementById('login-error');
+
+    try {
+      btn.disabled = true;
+      btn.innerText = 'Autenticando...';
+      errorMsg.style.display = 'none';
+
+      await signInWithEmailAndPassword(auth, email, pass);
+    } catch (error) {
+      errorMsg.innerText = "Acesso negado: Verifique e-mail e senha.";
+      errorMsg.style.display = 'block';
+      btn.disabled = false;
+      btn.innerText = 'Entrar';
+    }
+  });
 
   // --- CONTAS BANCÁRIAS E TRANSFERÊNCIAS ---
   async function loadAccounts() {
@@ -1123,68 +1143,75 @@ const AppController = (function () {
   }
 
   async function submitFixedCostPay(event) {
-    event.preventDefault();
-    const btn = document.getElementById('submit-fc-pay-btn');
+      event.preventDefault();
+      const btn = document.getElementById('submit-fc-pay-btn');
+      
+      try {
+        // 1. Altera o visual do botão para "Processando..."
+        if (btn) {
+          btn.disabled = true;
+          btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+        }
+        
+        // 2. Busca o formulário no HTML
+        const formElement = document.getElementById('fc-pay-form');
+        if (!formElement) throw new Error("A tag <form> perdeu o id 'fc-pay-form'.");
+        
+        // 3. Extrai as informações que você preencheu na tela
+        const formData = new FormData(formElement);
+        const costId = formData.get('id');
+        const contaNome = formData.get('conta');
+        const categoriaNome = formData.get('categoria');
+        
+        // 4. Valida se tudo foi preenchido
+        if (!costId) throw new Error("ID do custo fixo não encontrado.");
+        if (!contaNome) throw new Error("Selecione uma conta bancária.");
+        if (!categoriaNome) throw new Error("Selecione a categoria da despesa."); // <-- AVISA SE ESQUECER DE PREENCHER
+        
+        // 5. Encontra o Custo Fixo original no sistema
+        const currentTargetMonth = getSelectedYYYYMM();
+        const cost = state.fixedCosts.find(c => String(c.ID) === String(costId));
+        if (!cost) throw new Error("Custo não encontrado na base de dados.");
+        
+        // 6. Atualiza o Custo Fixo no Firebase (Marca como 'Pago' no mês atual)
+        let paidList = cost.MesesPagos ? String(cost.MesesPagos).split(',').map(s => s.trim()).filter(Boolean) : [];
+        if (!paidList.includes(currentTargetMonth)) {
+          paidList.push(currentTargetMonth);
+        }
+        await updateDoc(doc(db, "Custos Fixos", costId), { MesesPagos: paidList.join(','), Status: 'Pago' });
 
-    try {
-      if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
-      }
+        // 7. Calcula o dia exato para o lançamento
+        const amount = parseFloat(cost.Valor) || 0;
+        const [yearStr, monthStr] = currentTargetMonth.split('-');
+        const lastDayOfMonth = new Date(parseInt(yearStr, 10), parseInt(monthStr, 10), 0).getDate();
+        const dueDayStr = String(Math.min(parseInt(cost.DiaVencimento || 1, 10), lastDayOfMonth)).padStart(2, '0');
+        
+        // 8. Lança a despesa automática no seu Extrato (Firebase)
+        await addDoc(collection(db, "Transacoes"), {
+          Tipo: 'DESPESA',
+          Categoria: categoriaNome, // <-- AQUI ELE SALVA A CATEGORIA QUE VOCÊ ESCOLHEU
+          Valor: amount,
+          Descricao: `Pagamento autom.: ${cost.Nome}`,
+          Conta: contaNome,
+          Data: `${currentTargetMonth}-${dueDayStr}`
+        });
 
-      // Proteção 1: Verifica se o formulário existe no HTML
-      const formElement = document.getElementById('fc-pay-form');
-      if (!formElement) throw new Error("A tag <form> perdeu o id 'fc-pay-form' no seu HTML.");
-
-      const formData = new FormData(formElement);
-      const costId = formData.get('id');
-      const contaNome = formData.get('conta');
-
-      // Proteção 2: Valida os dados antes de consultar o banco
-      if (!costId) throw new Error("O campo oculto com o ID do custo fixo não foi encontrado.");
-      if (!contaNome) throw new Error("Por favor, selecione uma conta bancária.");
-
-      const currentTargetMonth = getSelectedYYYYMM();
-      const cost = state.fixedCosts.find(c => String(c.ID) === String(costId));
-      if (!cost) throw new Error("Custo não encontrado na base de dados local.");
-
-      // 1. Atualiza o status de pago no Firebase
-      let paidList = cost.MesesPagos ? String(cost.MesesPagos).split(',').map(s => s.trim()).filter(Boolean) : [];
-      if (!paidList.includes(currentTargetMonth)) {
-        paidList.push(currentTargetMonth);
-      }
-      await updateDoc(doc(db, "Custos Fixos", costId), { MesesPagos: paidList.join(','), Status: 'Pago' });
-
-      // 2. Registra a saída do dinheiro (Despesa Automática)
-      const amount = parseFloat(cost.Valor) || 0;
-      const [yearStr, monthStr] = currentTargetMonth.split('-');
-      const lastDayOfMonth = new Date(parseInt(yearStr, 10), parseInt(monthStr, 10), 0).getDate();
-      const dueDayStr = String(Math.min(parseInt(cost.DiaVencimento || 1, 10), lastDayOfMonth)).padStart(2, '0');
-
-      await addDoc(collection(db, "Transacoes"), {
-        Tipo: 'DESPESA',
-        Categoria: 'Moradia / Contas',
-        Valor: amount,
-        Descricao: `Pagamento autom.: ${cost.Nome}`,
-        Conta: contaNome,
-        Data: `${currentTargetMonth}-${dueDayStr}`
-      });
-
-      closeFixedCostPayModal();
-      loadFixedCosts();
-      loadTransactions();
-
-    } catch (error) {
-      console.error("Erro no pagamento:", error);
-      alert(error.message); // Agora o erro será jogado na tela para você saber o que falhou!
-    } finally {
-      // Devolve o botão ao estado original independente de sucesso ou falha
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-check"></i> Confirmar Pagamento';
+        // 9. Atualiza a tela
+        closeFixedCostPayModal();
+        loadFixedCosts();
+        loadTransactions();
+        
+      } catch (error) {
+        console.error("Erro no pagamento:", error);
+        alert(error.message);
+      } finally {
+        // 10. Devolve o botão ao normal, dando erro ou sucesso
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-check"></i> Confirmar Pagamento';
+        }
       }
     }
-  }
 
   function closeFixedCostPayModal() {
     const modal = document.getElementById('fc-pay-modal');
@@ -2020,10 +2047,18 @@ const AppController = (function () {
     }
   }
 
+  async function logout() {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error("Erro ao deslogar:", error);
+    }
+  }
+
   return {
     init, switchTab, setTransactionFilter, renderCreditCardsPage, renderFixedCostsPage, renderGoalsPage, renderAccountsPage, renderPlanningView, openMonthPicker, closeMonthPicker, changePickerYear, selectCurrentMonth, openModal, closeModal, submitTransaction, editTransaction, deleteTransaction, openAccountModal, closeAccountModal, submitAccount, openTransferModal, closeTransferModal, submitTransfer,
     openGoalModal, closeGoalModal, submitGoal, editGoal, deleteGoal, openGoalDepositModal, closeGoalDepositModal, submitGoalDeposit,
-    openFixedCostModal, closeFixedCostModal, submitFixedCost, editFixedCost, deleteFixedCost, markFixedCostPaid, unmarkFixedCostPaid, openFCPayModal, closeFCPayModal, openCCModal, closeCCModal, submitCC, openCCTransModal, closeCCTransModal, submitCCTrans, openCCInvoiceModal, closeCCInvoiceModal, deleteCreditTransaction, toggleFabMenu, closeFabMenu, openNewTransaction, openNewCCTransaction, openNewTransfer, startPlanningWizard, cancelPlanningWizard, copyPreviousPlanning, maskCurrency, calculateWizardBudget, prevWizardStep, nextWizardStep, calculateWizardCategoryTotals, renderWizardCategories, selectCardPreference, finishPlanningWizard, closeFixedCostPayModal, submitFixedCostPay
+    openFixedCostModal, closeFixedCostModal, submitFixedCost, editFixedCost, deleteFixedCost, markFixedCostPaid, unmarkFixedCostPaid, openFCPayModal, closeFCPayModal, openCCModal, closeCCModal, submitCC, openCCTransModal, closeCCTransModal, submitCCTrans, openCCInvoiceModal, closeCCInvoiceModal, deleteCreditTransaction, toggleFabMenu, closeFabMenu, openNewTransaction, openNewCCTransaction, openNewTransfer, startPlanningWizard, cancelPlanningWizard, copyPreviousPlanning, maskCurrency, calculateWizardBudget, prevWizardStep, nextWizardStep, calculateWizardCategoryTotals, renderWizardCategories, selectCardPreference, finishPlanningWizard, closeFixedCostPayModal, submitFixedCostPay, logout
   };
 })();
 
