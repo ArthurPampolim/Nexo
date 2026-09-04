@@ -28,19 +28,70 @@
     style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #f3f4f6; z-index: 9999; display: flex; align-items: center; justify-content: center;">
     <div
       style="background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center;">
-      <h2 style="color: var(--primary-color); margin-bottom: 20px;">Nexo Login</h2>
-      <form id="login-form">
-        <input type="email" id="login-email" placeholder="E-mail" required
-          style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px;" />
-        <input type="password" id="login-password" placeholder="Senha" required
-          style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px;" />
-        <button type="submit" id="login-btn" class="btn-primary" style="width: 100%;">Entrar</button>
-      </form>
-      <div style="margin-top: 15px; display: flex; justify-content: space-between; font-size: 14px;">
-        <a href="#" id="forgot-pass-btn" style="color: var(--primary-color); text-decoration: none;">Esqueci a senha</a>
-        <a href="#" id="create-account-btn" style="color: var(--primary-color); text-decoration: none;">Criar conta</a>
+
+      <!-- TELA DE LOGIN (Padrão) -->
+      <div id="login-view">
+        <img src="./src/assets/Logotipo Nexo (1).png" alt="Nexo" style="height: 32px; width: auto;" />
+        <form id="login-form">
+          <input type="email" id="login-email" placeholder="E-mail" required
+            style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px;" />
+          <input type="password" id="login-password" placeholder="Senha" required
+            style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px;" />
+          <button type="submit" id="login-btn" class="btn-primary" style="width: 100%;">Entrar</button>
+        </form>
+        <div style="margin-top: 15px; display: flex; justify-content: space-between; font-size: 14px;">
+          <a href="#" id="forgot-pass-btn" style="color: var(--primary-color); text-decoration: none;">Esqueci a
+            senha</a>
+          <a href="#" id="show-register-btn" style="color: var(--primary-color); text-decoration: none;">Criar conta</a>
+        </div>
+        <p id="login-error" style="color: red; margin-top: 15px; display: none; font-size: 14px;"></p>
       </div>
-      <p id="login-error" style="color: red; margin-top: 15px; display: none; font-size: 14px;"></p>
+
+      <!-- TELA DE CADASTRO (Oculta) -->
+      <div id="register-view" style="display: none;">
+        <h2 style="color: var(--primary-color); margin-bottom: 20px;">Nova Conta</h2>
+        <form id="register-form">
+          <input type="text" id="reg-nome" placeholder="Nome" required
+            style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px;" />
+          <input type="text" id="reg-sobrenome" placeholder="Sobrenome" required
+            style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px;" />
+          <input type="date" id="reg-nascimento" required
+            style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px;" />
+          <input type="email" id="reg-email" placeholder="E-mail" required
+            style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px;" />
+          <input type="password" id="reg-password" placeholder="Senha" required
+            style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px;" />
+          <input type="password" id="reg-confirm-password" placeholder="Confirmar Senha" required
+            style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px;" />
+          <button type="submit" id="submit-register-btn" class="btn-primary"
+            style="width: 100%; margin-bottom: 10px;">Confirmar Cadastro</button>
+          <button type="button" id="back-to-login-btn"
+            style="width: 100%; background: none; border: none; color: var(--primary-color); cursor: pointer;">Voltar
+            para o Login</button>
+        </form>
+        <p id="register-error" style="color: red; margin-top: 15px; display: none; font-size: 14px;"></p>
+      </div>
+
+      <!-- TELA DE RECUPERAÇÃO DE SENHA (Oculta) -->
+      <div id="forgot-pass-view" style="display: none;">
+        <h2 style="color: var(--primary-color); margin-bottom: 10px;">Recuperar Senha</h2>
+        <p style="font-size: 14px; margin-bottom: 20px; color: #666;">Digite o e-mail cadastrado. Enviaremos um link
+          seguro para a redefinição.</p>
+
+        <form id="forgot-pass-form">
+          <input type="email" id="forgot-email" placeholder="Seu e-mail" required
+            style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px;" />
+          <button type="submit" id="submit-forgot-btn" class="btn-primary"
+            style="width: 100%; margin-bottom: 10px;">Enviar Link</button>
+          <button type="button" id="back-to-login-forgot-btn"
+            style="width: 100%; background: none; border: none; color: var(--primary-color); cursor: pointer;">Voltar
+            para o Login</button>
+        </form>
+
+        <p id="forgot-error" style="color: red; margin-top: 15px; display: none; font-size: 14px;"></p>
+        <p id="forgot-success" style="color: green; margin-top: 15px; display: none; font-size: 14px;"></p>
+      </div>
+
     </div>
   </div>
 
@@ -53,663 +104,684 @@
         <span id="selected-month-label">Agosto 2026</span>
         <i class="fas fa-chevron-down" style="font-size: 11px; margin-left: 2px; color: #888;"></i>
       </button>
-      <button onclick="AppController.logout()"
-        style="background: none; border: none; color: #ef4444; cursor: pointer; font-weight: 600; margin-left: 20px;">
-        <i class="fas fa-sign-out-alt"></i> Sair
-      </button>
     </div>
-    <div class="nav-right user-profile">
-      <div class="avatar"><span>A</span><i class="fas fa-crown crown-icon"></i></div>
-      <span class="user-name">Arthur Barbosa</span>
-      <i class="fas fa-chevron-down chevron-icon"></i>
+    <div class="user-menu-container" style="position: relative; display: inline-block; margin-left: auto;">
+      <!-- Botão de acionamento -->
+      <div id="user-menu-trigger" style="display: flex; align-items: center; cursor: pointer; gap: 8px;">
+        <div
+          style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--primary-color); display: flex; align-items: center; justify-content: center;">
+          <i class="far fa-user"></i>
+        </div>
+        <span style="font-weight: 600; color: #333;">Arthur Barbosa</span>
+        <i class="fas fa-chevron-down" style="font-size: 12px; color: #666;"></i>
+      </div>
+
+      <!-- Caixa do Menu (Oculta por padrão) -->
+      <div id="user-dropdown"
+        style="display: none; position: absolute; top: 45px; right: 0; background: white; border-radius: 12px; box-shadow: 0 8px 16px rgba(0,0,0,0.1); width: 200px; padding: 10px 0; z-index: 1000; border: 1px solid #eee;">
+        <a href="#" class="dropdown-item" id="nav-profile-btn"><i class="far fa-user"></i> Meu perfil</a>
+        <a href="#" class="dropdown-item"><i class="fas fa-cog"></i> Configurações</a>
+        <a href="#" class="dropdown-item"><i class="fas fa-user-friends"></i> Convidar amigos</a>
+        <a href="#" class="dropdown-item"><i class="far fa-file-alt"></i> Blog</a>
+        <div style="height: 1px; background: #eee; margin: 5px 0;"></div>
+        <!-- O botão de Sair continua chamando a mesma função -->
+        <a href="#" class="dropdown-item" onclick="AppController.logout(); return false;"><i
+            class="fas fa-sign-out-alt"></i> Sair</a>
+      </div>
     </div>
   </nav>
 
-  <!-- ABAS DE NAVEGAÇÃO DA APLICAÇÃO -->
-  <div class="app-tab-nav">
-    <button id="tab-btn-dashboard" class="app-tab-btn active" onclick="AppController.switchTab('dashboard')">
-      <i class="fas fa-chart-pie"></i> Dashboard
-    </button>
-    <button id="tab-btn-transactions" class="app-tab-btn" onclick="AppController.switchTab('transactions')">
-      <i class="fas fa-list-alt"></i> Transações
-    </button>
-    <button id="tab-btn-credit-cards" class="app-tab-btn" onclick="AppController.switchTab('credit-cards')">
-      <i class="fas fa-credit-card"></i> Cartões & Faturas
-    </button>
-    <button id="tab-btn-fixed-costs" class="app-tab-btn" onclick="AppController.switchTab('fixed-costs')">
-      <i class="fas fa-calendar-check"></i> Custos Fixos
-    </button>
-    <button id="tab-btn-goals" class="app-tab-btn" onclick="AppController.switchTab('goals')">
-      <i class="fas fa-bullseye"></i> Meus Objetivos
-    </button>
-    <button id="tab-btn-accounts" class="app-tab-btn" onclick="AppController.switchTab('accounts')">
-      <i class="fas fa-university"></i> Minhas Contas
-    </button>
-    <button id="tab-btn-planning" class="app-tab-btn" onclick="AppController.switchTab('planning')">
-      <i class="fas fa-route"></i> Planejamento
-    </button>
-  </div>
-
-  <!-- VIEW 1: DASHBOARD -->
-  <div id="view-dashboard" class="app-view">
-    <!-- TÍTULO E BOTÕES -->
-    <div class="dashboard-title-container">
-      <h2>Dashboard</h2>
-      <div>
-        <button class="btn-text" onclick="AppController.openTransferModal()" style="margin-right: 15px;"><i
-            class="fas fa-exchange-alt"></i> Transferir</button>
-        <button class="btn-text" onclick="AppController.openCCModal()" style="margin-right: 15px;">+ Novo
-          Cartão</button>
-        <button class="btn-text" onclick="AppController.openAccountModal()">+ Nova Conta</button>
-      </div>
+  <div id="main-dashboard-content">
+    <!-- ABAS DE NAVEGAÇÃO DA APLICAÇÃO -->
+    <div class="app-tab-nav">
+      <button id="tab-btn-dashboard" class="app-tab-btn active" onclick="AppController.switchTab('dashboard')">
+        <i class="fas fa-chart-pie"></i> Dashboard
+      </button>
+      <button id="tab-btn-transactions" class="app-tab-btn" onclick="AppController.switchTab('transactions')">
+        <i class="fas fa-list-alt"></i> Transações
+      </button>
+      <button id="tab-btn-credit-cards" class="app-tab-btn" onclick="AppController.switchTab('credit-cards')">
+        <i class="fas fa-credit-card"></i> Cartões & Faturas
+      </button>
+      <button id="tab-btn-fixed-costs" class="app-tab-btn" onclick="AppController.switchTab('fixed-costs')">
+        <i class="fas fa-calendar-check"></i> Custos Fixos
+      </button>
+      <button id="tab-btn-goals" class="app-tab-btn" onclick="AppController.switchTab('goals')">
+        <i class="fas fa-bullseye"></i> Meus Objetivos
+      </button>
+      <button id="tab-btn-accounts" class="app-tab-btn" onclick="AppController.switchTab('accounts')">
+        <i class="fas fa-university"></i> Minhas Contas
+      </button>
+      <button id="tab-btn-planning" class="app-tab-btn" onclick="AppController.switchTab('planning')">
+        <i class="fas fa-route"></i> Planejamento
+      </button>
     </div>
 
-    <!-- 4 CARTÕES SUPERIORES -->
-    <div class="summary-cards">
-      <div class="summary-card">
-        <div class="card-icon icon-blue"><i class="fas fa-university"></i></div>
-        <div class="card-info">
-          <div class="card-label">Saldo atual</div>
-          <h3 class="card-value" id="total-balance">R$ 0,00</h3>
+    <!-- VIEW 1: DASHBOARD -->
+    <div id="view-dashboard" class="app-view">
+      <!-- TÍTULO E BOTÕES -->
+      <div class="dashboard-title-container">
+        <h2>Dashboard</h2>
+        <div>
+          <button class="btn-text" onclick="AppController.openTransferModal()" style="margin-right: 15px;"><i
+              class="fas fa-exchange-alt"></i> Transferir</button>
+          <button class="btn-text" onclick="AppController.openCCModal()" style="margin-right: 15px;">+ Novo
+            Cartão</button>
+          <button class="btn-text" onclick="AppController.openAccountModal()">+ Nova Conta</button>
         </div>
       </div>
-      <div class="summary-card">
-        <div class="card-icon icon-green"><i class="fas fa-arrow-up"></i></div>
-        <div class="card-info">
-          <div class="card-label">Receitas</div>
-          <h3 class="card-value" id="total-income">R$ 0,00</h3>
-        </div>
-      </div>
-      <div class="summary-card">
-        <div class="card-icon icon-red"><i class="fas fa-arrow-down"></i></div>
-        <div class="card-info">
-          <div class="card-label">Despesas</div>
-          <h3 class="card-value" id="total-expense">R$ 0,00</h3>
-        </div>
-      </div>
-      <div class="summary-card" onclick="AppController.openCCInvoiceModal()" title="Ver Detalhes da Fatura"
-        style="border-left: 4px solid #00796B; cursor: pointer;">
-        <div class="card-icon icon-dark-green"><i class="fas fa-credit-card"></i></div>
-        <div class="card-info">
-          <div class="card-label">Fatura do Mês</div>
-          <h3 class="card-value" id="total-credit-card">R$ 0,00</h3>
-        </div>
-        <i class="fas fa-list-ul" style="color: #00796B; font-size: 18px; margin-left: 10px;"></i>
-      </div>
-    </div>
 
-    <!-- CARROSSEL DE CONTAS BANCÁRIAS -->
-    <div class="accounts-section">
-      <div style="max-width: 1200px; margin: 0 auto 10px auto; padding: 0 15px;">
-        <h3 style="margin: 0; font-size: 16px; color: #777; font-weight: 500;">Minhas Contas</h3>
-      </div>
-      <div class="accounts-carousel" id="accounts-container">
-        <div class="loading" style="padding: 15px;">Calculando saldos...</div>
-      </div>
-    </div>
-
-    <!-- GRID INFERIOR (Metas, Custos Fixos e Gráfico) -->
-    <div class="dashboard-layout">
-      <section class="goals-section">
-        <div class="section-header">
-          <h3>Meus Objetivos</h3>
-          <div>
-            <button class="btn-text" onclick="AppController.switchTab('goals')"
-              style="margin-right: 10px; font-size: 13px;">Ver Todos <i class="fas fa-arrow-right"></i></button>
-            <button class="btn-text" onclick="AppController.openGoalModal()">+ Novo</button>
+      <!-- 4 CARTÕES SUPERIORES -->
+      <div class="summary-cards">
+        <div class="summary-card">
+          <div class="card-icon icon-blue"><i class="fas fa-university"></i></div>
+          <div class="card-info">
+            <div class="card-label">Saldo atual</div>
+            <h3 class="card-value" id="total-balance">R$ 0,00</h3>
           </div>
         </div>
-        <div id="goals-container" class="goals-grid">
-          <div class="loading">Carregando objetivos...</div>
-        </div>
-      </section>
-      <section class="fixed-costs-section">
-        <div class="section-header">
-          <h3>Custos Fixos</h3>
-          <div>
-            <button class="btn-text" onclick="AppController.switchTab('fixed-costs')"
-              style="margin-right: 10px; font-size: 13px;">Ver Todos <i class="fas fa-arrow-right"></i></button>
-            <button class="btn-text" onclick="AppController.openFixedCostModal()">+ Novo</button>
+        <div class="summary-card">
+          <div class="card-icon icon-green"><i class="fas fa-arrow-up"></i></div>
+          <div class="card-info">
+            <div class="card-label">Receitas</div>
+            <h3 class="card-value" id="total-income">R$ 0,00</h3>
           </div>
         </div>
-        <ul id="fixed-costs-container">
-          <li class="loading">Carregando custos...</li>
-        </ul>
-      </section>
-      <section class="chart-section" style="grid-column: 1 / -1; margin-top: 10px;">
-        <div class="section-header">
-          <h3>Gastos por Categoria</h3>
+        <div class="summary-card">
+          <div class="card-icon icon-red"><i class="fas fa-arrow-down"></i></div>
+          <div class="card-info">
+            <div class="card-label">Despesas</div>
+            <h3 class="card-value" id="total-expense">R$ 0,00</h3>
+          </div>
         </div>
-        <div
-          style="background: var(--card-bg); border-radius: 16px; padding: 20px; border: 1px solid var(--border-color); height: 320px; position: relative; box-shadow: 0 2px 8px rgba(0,0,0,0.04); display: flex; justify-content: center; align-items: center;">
-          <canvas id="expensesChart"></canvas>
-        </div>
-      </section>
-    </div>
-  </div>
-
-  <!-- VIEW 2: GUIA DE TRANSAÇÕES -->
-  <div id="view-transactions" class="app-view hidden">
-    <div class="dashboard-title-container">
-      <h2>Histórico de Transações</h2>
-      <div>
-        <button class="btn-text" onclick="AppController.openModal()"><i class="fas fa-plus"></i> Nova Transação</button>
-      </div>
-    </div>
-    <div style="max-width: 1200px; margin: 0 auto; padding: 0 15px 50px;">
-      <main class="transaction-list"
-        style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #eaeaea;">
-        <div class="section-header" style="margin-bottom: 10px;">
-          <h3 style="margin: 0; font-size: 18px; color: #333;">Lançamentos do Mês</h3>
-          <span id="tx-count-badge" style="font-size: 13px; color: #777; font-weight: 500;"></span>
-        </div>
-        <!-- FILTROS DE TRANSAÇÕES -->
-        <div class="tx-filter-pills">
-          <button id="tx-filter-ALL" class="tx-filter-btn active" onclick="AppController.setTransactionFilter('ALL')">
-            <i class="fas fa-list"></i> Todas as Transações
-          </button>
-          <button id="tx-filter-DESPESA" class="tx-filter-btn" onclick="AppController.setTransactionFilter('DESPESA')">
-            <i class="fas fa-arrow-down" style="color: #F44336;"></i> Despesas
-          </button>
-          <button id="tx-filter-RECEITA" class="tx-filter-btn" onclick="AppController.setTransactionFilter('RECEITA')">
-            <i class="fas fa-arrow-up" style="color: #4CAF50;"></i> Receitas
-          </button>
-          <button id="tx-filter-TRANSFERENCIA" class="tx-filter-btn"
-            onclick="AppController.setTransactionFilter('TRANSFERENCIA')">
-            <i class="fas fa-exchange-alt" style="color: #2196F3;"></i> Transferências
-          </button>
-        </div>
-        <!-- TABELA DE DADOS -->
-        <div class="tx-table-container">
-          <table class="tx-table">
-            <thead>
-              <tr>
-                <th class="tx-th" style="width: 40px; text-align: center;"><input type="checkbox" class="tx-checkbox"
-                    disabled></th>
-                <th class="tx-th" style="width: 60px; text-align: center;">Situação</th>
-                <th class="tx-th">Data <i class="fas fa-arrow-down" style="font-size: 10px; color: #888;"></i></th>
-                <th class="tx-th">Descrição</th>
-                <th class="tx-th">Categoria</th>
-                <th class="tx-th">Conta</th>
-                <th class="tx-th" style="text-align: right;">Valor</th>
-                <th class="tx-th" style="text-align: center;">Ações</th>
-              </tr>
-            </thead>
-            <tbody id="transactions-container">
-              <tr>
-                <td colspan="8" style="padding:15px; color:#888; text-align:center;">Carregando dados...</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </main>
-    </div>
-  </div>
-
-  <!-- VIEW 3: CARTÕES & FATURAS -->
-  <div id="view-credit-cards" class="app-view hidden">
-    <div class="dashboard-title-container">
-      <h2>Cartões de Crédito e Faturas</h2>
-      <div>
-        <button class="btn-text" onclick="AppController.openCCModal()" style="margin-right: 15px;"><i
-            class="fas fa-plus"></i> Novo Cartão</button>
-        <button class="btn-text" onclick="AppController.openCCTransModal()"><i class="fas fa-credit-card"></i> + Nova
-          Despesa Crédito</button>
-      </div>
-    </div>
-    <div style="max-width: 1200px; margin: 0 auto; padding: 0 15px 50px;">
-      <!-- Card Resumo da Fatura -->
-      <div class="summary-cards" style="padding: 0; margin-bottom: 25px;">
-        <div class="summary-card" style="border-left: 4px solid #00796B;">
+        <div class="summary-card" onclick="AppController.openCCInvoiceModal()" title="Ver Detalhes da Fatura"
+          style="border-left: 4px solid #00796B; cursor: pointer;">
           <div class="card-icon icon-dark-green"><i class="fas fa-credit-card"></i></div>
           <div class="card-info">
-            <div class="card-label">Fatura do Mês (<span id="cc-page-period-title">--</span>)</div>
-            <h3 class="card-value" id="cc-page-total-invoice">R$ 0,00</h3>
+            <div class="card-label">Fatura do Mês</div>
+            <h3 class="card-value" id="total-credit-card">R$ 0,00</h3>
           </div>
+          <i class="fas fa-list-ul" style="color: #00796B; font-size: 18px; margin-left: 10px;"></i>
         </div>
       </div>
 
-      <!-- Seção Meus Cartões -->
-      <div style="margin-bottom: 30px;">
-        <h3 style="font-size: 18px; color: #333; margin-bottom: 15px;">Meus Cartões</h3>
-        <div id="cc-cards-grid"
-          style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
-          <div class="loading">Carregando cartões...</div>
+      <!-- CARROSSEL DE CONTAS BANCÁRIAS -->
+      <div class="accounts-section">
+        <div style="max-width: 1200px; margin: 0 auto 10px auto; padding: 0 15px;">
+          <h3 style="margin: 0; font-size: 16px; color: #777; font-weight: 500;">Minhas Contas</h3>
+        </div>
+        <div class="accounts-carousel" id="accounts-container">
+          <div class="loading" style="padding: 15px;">Calculando saldos...</div>
         </div>
       </div>
 
-      <!-- Seção Itens da Fatura -->
-      <main class="transaction-list"
-        style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #eaeaea;">
-        <div class="section-header" style="margin-bottom: 15px;">
-          <h3 style="margin: 0; font-size: 18px; color: #333;">Lançamentos da Fatura</h3>
-          <span id="cc-items-count-badge" style="font-size: 13px; color: #777; font-weight: 500;"></span>
-        </div>
-        <ul id="cc-page-items-container">
-          <li class="loading">Carregando lançamentos...</li>
-        </ul>
-      </main>
-    </div>
-  </div>
-
-  <!-- VIEW 4: MINHAS CONTAS -->
-  <div id="view-accounts" class="app-view hidden">
-    <div class="dashboard-title-container">
-      <h2>Minhas Contas Bancárias</h2>
-      <div>
-        <button class="btn-text" onclick="AppController.openTransferModal()" style="margin-right: 15px;"><i
-            class="fas fa-exchange-alt"></i> Transferir</button>
-        <button class="btn-text" onclick="AppController.openAccountModal()"><i class="fas fa-plus"></i> Nova
-          Conta</button>
-      </div>
-    </div>
-    <div style="max-width: 1200px; margin: 0 auto; padding: 0 15px 50px;">
-      <!-- Card Saldo Total das Contas -->
-      <div class="summary-cards" style="padding: 0; margin-bottom: 25px;">
-        <div class="summary-card">
-          <div class="card-icon icon-blue"><i class="fas fa-wallet"></i></div>
-          <div class="card-info">
-            <div class="card-label">Saldo Consolidado das Contas</div>
-            <h3 class="card-value" id="acc-page-total-balance">R$ 0,00</h3>
-          </div>
-        </div>
-      </div>
-
-      <!-- Lista Detalhada de Contas -->
-      <main class="transaction-list"
-        style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #eaeaea;">
-        <div class="section-header" style="margin-bottom: 20px;">
-          <h3 style="margin: 0; font-size: 18px; color: #333;">Contas Ativas</h3>
-          <span id="acc-count-badge" style="font-size: 13px; color: #777; font-weight: 500;"></span>
-        </div>
-        <div id="acc-page-grid"
-          style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">
-          <div class="loading">Carregando contas...</div>
-        </div>
-      </main>
-    </div>
-  </div>
-
-  <!-- VIEW 5: CUSTOS FIXOS -->
-  <div id="view-fixed-costs" class="app-view hidden">
-    <div class="dashboard-title-container">
-      <h2>Custos Fixos</h2>
-      <div>
-        <button class="btn-text" onclick="AppController.openFixedCostModal()"><i class="fas fa-plus"></i> Novo Custo
-          Fixo</button>
-      </div>
-    </div>
-    <div style="max-width: 1200px; margin: 0 auto; padding: 0 15px 50px;">
-      <!-- Cartões de Resumo do Mês para Custos Fixos -->
-      <div class="summary-cards" style="padding: 0; margin-bottom: 25px;">
-        <div class="summary-card" style="border-left: 4px solid #6200ea;">
-          <div class="card-icon" style="background-color: #6200ea;"><i class="fas fa-file-invoice-dollar"></i></div>
-          <div class="card-info">
-            <div class="card-label">Total Custos Fixos (<span id="fc-page-period-title">--</span>)</div>
-            <h3 class="card-value" id="fc-page-total-cost">R$ 0,00</h3>
-          </div>
-        </div>
-        <div class="summary-card" style="border-left: 4px solid #4CAF50;">
-          <div class="card-icon icon-green"><i class="fas fa-check-circle"></i></div>
-          <div class="card-info">
-            <div class="card-label">Quitados no Mês</div>
-            <h3 class="card-value" id="fc-page-total-paid">R$ 0,00</h3>
-          </div>
-        </div>
-        <div class="summary-card" style="border-left: 4px solid #FF9800;">
-          <div class="card-icon" style="background-color: #FF9800;"><i class="fas fa-clock"></i></div>
-          <div class="card-info">
-            <div class="card-label">Pendentes no Mês</div>
-            <h3 class="card-value" id="fc-page-total-pending">R$ 0,00</h3>
-          </div>
-        </div>
-      </div>
-
-      <!-- Lista Principal de Custos Fixos -->
-      <main class="transaction-list"
-        style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #eaeaea;">
-        <div class="section-header" style="margin-bottom: 20px;">
-          <h3 style="margin: 0; font-size: 18px; color: #333;">Lançamentos de Custos Fixos</h3>
-          <span id="fc-count-badge" style="font-size: 13px; color: #777; font-weight: 500;"></span>
-        </div>
-        <ul id="fc-page-items-container">
-          <li class="loading">Carregando custos fixos...</li>
-        </ul>
-      </main>
-    </div>
-  </div>
-
-  <!-- VIEW 6: MEUS OBJETIVOS -->
-  <div id="view-goals" class="app-view hidden">
-    <div class="dashboard-title-container">
-      <h2>Meus Objetivos</h2>
-      <div>
-        <button class="btn-text" onclick="AppController.openGoalModal()"><i class="fas fa-plus"></i> Novo
-          Objetivo</button>
-      </div>
-    </div>
-    <div style="max-width: 1200px; margin: 0 auto; padding: 0 15px 50px;">
-      <!-- Cartões de Resumo para Objetivos -->
-      <div class="summary-cards" style="padding: 0; margin-bottom: 25px;">
-        <div class="summary-card" style="border-left: 4px solid #2196F3;">
-          <div class="card-icon icon-blue"><i class="fas fa-bullseye"></i></div>
-          <div class="card-info">
-            <div class="card-label">Total de Objetivos</div>
-            <h3 class="card-value" id="goals-page-count">0</h3>
-          </div>
-        </div>
-        <div class="summary-card" style="border-left: 4px solid #6200ea;">
-          <div class="card-icon" style="background-color: #6200ea;"><i class="fas fa-crosshairs"></i></div>
-          <div class="card-info">
-            <div class="card-label">Valor Alvo Total</div>
-            <h3 class="card-value" id="goals-page-total-target">R$ 0,00</h3>
-          </div>
-        </div>
-        <div class="summary-card" style="border-left: 4px solid #4CAF50;">
-          <div class="card-icon icon-green"><i class="fas fa-piggy-bank"></i></div>
-          <div class="card-info">
-            <div class="card-label">Total Acumulado</div>
-            <h3 class="card-value" id="goals-page-total-current">R$ 0,00</h3>
-          </div>
-        </div>
-      </div>
-
-      <!-- Lista de Objetivos -->
-      <main class="transaction-list"
-        style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #eaeaea;">
-        <div class="section-header" style="margin-bottom: 20px;">
-          <h3 style="margin: 0; font-size: 18px; color: #333;">Metas Financeiras</h3>
-          <span id="goals-count-badge" style="font-size: 13px; color: #777; font-weight: 500;"></span>
-        </div>
-        <div id="goals-page-container" class="goals-grid">
-          <div class="loading">Carregando objetivos...</div>
-        </div>
-      </main>
-    </div>
-  </div>
-
-  <!-- VIEW 7: PLANEJAMENTO MENSAL -->
-  <div id="view-planning" class="app-view hidden">
-
-    <!-- TELA 1: INTRODUÇÃO (Os dois botões) -->
-    <div id="planning-intro" style="max-width: 800px; margin: 60px auto; text-align: center;">
-      <h2 style="font-size: 24px; color: #333; margin-bottom: 40px;">Planejamento Mensal</h2>
-      <div style="display: flex; gap: 20px; justify-content: center;">
-        <button class="plan-main-btn" onclick="AppController.startPlanningWizard()">
-          <i class="fas fa-plus-circle" style="font-size: 24px; margin-bottom: 10px;"></i><br>
-          DEFINIR NOVO PLANEJAMENTO
-        </button>
-        <button class="plan-main-btn secondary" onclick="AppController.copyPreviousPlanning()">
-          <i class="fas fa-copy" style="font-size: 24px; margin-bottom: 10px;"></i><br>
-          COPIAR MÊS ANTERIOR
-        </button>
-      </div>
-    </div>
-
-    <!-- TELA 2: O WIZARD DE CRIAÇÃO -->
-    <div id="planning-wizard" class="hidden" style="max-width: 900px; margin: 40px auto; padding: 0 15px;">
-      <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 30px;">
-        <button class="btn-text" style="color: #666; font-size: 18px;" onclick="AppController.cancelPlanningWizard()"><i
-            class="fas fa-arrow-left"></i></button>
-        <h2 style="font-size: 22px; color: #111; margin: 0;">Criação do planejamento mensal</h2>
-      </div>
-
-      <div style="font-size: 13px; color: #666; margin-bottom: 15px;" id="wizard-breadcrumbs">
-        <strong>Renda mensal</strong>
-      </div>
-
-      <!-- PASSO 1: RENDA E ECONOMIA -->
-      <div id="wizard-step-1" class="wizard-card">
-
-        <div class="form-group" style="margin-bottom: 30px;">
-          <label style="font-size: 16px; color: #333;">Quanto você ganha por mês?</label>
-          <input type="text" id="wiz-income" class="big-input text-primary" value="0,00"
-            oninput="AppController.maskCurrency(this); AppController.calculateWizardBudget()">
-        </div>
-
-        <div class="form-group" style="margin-bottom: 30px;">
-          <label style="font-size: 16px; color: #333;">E quanto você quer economizar por mês?</label>
-          <p style="font-size: 13px; color: #888; margin-top: 0;">Essa porcentagem será utilizada para calcular seu
-            orçamento mensal de gastos.</p>
-          <div style="display: flex; align-items: baseline; gap: 10px;">
-            <input type="number" id="wiz-savings-pct" class="big-input text-primary"
-              style="width: 80px; text-align: center;" value="20" min="0" max="100"
-              oninput="AppController.calculateWizardBudget()">
-            <span style="font-size: 20px; font-weight: 600; color: var(--primary-color);">%</span>
-          </div>
-        </div>
-
-        <div class="wizard-result-box">
-          <div style="display: flex; gap: 15px; align-items: flex-start;">
-            <div
-              style="background: white; border-radius: 50%; width: 24px; height: 24px; display: flex; justify-content: center; align-items: center; margin-top: 2px;">
-              <i class="fas fa-dollar-sign" style="font-size: 12px; color: #333;"></i>
-            </div>
+      <!-- GRID INFERIOR (Metas, Custos Fixos e Gráfico) -->
+      <div class="dashboard-layout">
+        <section class="goals-section">
+          <div class="section-header">
+            <h3>Meus Objetivos</h3>
             <div>
-              <div style="font-size: 14px; color: #555;">Seu orçamento mensal de gastos será:</div>
-              <div id="wiz-calc-budget" style="font-size: 22px; font-weight: 600; color: #111; margin-bottom: 8px;">R$
-                0,00</div>
-              <div style="font-size: 14px; color: #555;">E você economizará mensalmente:</div>
-              <div id="wiz-calc-savings" style="font-size: 18px; font-weight: 600; color: #4CAF50;">R$ 0,00</div>
+              <button class="btn-text" onclick="AppController.switchTab('goals')"
+                style="margin-right: 10px; font-size: 13px;">Ver Todos <i class="fas fa-arrow-right"></i></button>
+              <button class="btn-text" onclick="AppController.openGoalModal()">+ Novo</button>
+            </div>
+          </div>
+          <div id="goals-container" class="goals-grid">
+            <div class="loading">Carregando objetivos...</div>
+          </div>
+        </section>
+        <section class="fixed-costs-section">
+          <div class="section-header">
+            <h3>Custos Fixos</h3>
+            <div>
+              <button class="btn-text" onclick="AppController.switchTab('fixed-costs')"
+                style="margin-right: 10px; font-size: 13px;">Ver Todos <i class="fas fa-arrow-right"></i></button>
+              <button class="btn-text" onclick="AppController.openFixedCostModal()">+ Novo</button>
+            </div>
+          </div>
+          <ul id="fixed-costs-container">
+            <li class="loading">Carregando custos...</li>
+          </ul>
+        </section>
+        <section class="chart-section" style="grid-column: 1 / -1; margin-top: 10px;">
+          <div class="section-header">
+            <h3>Gastos por Categoria</h3>
+          </div>
+          <div
+            style="background: var(--card-bg); border-radius: 16px; padding: 20px; border: 1px solid var(--border-color); height: 320px; position: relative; box-shadow: 0 2px 8px rgba(0,0,0,0.04); display: flex; justify-content: center; align-items: center;">
+            <canvas id="expensesChart"></canvas>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- VIEW 2: GUIA DE TRANSAÇÕES -->
+    <div id="view-transactions" class="app-view hidden">
+      <div class="dashboard-title-container">
+        <h2>Histórico de Transações</h2>
+        <div>
+          <button class="btn-text" onclick="AppController.openModal()"><i class="fas fa-plus"></i> Nova
+            Transação</button>
+        </div>
+      </div>
+      <div style="max-width: 1200px; margin: 0 auto; padding: 0 15px 50px;">
+        <main class="transaction-list"
+          style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #eaeaea;">
+          <div class="section-header" style="margin-bottom: 10px;">
+            <h3 style="margin: 0; font-size: 18px; color: #333;">Lançamentos do Mês</h3>
+            <span id="tx-count-badge" style="font-size: 13px; color: #777; font-weight: 500;"></span>
+          </div>
+          <!-- FILTROS DE TRANSAÇÕES -->
+          <div class="tx-filter-pills">
+            <button id="tx-filter-ALL" class="tx-filter-btn active" onclick="AppController.setTransactionFilter('ALL')">
+              <i class="fas fa-list"></i> Todas as Transações
+            </button>
+            <button id="tx-filter-DESPESA" class="tx-filter-btn"
+              onclick="AppController.setTransactionFilter('DESPESA')">
+              <i class="fas fa-arrow-down" style="color: #F44336;"></i> Despesas
+            </button>
+            <button id="tx-filter-RECEITA" class="tx-filter-btn"
+              onclick="AppController.setTransactionFilter('RECEITA')">
+              <i class="fas fa-arrow-up" style="color: #4CAF50;"></i> Receitas
+            </button>
+            <button id="tx-filter-TRANSFERENCIA" class="tx-filter-btn"
+              onclick="AppController.setTransactionFilter('TRANSFERENCIA')">
+              <i class="fas fa-exchange-alt" style="color: #2196F3;"></i> Transferências
+            </button>
+          </div>
+          <!-- TABELA DE DADOS -->
+          <div class="tx-table-container">
+            <table class="tx-table">
+              <thead>
+                <tr>
+                  <th class="tx-th" style="width: 40px; text-align: center;"><input type="checkbox" class="tx-checkbox"
+                      disabled></th>
+                  <th class="tx-th" style="width: 60px; text-align: center;">Situação</th>
+                  <th class="tx-th">Data <i class="fas fa-arrow-down" style="font-size: 10px; color: #888;"></i></th>
+                  <th class="tx-th">Descrição</th>
+                  <th class="tx-th">Categoria</th>
+                  <th class="tx-th">Conta</th>
+                  <th class="tx-th" style="text-align: right;">Valor</th>
+                  <th class="tx-th" style="text-align: center;">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="transactions-container">
+                <tr>
+                  <td colspan="8" style="padding:15px; color:#888; text-align:center;">Carregando dados...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- VIEW 3: CARTÕES & FATURAS -->
+    <div id="view-credit-cards" class="app-view hidden">
+      <div class="dashboard-title-container">
+        <h2>Cartões de Crédito e Faturas</h2>
+        <div>
+          <button class="btn-text" onclick="AppController.openCCModal()" style="margin-right: 15px;"><i
+              class="fas fa-plus"></i> Novo Cartão</button>
+          <button class="btn-text" onclick="AppController.openCCTransModal()"><i class="fas fa-credit-card"></i> + Nova
+            Despesa Crédito</button>
+        </div>
+      </div>
+      <div style="max-width: 1200px; margin: 0 auto; padding: 0 15px 50px;">
+        <!-- Card Resumo da Fatura -->
+        <div class="summary-cards" style="padding: 0; margin-bottom: 25px;">
+          <div class="summary-card" style="border-left: 4px solid #00796B;">
+            <div class="card-icon icon-dark-green"><i class="fas fa-credit-card"></i></div>
+            <div class="card-info">
+              <div class="card-label">Fatura do Mês (<span id="cc-page-period-title">--</span>)</div>
+              <h3 class="card-value" id="cc-page-total-invoice">R$ 0,00</h3>
             </div>
           </div>
         </div>
 
-        <div style="text-align: right; margin-top: 20px;">
-          <button class="wizard-next-btn" onclick="AppController.nextWizardStep(2)"><i
-              class="fas fa-arrow-right"></i></button>
+        <!-- Seção Meus Cartões -->
+        <div style="margin-bottom: 30px;">
+          <h3 style="font-size: 18px; color: #333; margin-bottom: 15px;">Meus Cartões</h3>
+          <div id="cc-cards-grid"
+            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+            <div class="loading">Carregando cartões...</div>
+          </div>
+        </div>
+
+        <!-- Seção Itens da Fatura -->
+        <main class="transaction-list"
+          style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #eaeaea;">
+          <div class="section-header" style="margin-bottom: 15px;">
+            <h3 style="margin: 0; font-size: 18px; color: #333;">Lançamentos da Fatura</h3>
+            <span id="cc-items-count-badge" style="font-size: 13px; color: #777; font-weight: 500;"></span>
+          </div>
+          <ul id="cc-page-items-container">
+            <li class="loading">Carregando lançamentos...</li>
+          </ul>
+        </main>
+      </div>
+    </div>
+
+    <!-- VIEW 4: MINHAS CONTAS -->
+    <div id="view-accounts" class="app-view hidden">
+      <div class="dashboard-title-container">
+        <h2>Minhas Contas Bancárias</h2>
+        <div>
+          <button class="btn-text" onclick="AppController.openTransferModal()" style="margin-right: 15px;"><i
+              class="fas fa-exchange-alt"></i> Transferir</button>
+          <button class="btn-text" onclick="AppController.openAccountModal()"><i class="fas fa-plus"></i> Nova
+            Conta</button>
+        </div>
+      </div>
+      <div style="max-width: 1200px; margin: 0 auto; padding: 0 15px 50px;">
+        <!-- Card Saldo Total das Contas -->
+        <div class="summary-cards" style="padding: 0; margin-bottom: 25px;">
+          <div class="summary-card">
+            <div class="card-icon icon-blue"><i class="fas fa-wallet"></i></div>
+            <div class="card-info">
+              <div class="card-label">Saldo Consolidado das Contas</div>
+              <h3 class="card-value" id="acc-page-total-balance">R$ 0,00</h3>
+            </div>
+          </div>
+        </div>
+
+        <!-- Lista Detalhada de Contas -->
+        <main class="transaction-list"
+          style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #eaeaea;">
+          <div class="section-header" style="margin-bottom: 20px;">
+            <h3 style="margin: 0; font-size: 18px; color: #333;">Contas Ativas</h3>
+            <span id="acc-count-badge" style="font-size: 13px; color: #777; font-weight: 500;"></span>
+          </div>
+          <div id="acc-page-grid"
+            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">
+            <div class="loading">Carregando contas...</div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- VIEW 5: CUSTOS FIXOS -->
+    <div id="view-fixed-costs" class="app-view hidden">
+      <div class="dashboard-title-container">
+        <h2>Custos Fixos</h2>
+        <div>
+          <button class="btn-text" onclick="AppController.openFixedCostModal()"><i class="fas fa-plus"></i> Novo Custo
+            Fixo</button>
+        </div>
+      </div>
+      <div style="max-width: 1200px; margin: 0 auto; padding: 0 15px 50px;">
+        <!-- Cartões de Resumo do Mês para Custos Fixos -->
+        <div class="summary-cards" style="padding: 0; margin-bottom: 25px;">
+          <div class="summary-card" style="border-left: 4px solid #6200ea;">
+            <div class="card-icon" style="background-color: #6200ea;"><i class="fas fa-file-invoice-dollar"></i></div>
+            <div class="card-info">
+              <div class="card-label">Total Custos Fixos (<span id="fc-page-period-title">--</span>)</div>
+              <h3 class="card-value" id="fc-page-total-cost">R$ 0,00</h3>
+            </div>
+          </div>
+          <div class="summary-card" style="border-left: 4px solid #4CAF50;">
+            <div class="card-icon icon-green"><i class="fas fa-check-circle"></i></div>
+            <div class="card-info">
+              <div class="card-label">Quitados no Mês</div>
+              <h3 class="card-value" id="fc-page-total-paid">R$ 0,00</h3>
+            </div>
+          </div>
+          <div class="summary-card" style="border-left: 4px solid #FF9800;">
+            <div class="card-icon" style="background-color: #FF9800;"><i class="fas fa-clock"></i></div>
+            <div class="card-info">
+              <div class="card-label">Pendentes no Mês</div>
+              <h3 class="card-value" id="fc-page-total-pending">R$ 0,00</h3>
+            </div>
+          </div>
+        </div>
+
+        <!-- Lista Principal de Custos Fixos -->
+        <main class="transaction-list"
+          style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #eaeaea;">
+          <div class="section-header" style="margin-bottom: 20px;">
+            <h3 style="margin: 0; font-size: 18px; color: #333;">Lançamentos de Custos Fixos</h3>
+            <span id="fc-count-badge" style="font-size: 13px; color: #777; font-weight: 500;"></span>
+          </div>
+          <ul id="fc-page-items-container">
+            <li class="loading">Carregando custos fixos...</li>
+          </ul>
+        </main>
+      </div>
+    </div>
+
+    <!-- VIEW 6: MEUS OBJETIVOS -->
+    <div id="view-goals" class="app-view hidden">
+      <div class="dashboard-title-container">
+        <h2>Meus Objetivos</h2>
+        <div>
+          <button class="btn-text" onclick="AppController.openGoalModal()"><i class="fas fa-plus"></i> Novo
+            Objetivo</button>
+        </div>
+      </div>
+      <div style="max-width: 1200px; margin: 0 auto; padding: 0 15px 50px;">
+        <!-- Cartões de Resumo para Objetivos -->
+        <div class="summary-cards" style="padding: 0; margin-bottom: 25px;">
+          <div class="summary-card" style="border-left: 4px solid #2196F3;">
+            <div class="card-icon icon-blue"><i class="fas fa-bullseye"></i></div>
+            <div class="card-info">
+              <div class="card-label">Total de Objetivos</div>
+              <h3 class="card-value" id="goals-page-count">0</h3>
+            </div>
+          </div>
+          <div class="summary-card" style="border-left: 4px solid #6200ea;">
+            <div class="card-icon" style="background-color: #6200ea;"><i class="fas fa-crosshairs"></i></div>
+            <div class="card-info">
+              <div class="card-label">Valor Alvo Total</div>
+              <h3 class="card-value" id="goals-page-total-target">R$ 0,00</h3>
+            </div>
+          </div>
+          <div class="summary-card" style="border-left: 4px solid #4CAF50;">
+            <div class="card-icon icon-green"><i class="fas fa-piggy-bank"></i></div>
+            <div class="card-info">
+              <div class="card-label">Total Acumulado</div>
+              <h3 class="card-value" id="goals-page-total-current">R$ 0,00</h3>
+            </div>
+          </div>
+        </div>
+
+        <!-- Lista de Objetivos -->
+        <main class="transaction-list"
+          style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #eaeaea;">
+          <div class="section-header" style="margin-bottom: 20px;">
+            <h3 style="margin: 0; font-size: 18px; color: #333;">Metas Financeiras</h3>
+            <span id="goals-count-badge" style="font-size: 13px; color: #777; font-weight: 500;"></span>
+          </div>
+          <div id="goals-page-container" class="goals-grid">
+            <div class="loading">Carregando objetivos...</div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- VIEW 7: PLANEJAMENTO MENSAL -->
+    <div id="view-planning" class="app-view hidden">
+
+      <!-- TELA 1: INTRODUÇÃO (Os dois botões) -->
+      <div id="planning-intro" style="max-width: 800px; margin: 60px auto; text-align: center;">
+        <h2 style="font-size: 24px; color: #333; margin-bottom: 40px;">Planejamento Mensal</h2>
+        <div style="display: flex; gap: 20px; justify-content: center;">
+          <button class="plan-main-btn" onclick="AppController.startPlanningWizard()">
+            <i class="fas fa-plus-circle" style="font-size: 24px; margin-bottom: 10px;"></i><br>
+            DEFINIR NOVO PLANEJAMENTO
+          </button>
+          <button class="plan-main-btn secondary" onclick="AppController.copyPreviousPlanning()">
+            <i class="fas fa-copy" style="font-size: 24px; margin-bottom: 10px;"></i><br>
+            COPIAR MÊS ANTERIOR
+          </button>
         </div>
       </div>
 
-      <!-- PASSO 2: CATEGORIZAÇÃO DE GASTOS -->
-      <div id="wizard-step-2" class="hidden">
-        <div class="wizard-split-layout">
-          <!-- Coluna Esquerda: Lista de Categorias -->
-          <div class="wizard-left-col">
-            <div class="wizard-card" style="padding: 30px;">
-              <h3 style="font-size: 20px; color: #111; margin-bottom: 8px;">Hora de planejar!</h3>
-              <p style="font-size: 14px; color: #666; margin-top: 0; margin-bottom: 30px;">Preencha os campos abaixo com
-                seus limites de gastos para cada categoria.</p>
+      <!-- TELA 2: O WIZARD DE CRIAÇÃO -->
+      <div id="planning-wizard" class="hidden" style="max-width: 900px; margin: 40px auto; padding: 0 15px;">
+        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 30px;">
+          <button class="btn-text" style="color: #666; font-size: 18px;"
+            onclick="AppController.cancelPlanningWizard()"><i class="fas fa-arrow-left"></i></button>
+          <h2 style="font-size: 22px; color: #111; margin: 0;">Criação do planejamento mensal</h2>
+        </div>
 
-              <h4 style="font-size: 16px; color: #333; margin-bottom: 20px;">Categorias</h4>
-              <div id="wizard-categories-list" style="display: flex; flex-direction: column; gap: 15px;">
-                <!-- As categorias serão injetadas magicamente pelo JavaScript aqui -->
+        <div style="font-size: 13px; color: #666; margin-bottom: 15px;" id="wizard-breadcrumbs">
+          <strong>Renda mensal</strong>
+        </div>
+
+        <!-- PASSO 1: RENDA E ECONOMIA -->
+        <div id="wizard-step-1" class="wizard-card">
+
+          <div class="form-group" style="margin-bottom: 30px;">
+            <label style="font-size: 16px; color: #333;">Quanto você ganha por mês?</label>
+            <input type="text" id="wiz-income" class="big-input text-primary" value="0,00"
+              oninput="AppController.maskCurrency(this); AppController.calculateWizardBudget()">
+          </div>
+
+          <div class="form-group" style="margin-bottom: 30px;">
+            <label style="font-size: 16px; color: #333;">E quanto você quer economizar por mês?</label>
+            <p style="font-size: 13px; color: #888; margin-top: 0;">Essa porcentagem será utilizada para calcular seu
+              orçamento mensal de gastos.</p>
+            <div style="display: flex; align-items: baseline; gap: 10px;">
+              <input type="number" id="wiz-savings-pct" class="big-input text-primary"
+                style="width: 80px; text-align: center;" value="20" min="0" max="100"
+                oninput="AppController.calculateWizardBudget()">
+              <span style="font-size: 20px; font-weight: 600; color: var(--primary-color);">%</span>
+            </div>
+          </div>
+
+          <div class="wizard-result-box">
+            <div style="display: flex; gap: 15px; align-items: flex-start;">
+              <div
+                style="background: white; border-radius: 50%; width: 24px; height: 24px; display: flex; justify-content: center; align-items: center; margin-top: 2px;">
+                <i class="fas fa-dollar-sign" style="font-size: 12px; color: #333;"></i>
+              </div>
+              <div>
+                <div style="font-size: 14px; color: #555;">Seu orçamento mensal de gastos será:</div>
+                <div id="wiz-calc-budget" style="font-size: 22px; font-weight: 600; color: #111; margin-bottom: 8px;">R$
+                  0,00</div>
+                <div style="font-size: 14px; color: #555;">E você economizará mensalmente:</div>
+                <div id="wiz-calc-savings" style="font-size: 18px; font-weight: 600; color: #4CAF50;">R$ 0,00</div>
               </div>
             </div>
           </div>
 
-          <!-- Coluna Direita: Resumo Fixo -->
-          <div class="wizard-right-col">
-            <div class="wizard-summary-card">
-              <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px;">
-                <div class="progress-ring"></div>
-                <div>
-                  <div style="font-size: 13px; color: #666;">Total categorizado</div>
-                  <div id="wiz-sum-categorized" style="font-size: 20px; font-weight: 600; color: #111;">R$ 0,00</div>
-                  <div id="wiz-sum-remaining" style="font-size: 13px; color: #888;">R$ 0,00 sem categorização</div>
+          <div style="text-align: right; margin-top: 20px;">
+            <button class="wizard-next-btn" onclick="AppController.nextWizardStep(2)"><i
+                class="fas fa-arrow-right"></i></button>
+          </div>
+        </div>
+
+        <!-- PASSO 2: CATEGORIZAÇÃO DE GASTOS -->
+        <div id="wizard-step-2" class="hidden">
+          <div class="wizard-split-layout">
+            <!-- Coluna Esquerda: Lista de Categorias -->
+            <div class="wizard-left-col">
+              <div class="wizard-card" style="padding: 30px;">
+                <h3 style="font-size: 20px; color: #111; margin-bottom: 8px;">Hora de planejar!</h3>
+                <p style="font-size: 14px; color: #666; margin-top: 0; margin-bottom: 30px;">Preencha os campos abaixo
+                  com
+                  seus limites de gastos para cada categoria.</p>
+
+                <h4 style="font-size: 16px; color: #333; margin-bottom: 20px;">Categorias</h4>
+                <div id="wizard-categories-list" style="display: flex; flex-direction: column; gap: 15px;">
+                  <!-- As categorias serão injetadas magicamente pelo JavaScript aqui -->
                 </div>
               </div>
-              <div
-                style="background: #f3e5f5; border-radius: 8px; padding: 15px; font-size: 13px; color: #555; line-height: 1.4;">
-                <i class="fas fa-info-circle" style="color: var(--primary-color); margin-right: 5px;"></i>
-                <strong>Dica:</strong> Ajuste os valores acima até que o restante seja zero para criar um planejamento
-                perfeito!
+            </div>
+
+            <!-- Coluna Direita: Resumo Fixo -->
+            <div class="wizard-right-col">
+              <div class="wizard-summary-card">
+                <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px;">
+                  <div class="progress-ring"></div>
+                  <div>
+                    <div style="font-size: 13px; color: #666;">Total categorizado</div>
+                    <div id="wiz-sum-categorized" style="font-size: 20px; font-weight: 600; color: #111;">R$ 0,00</div>
+                    <div id="wiz-sum-remaining" style="font-size: 13px; color: #888;">R$ 0,00 sem categorização</div>
+                  </div>
+                </div>
+                <div
+                  style="background: #f3e5f5; border-radius: 8px; padding: 15px; font-size: 13px; color: #555; line-height: 1.4;">
+                  <i class="fas fa-info-circle" style="color: var(--primary-color); margin-right: 5px;"></i>
+                  <strong>Dica:</strong> Ajuste os valores acima até que o restante seja zero para criar um planejamento
+                  perfeito!
+                </div>
+              </div>
+
+              <div style="display: flex; justify-content: space-between; margin-top: 25px; align-items: center;">
+                <button class="btn-text" style="color: #888; font-size: 15px;"
+                  onclick="AppController.prevWizardStep(1)">Voltar</button>
+                <button class="plan-main-btn" style="width: auto; padding: 14px 30px; margin: 0;"
+                  onclick="AppController.nextWizardStep(3)">Avançar <i class="fas fa-arrow-right"
+                    style="margin-left: 8px;"></i></button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PASSO 3: VISUALIZAÇÃO DO CARTÃO -->
+        <div id="wizard-step-3" class="hidden">
+          <div class="wizard-card" style="padding: 40px;">
+            <h3 style="font-size: 20px; color: #111; margin-bottom: 8px;">Como você quer visualizar suas despesas
+              realizadas no cartão de crédito?</h3>
+            <p style="font-size: 14px; color: #666; margin-top: 0; margin-bottom: 30px;">Escolha a forma como você quer
+              registrar suas compras realizadas no cartão.</p>
+
+            <div class="radio-card active" onclick="AppController.selectCardPreference('COMPRA')" id="rc-COMPRA">
+              <div class="rc-content">
+                <strong style="font-size: 16px; color: #333; display: block; margin-bottom: 5px;">Pela data da
+                  compra</strong>
+                <span style="font-size: 13px; color: #666;">As despesas realizadas no cartão serão contabilizadas no
+                  planejamento no dia em que forem realizadas.</span>
+              </div>
+              <div class="rc-radio">
+                <input type="radio" name="cc_pref" value="COMPRA" checked>
               </div>
             </div>
 
-            <div style="display: flex; justify-content: space-between; margin-top: 25px; align-items: center;">
+            <div class="radio-card" onclick="AppController.selectCardPreference('FATURA')" id="rc-FATURA">
+              <div class="rc-content">
+                <strong style="font-size: 16px; color: #333; display: block; margin-bottom: 5px;">Pela data da
+                  fatura</strong>
+                <span style="font-size: 13px; color: #666;">As despesas realizadas no cartão serão contabilizadas no
+                  planejamento apenas na data do vencimento da fatura.</span>
+              </div>
+              <div class="rc-radio">
+                <input type="radio" name="cc_pref" value="FATURA">
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; margin-top: 40px; align-items: center;">
               <button class="btn-text" style="color: #888; font-size: 15px;"
-                onclick="AppController.prevWizardStep(1)">Voltar</button>
-              <button class="plan-main-btn" style="width: auto; padding: 14px 30px; margin: 0;"
-                onclick="AppController.nextWizardStep(3)">Avançar <i class="fas fa-arrow-right"
+                onclick="AppController.prevWizardStep(2)">Voltar</button>
+              <button class="plan-main-btn"
+                style="width: auto; padding: 14px 30px; margin: 0; background: var(--primary-color); color: white;"
+                onclick="AppController.finishPlanningWizard()">Concluir <i class="fas fa-check"
                   style="margin-left: 8px;"></i></button>
             </div>
           </div>
         </div>
-      </div>
+      </div> <!-- FIM DO WIZARD -->
 
-      <!-- PASSO 3: VISUALIZAÇÃO DO CARTÃO -->
-      <div id="wizard-step-3" class="hidden">
-        <div class="wizard-card" style="padding: 40px;">
-          <h3 style="font-size: 20px; color: #111; margin-bottom: 8px;">Como você quer visualizar suas despesas
-            realizadas no cartão de crédito?</h3>
-          <p style="font-size: 14px; color: #666; margin-top: 0; margin-bottom: 30px;">Escolha a forma como você quer
-            registrar suas compras realizadas no cartão.</p>
+      <!-- TELA 3: DASHBOARD DE PLANEJAMENTO -->
+      <div id="planning-dashboard" class="hidden" style="max-width: 1200px; margin: 20px auto; padding: 0 15px 50px;">
 
-          <div class="radio-card active" onclick="AppController.selectCardPreference('COMPRA')" id="rc-COMPRA">
-            <div class="rc-content">
-              <strong style="font-size: 16px; color: #333; display: block; margin-bottom: 5px;">Pela data da
-                compra</strong>
-              <span style="font-size: 13px; color: #666;">As despesas realizadas no cartão serão contabilizadas no
-                planejamento no dia em que forem realizadas.</span>
-            </div>
-            <div class="rc-radio">
-              <input type="radio" name="cc_pref" value="COMPRA" checked>
-            </div>
-          </div>
-
-          <div class="radio-card" onclick="AppController.selectCardPreference('FATURA')" id="rc-FATURA">
-            <div class="rc-content">
-              <strong style="font-size: 16px; color: #333; display: block; margin-bottom: 5px;">Pela data da
-                fatura</strong>
-              <span style="font-size: 13px; color: #666;">As despesas realizadas no cartão serão contabilizadas no
-                planejamento apenas na data do vencimento da fatura.</span>
-            </div>
-            <div class="rc-radio">
-              <input type="radio" name="cc_pref" value="FATURA">
-            </div>
-          </div>
-
-          <div style="display: flex; justify-content: space-between; margin-top: 40px; align-items: center;">
-            <button class="btn-text" style="color: #888; font-size: 15px;"
-              onclick="AppController.prevWizardStep(2)">Voltar</button>
-            <button class="plan-main-btn"
-              style="width: auto; padding: 14px 30px; margin: 0; background: var(--primary-color); color: white;"
-              onclick="AppController.finishPlanningWizard()">Concluir <i class="fas fa-check"
-                style="margin-left: 8px;"></i></button>
-          </div>
+        <!-- Cabeçalho do Dashboard -->
+        <div
+          style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 15px;">
+          <h2 style="font-size: 22px; color: #111; margin: 0;">Planejamento (<span id="dash-month-label">--</span>)</h2>
+          <button class="btn-text"
+            style="border: 1px solid #cbd5e1; padding: 10px 20px; border-radius: 20px; color: var(--primary-color); font-weight: 600; background: white;"
+            onclick="AppController.startPlanningWizard()"><i class="fas fa-plus"></i> NOVO ORÇAMENTO</button>
         </div>
-      </div>
-    </div> <!-- FIM DO WIZARD -->
 
-    <!-- TELA 3: DASHBOARD DE PLANEJAMENTO -->
-    <div id="planning-dashboard" class="hidden" style="max-width: 1200px; margin: 20px auto; padding: 0 15px 50px;">
+        <div class="wizard-split-layout">
+          <!-- Coluna Esquerda: Tabela de Metas -->
+          <div class="wizard-left-col">
+            <div class="wizard-card" style="padding: 0; overflow: hidden;">
 
-      <!-- Cabeçalho do Dashboard -->
-      <div
-        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 15px;">
-        <h2 style="font-size: 22px; color: #111; margin: 0;">Planejamento (<span id="dash-month-label">--</span>)</h2>
-        <button class="btn-text"
-          style="border: 1px solid #cbd5e1; padding: 10px 20px; border-radius: 20px; color: var(--primary-color); font-weight: 600; background: white;"
-          onclick="AppController.startPlanningWizard()"><i class="fas fa-plus"></i> NOVO ORÇAMENTO</button>
-      </div>
-
-      <div class="wizard-split-layout">
-        <!-- Coluna Esquerda: Tabela de Metas -->
-        <div class="wizard-left-col">
-          <div class="wizard-card" style="padding: 0; overflow: hidden;">
-
-            <!-- Resumo Superior da Tabela -->
-            <div
-              style="padding: 30px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
-              <div>
-                <div style="color: #666; font-size: 14px;">Restam</div>
-                <div id="dash-remaining-budget" style="font-size: 28px; font-weight: 600; color: #111;">R$ 0,00</div>
-                <div style="color: #888; font-size: 13px;" id="dash-spent-info">R$ 0,00 de R$ 0,00 gastos</div>
-              </div>
-              <div style="width: 250px;">
-                <div style="width: 100%; background: #e2e8f0; height: 10px; border-radius: 5px; margin-bottom: 5px;">
-                  <div id="dash-main-bar"
-                    style="width: 0%; background: var(--primary-color); height: 100%; border-radius: 5px; transition: width 0.5s;">
+              <!-- Resumo Superior da Tabela -->
+              <div
+                style="padding: 30px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <div style="color: #666; font-size: 14px;">Restam</div>
+                  <div id="dash-remaining-budget" style="font-size: 28px; font-weight: 600; color: #111;">R$ 0,00</div>
+                  <div style="color: #888; font-size: 13px;" id="dash-spent-info">R$ 0,00 de R$ 0,00 gastos</div>
+                </div>
+                <div style="width: 250px;">
+                  <div style="width: 100%; background: #e2e8f0; height: 10px; border-radius: 5px; margin-bottom: 5px;">
+                    <div id="dash-main-bar"
+                      style="width: 0%; background: var(--primary-color); height: 100%; border-radius: 5px; transition: width 0.5s;">
+                    </div>
+                  </div>
+                  <div style="display: flex; gap: 15px; font-size: 11px; color: #666;">
+                    <span><span
+                        style="display: inline-block; width: 10px; height: 10px; background: #4CAF50; border-radius: 50%;"></span>
+                      0% pagos</span>
+                    <span><span
+                        style="display: inline-block; width: 10px; height: 10px; background: #8BC34A; border-radius: 50%;"></span>
+                      0% previstos</span>
                   </div>
                 </div>
-                <div style="display: flex; gap: 15px; font-size: 11px; color: #666;">
-                  <span><span
-                      style="display: inline-block; width: 10px; height: 10px; background: #4CAF50; border-radius: 50%;"></span>
-                    0% pagos</span>
-                  <span><span
-                      style="display: inline-block; width: 10px; height: 10px; background: #8BC34A; border-radius: 50%;"></span>
-                    0% previstos</span>
-                </div>
               </div>
-            </div>
 
-            <!-- Tabela de Categorias -->
-            <div class="tx-table-container" style="border: none; border-radius: 0;">
-              <table class="tx-table">
-                <thead>
-                  <tr>
-                    <th class="tx-th">Categoria</th>
-                    <th class="tx-th">Meta planejada</th>
-                    <th class="tx-th">Despesas pagas</th>
-                    <th class="tx-th">Despesas previstas</th>
-                    <th class="tx-th">Total gasto</th>
-                    <th class="tx-th" style="text-align: center;">Ações</th>
-                  </tr>
-                </thead>
-                <tbody id="dash-categories-list">
-                  <!-- Linhas injetadas pelo JS -->
-                </tbody>
-              </table>
-            </div>
+              <!-- Tabela de Categorias -->
+              <div class="tx-table-container" style="border: none; border-radius: 0;">
+                <table class="tx-table">
+                  <thead>
+                    <tr>
+                      <th class="tx-th">Categoria</th>
+                      <th class="tx-th">Meta planejada</th>
+                      <th class="tx-th">Despesas pagas</th>
+                      <th class="tx-th">Despesas previstas</th>
+                      <th class="tx-th">Total gasto</th>
+                      <th class="tx-th" style="text-align: center;">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dash-categories-list">
+                    <!-- Linhas injetadas pelo JS -->
+                  </tbody>
+                </table>
+              </div>
 
+            </div>
           </div>
-        </div>
 
-        <!-- Coluna Direita: Os 4 Cartões Verticais -->
-        <div class="wizard-right-col" style="display: flex; flex-direction: column; gap: 15px;">
-          <div class="wiz-cat-card" style="padding: 25px;">
-            <div>
-              <div style="color:#666; font-size:14px; margin-bottom: 5px;">Receitas do mês</div>
-              <div id="dash-income" style="font-size:24px; font-weight:600;">R$ 0,00</div>
+          <!-- Coluna Direita: Os 4 Cartões Verticais -->
+          <div class="wizard-right-col" style="display: flex; flex-direction: column; gap: 15px;">
+            <div class="wiz-cat-card" style="padding: 25px;">
+              <div>
+                <div style="color:#666; font-size:14px; margin-bottom: 5px;">Receitas do mês</div>
+                <div id="dash-income" style="font-size:24px; font-weight:600;">R$ 0,00</div>
+              </div>
+              <div class="wiz-cat-icon" style="background:#4CAF50;"><i class="fas fa-arrow-up"></i></div>
             </div>
-            <div class="wiz-cat-icon" style="background:#4CAF50;"><i class="fas fa-arrow-up"></i></div>
-          </div>
-          <div class="wiz-cat-card" style="padding: 25px;">
-            <div>
-              <div style="color:#666; font-size:14px; margin-bottom: 5px;">Gastos planejados</div>
-              <div id="dash-planned" style="font-size:24px; font-weight:600;">R$ 0,00</div>
+            <div class="wiz-cat-card" style="padding: 25px;">
+              <div>
+                <div style="color:#666; font-size:14px; margin-bottom: 5px;">Gastos planejados</div>
+                <div id="dash-planned" style="font-size:24px; font-weight:600;">R$ 0,00</div>
+              </div>
+              <div class="wiz-cat-icon" style="background:#F44336;"><i class="fas fa-arrow-down"></i></div>
             </div>
-            <div class="wiz-cat-icon" style="background:#F44336;"><i class="fas fa-arrow-down"></i></div>
-          </div>
-          <div class="wiz-cat-card" style="padding: 25px;">
-            <div>
-              <div style="color:#666; font-size:14px; margin-bottom: 5px;">Balanço planejado</div>
-              <div id="dash-balance" style="font-size:24px; font-weight:600;">R$ 0,00</div>
+            <div class="wiz-cat-card" style="padding: 25px;">
+              <div>
+                <div style="color:#666; font-size:14px; margin-bottom: 5px;">Balanço planejado</div>
+                <div id="dash-balance" style="font-size:24px; font-weight:600;">R$ 0,00</div>
+              </div>
+              <div class="wiz-cat-icon" style="background:#6200ea;"><i class="fas fa-balance-scale"></i></div>
             </div>
-            <div class="wiz-cat-icon" style="background:#6200ea;"><i class="fas fa-balance-scale"></i></div>
-          </div>
-          <div class="wiz-cat-card" style="padding: 25px;">
-            <div>
-              <div style="color:#666; font-size:14px; margin-bottom: 5px;">Economia planejada</div>
-              <div id="dash-savings-pct" style="font-size:24px; font-weight:600;">0.00%</div>
+            <div class="wiz-cat-card" style="padding: 25px;">
+              <div>
+                <div style="color:#666; font-size:14px; margin-bottom: 5px;">Economia planejada</div>
+                <div id="dash-savings-pct" style="font-size:24px; font-weight:600;">0.00%</div>
+              </div>
+              <div class="wiz-cat-icon" style="background:#4CAF50;"><i class="fas fa-wallet"></i></div>
             </div>
-            <div class="wiz-cat-icon" style="background:#4CAF50;"><i class="fas fa-wallet"></i></div>
           </div>
         </div>
       </div>
-    </div>
-  </div> <!-- FIM DA VIEW 7: PLANEJAMENTO MENSAL -->
+    </div> <!-- FIM DA VIEW 7: PLANEJAMENTO MENSAL -->
 
-  <!-- FAB ESTENDIDO E MENU SUSPENSO -->
-  <div class="fab-container">
-    <div id="fab-menu" class="fab-menu hidden">
-      <button class="fab-menu-item" onclick="AppController.openNewTransaction('DESPESA')">
-        <i class="fas fa-arrow-trend-down" style="color: #F44336;"></i> Despesa
-      </button>
-      <button class="fab-menu-item" onclick="AppController.openNewTransaction('RECEITA')">
-        <i class="fas fa-arrow-trend-up" style="color: #4CAF50;"></i> Receita
-      </button>
-      <button class="fab-menu-item" onclick="AppController.openNewCCTransaction()">
-        <i class="fas fa-credit-card" style="color: #00796B;"></i> Despesa cartão
-      </button>
-      <button class="fab-menu-item" onclick="AppController.openNewTransfer()">
-        <i class="fas fa-exchange-alt" style="color: #2196F3;"></i> Transferência
+    <!-- FAB ESTENDIDO E MENU SUSPENSO -->
+    <div class="fab-container">
+      <div id="fab-menu" class="fab-menu hidden">
+        <button class="fab-menu-item" onclick="AppController.openNewTransaction('DESPESA')">
+          <i class="fas fa-arrow-trend-down" style="color: #F44336;"></i> Despesa
+        </button>
+        <button class="fab-menu-item" onclick="AppController.openNewTransaction('RECEITA')">
+          <i class="fas fa-arrow-trend-up" style="color: #4CAF50;"></i> Receita
+        </button>
+        <button class="fab-menu-item" onclick="AppController.openNewCCTransaction()">
+          <i class="fas fa-credit-card" style="color: #00796B;"></i> Despesa cartão
+        </button>
+        <button class="fab-menu-item" onclick="AppController.openNewTransfer()">
+          <i class="fas fa-exchange-alt" style="color: #2196F3;"></i> Transferência
+        </button>
+      </div>
+      <button class="fab-extended" onclick="AppController.toggleFabMenu()">
+        <i class="fas fa-plus"></i> Novo
       </button>
     </div>
-    <button class="fab-extended" onclick="AppController.toggleFabMenu()">
-      <i class="fas fa-plus"></i> Novo
-    </button>
   </div>
 
   <!-- ============================================== -->
@@ -1034,6 +1106,112 @@
         <button type="button" class="btn-picker-secondary" onclick="AppController.selectCurrentMonth()">MÊS
           ATUAL</button>
         <button type="button" class="btn-picker-cancel" onclick="AppController.closeMonthPicker()">CANCELAR</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TELA DE PERFIL (Oculta por padrão) -->
+  <div id="profile-view" style="display: none; padding: 30px; max-width: 1100px; margin: 0 auto; width: 100%;">
+
+    <!-- Cabeçalho e Tabs -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h2 style="font-size: 24px; color: #111;">Meu perfil</h2>
+      <div
+        style="display: flex; background: #fff; border-radius: 30px; padding: 5px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+        <button
+          style="background: var(--primary-color); color: white; border: none; border-radius: 20px; padding: 8px 20px; font-weight: 600; cursor: pointer;">Visão
+          geral</button>
+        <button style="background: none; border: none; color: #666; padding: 8px 20px; cursor: pointer;">Meu
+          cadastro</button>
+        <button
+          style="background: none; border: none; color: #666; padding: 8px 20px; cursor: pointer;">Assinatura</button>
+        <button style="background: none; border: none; color: #666; padding: 8px 20px; cursor: pointer;">Convidar
+          amigos</button>
+        <button
+          style="background: none; border: none; color: #666; padding: 8px 20px; cursor: pointer;">Privacidade</button>
+      </div>
+    </div>
+
+    <!-- Banner Roxo -->
+    <div
+      style="background: var(--primary-color); border-radius: 16px; padding: 30px; color: white; display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+      <div style="display: flex; align-items: center; gap: 20px;">
+        <div
+          style="width: 80px; height: 80px; background: white; border-radius: 50%; display: flex; justify-content: center; align-items: center; position: relative;">
+          <i class="far fa-user" style="color: #ccc; font-size: 32px;"></i>
+          <div
+            style="position: absolute; bottom: 0; right: 0; background: #111; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; justify-content: center; align-items: center; cursor: pointer;">
+            <i class="fas fa-pencil-alt" style="font-size: 10px;"></i>
+          </div>
+        </div>
+        <div>
+          <h3 style="margin: 0; font-size: 20px;">Arthur Barbosa</h3>
+          <p style="margin: 5px 0 0 0; font-size: 14px; opacity: 0.9;">thurpampolim@gmail.com</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Grid de Cards -->
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 30px;">
+      <!-- Card Dados da Conta -->
+      <div style="background: white; border-radius: 16px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+        <h4 style="margin-top: 0; margin-bottom: 20px; font-size: 16px;">Dados da Conta</h4>
+        <div style="margin-bottom: 15px;">
+          <label style="font-size: 12px; color: #666;">Nome</label>
+          <input type="text" value="Arthur Barbosa"
+            style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 16px; outline: none;" />
+        </div>
+        <div style="margin-bottom: 25px;">
+          <label style="font-size: 12px; color: #666;">Email</label>
+          <input type="email" value="thurpampolim@gmail.com" disabled
+            style="width: 100%; border: none; border-bottom: 1px dotted #ddd; padding: 8px 0; font-size: 16px; color: #888; background: transparent; outline: none;" />
+        </div>
+        <button
+          style="background: transparent; border: 1px solid var(--primary-color); color: var(--primary-color); padding: 8px 20px; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; margin-bottom: 25px;">ALTERAR
+          E-MAIL</button>
+
+        <div style="margin-bottom: 30px;">
+          <label style="font-size: 12px; color: #666;">Objetivo Financeiro</label>
+          <select
+            style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 14px; outline: none; background: transparent;">
+            <option>Selecionar objetivo...</option>
+          </select>
+        </div>
+
+        <button
+          style="background: #e0e0e0; border: none; color: #888; padding: 12px 24px; border-radius: 24px; font-weight: bold; cursor: not-allowed;">ATUALIZAR
+          DADOS</button>
+      </div>
+
+      <!-- Card Preferências -->
+      <div style="background: white; border-radius: 16px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+        <h4 style="margin-top: 0; margin-bottom: 20px; font-size: 16px;">Preferências</h4>
+
+        <div style="margin-bottom: 20px;">
+          <label style="font-size: 12px; color: #666;">Idioma</label>
+          <select
+            style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 14px; outline: none; background: transparent;">
+            <option>Português Brasil</option>
+          </select>
+        </div>
+        <div style="margin-bottom: 20px;">
+          <label style="font-size: 12px; color: #666;">Moeda</label>
+          <select
+            style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 14px; outline: none; background: transparent;">
+            <option>Brazil</option>
+          </select>
+        </div>
+        <div style="margin-bottom: 30px;">
+          <label style="font-size: 12px; color: #666;">Aparência</label>
+          <select
+            style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 14px; outline: none; background: transparent;">
+            <option>Modo claro</option>
+          </select>
+        </div>
+
+        <button
+          style="background: var(--primary-color); border: none; color: white; padding: 12px 24px; border-radius: 24px; font-weight: bold; width: 100%; cursor: pointer;">SALVAR
+          ALTERAÇÕES</button>
       </div>
     </div>
   </div>

@@ -1,12 +1,16 @@
   :root {
-    --primary-color: #6200ea;
+    --primary-color: #0d253f; /* Azul Profundo (Base de botões e navegação) */
+    --secondary-color: #174665;   /* Azul Petróleo (Elementos secundários) */
+    --accent-color: #00c985;      /* Verde Esmeralda (Destaques, botões de ação e ícones) */
     --bg-color: #f2f5f9;
+    --bg-light: #f3f4f6;
     --card-bg: #ffffff;
     --text-main: #333333;
     --text-muted: #888888;
     --success-color: #4CAF50;
     --danger-color: #F44336;
     --border-color: #eeeeee;
+    --text-dark: #111111;
   }
 
   * {
@@ -28,6 +32,7 @@
     align-items: center;
     padding: 20px 40px;
     background-color: var(--bg-color);
+    position: relative;
   }
 
   .nav-center,
@@ -39,6 +44,8 @@
 
   .nav-center {
     justify-content: center;
+    left: 50%;
+    transform: translateX(-50%);
   }
 
   .nav-right {
@@ -840,7 +847,7 @@
   }
 
   .fab-extended {
-    background-color: #6200ea;
+    background-color: var(--primary-color);
     color: white;
     border: none;
     border-radius: 28px;
@@ -859,7 +866,7 @@
 
   .fab-extended:hover {
     transform: scale(1.05);
-    background-color: #5000cc;
+    background-color: var(--accent-color);
   }
 
   .fab-menu {
@@ -1211,4 +1218,31 @@
     accent-color: var(--primary-color);
     transform: scale(1.3);
     cursor: pointer;
+  }
+
+  .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 20px;
+    color: #555;
+    text-decoration: none;
+    font-size: 14px;
+    transition: background 0.2s, color 0.2s;
+  }
+
+  .dropdown-item:hover {
+    background: #f8f9fa;
+    color: var(--primary-color);
+  }
+
+  .dropdown-item i {
+    font-size: 16px;
+    width: 20px;
+    text-align: center;
+    color: #888;
+  }
+
+  .dropdown-item:hover i {
+    color: var(--primary-color);
   }

@@ -206,6 +206,7 @@ const AppController = (function () {
   onAuthStateChanged(auth, (user) => {
     if (user) {
       document.getElementById('login-screen').style.display = 'none';
+      definirMesAtual()
       init(); // Só baixa os dados do banco se tiver permissão
     } else {
       document.getElementById('login-screen').style.display = 'flex';
@@ -213,6 +214,34 @@ const AppController = (function () {
   });
 
   // Evento do formulário de Login
+  // Sistema de Bloqueio Client-Side
+  function verificarBloqueio() {
+    const bloqueioAte = localStorage.getItem('nexo_lockout');
+    if (bloqueioAte && Date.now() < parseInt(bloqueioAte)) {
+      const minutosRestantes = Math.ceil((parseInt(bloqueioAte) - Date.now()) / 60000);
+      return `Sistema bloqueado. Tente novamente em ${minutosRestantes} minuto(s).`;
+    }
+    return null;
+  }
+
+  function registrarFalhaLogin() {
+    let tentativas = parseInt(localStorage.getItem('nexo_tentativas') || '0');
+    tentativas++;
+    localStorage.setItem('nexo_tentativas', tentativas);
+
+    if (tentativas >= 3) {
+      let tempoPenalidade = 1; // 3 tentativas = 1 min
+      if (tentativas === 4) tempoPenalidade = 5; // 4 tentativas = 5 min
+      if (tentativas >= 5) tempoPenalidade = 10; // 5+ tentativas = 10 min
+
+      const bloqueioTempo = Date.now() + (tempoPenalidade * 60000);
+      localStorage.setItem('nexo_lockout', bloqueioTempo);
+      return `Muitas falhas. Bloqueado por ${tempoPenalidade} minuto(s).`;
+    }
+    return `Senha incorreta. Tentativa ${tentativas} de 3 antes do bloqueio.`;
+  }
+
+  // Ação do Botão Entrar
   // Sistema de Bloqueio Client-Side
   function verificarBloqueio() {
     const bloqueioAte = localStorage.getItem('nexo_lockout');
@@ -265,6 +294,9 @@ const AppController = (function () {
       // Login com sucesso: limpa o histórico de falhas
       localStorage.removeItem('nexo_tentativas');
       localStorage.removeItem('nexo_lockout');
+      btn.disabled = false;
+      btn.innerText = 'Entrar';
+      document.getElementById('login-form').reset();
     } catch (error) {
       errorMsg.innerText = registrarFalhaLogin();
       errorMsg.style.display = 'block';
@@ -291,25 +323,113 @@ const AppController = (function () {
     }
   });
 
-  // Ação de Esqueci a Senha
-  document.getElementById('forgot-pass-btn')?.addEventListener('click', async (e) => {
+  // Alternar entre as telas de Login e Cadastro
+  document.getElementById('show-register-btn')?.addEventListener('click', (e) => {
     e.preventDefault();
-    const email = document.getElementById('login-email').value;
-    const errorMsg = document.getElementById('login-error');
+    document.getElementById('login-view').style.display = 'none';
+    document.getElementById('register-view').style.display = 'block';
+  });
 
-    if (!email) {
-      errorMsg.innerText = "Digite seu e-mail no campo acima para receber o link.";
+  document.getElementById('back-to-login-btn')?.addEventListener('click', () => {
+    document.getElementById('register-view').style.display = 'none';
+    document.getElementById('login-view').style.display = 'block';
+  });
+
+  // Processamento e Validação do Cadastro
+  document.getElementById('register-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const nome = document.getElementById('reg-nome').value;
+    const sobrenome = document.getElementById('reg-sobrenome').value;
+    const nascimento = document.getElementById('reg-nascimento').value;
+    const email = document.getElementById('reg-email').value;
+    const pass = document.getElementById('reg-password').value;
+    const confirmPass = document.getElementById('reg-confirm-password').value;
+    const errorMsg = document.getElementById('register-error');
+    const btn = document.getElementById('submit-register-btn');
+
+    // 1. Validação de Confirmação de Senha
+    if (pass !== confirmPass) {
+      errorMsg.innerText = "Erro: As senhas não coincidem.";
+      errorMsg.style.display = 'block';
+      return;
+    }
+
+    // 2. Validação de Força da Senha (Maiúscula, Minúscula, Número e Símbolo)
+    const regexSenha = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{6,}$/;
+    if (!regexSenha.test(pass)) {
+      errorMsg.innerText = "Sua senha deve conter pelo menos uma letra maiúscula, uma minúscula, um número e um símbolo.";
       errorMsg.style.display = 'block';
       return;
     }
 
     try {
-      await sendPasswordResetEmail(auth, email);
-      alert("Link de redefinição enviado! Verifique sua caixa de entrada.");
+      btn.disabled = true;
+      btn.innerText = 'Processando...';
       errorMsg.style.display = 'none';
+
+      // Cria a conta no Firebase
+      await createUserWithEmailAndPassword(auth, email, pass);
+
+      // (Opcional) Aqui você poderá enviar o nome/nascimento para uma tabela "Usuarios" no banco de dados posteriormente
+
+      alert(`Conta criada com sucesso, ${nome}! O login será feito automaticamente.`);
     } catch (error) {
-      errorMsg.innerText = "Erro: " + error.message;
+      errorMsg.innerText = "Erro ao criar conta: " + error.message;
       errorMsg.style.display = 'block';
+      btn.disabled = false;
+      btn.innerText = 'Confirmar Cadastro';
+    }
+  });
+
+  // Ação de Esqueci a Senha
+  // Navegação: Abrir Tela de Recuperação
+  document.getElementById('forgot-pass-btn')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    document.getElementById('login-view').style.display = 'none';
+    document.getElementById('register-view').style.display = 'none';
+    document.getElementById('forgot-pass-view').style.display = 'block';
+  });
+
+  // Navegação: Voltar da Recuperação para o Login
+  document.getElementById('back-to-login-forgot-btn')?.addEventListener('click', () => {
+    document.getElementById('forgot-pass-view').style.display = 'none';
+    document.getElementById('login-view').style.display = 'block';
+    document.getElementById('forgot-success').style.display = 'none';
+    document.getElementById('forgot-error').style.display = 'none';
+  });
+
+  // Processamento do E-mail de Recuperação
+  document.getElementById('forgot-pass-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('forgot-email').value;
+    const errorMsg = document.getElementById('forgot-error');
+    const successMsg = document.getElementById('forgot-success');
+    const btn = document.getElementById('submit-forgot-btn');
+
+    try {
+      btn.disabled = true;
+      btn.innerText = 'Verificando...';
+      errorMsg.style.display = 'none';
+      successMsg.style.display = 'none';
+
+      // O Firebase processa o envio e valida a existência do e-mail simultaneamente
+      await sendPasswordResetEmail(auth, email);
+
+      successMsg.innerText = "E-mail validado! O link de redefinição foi enviado para sua caixa de entrada.";
+      successMsg.style.display = 'block';
+      document.getElementById('forgot-email').value = '';
+    } catch (error) {
+      // Captura o erro específico se o e-mail não existir no banco
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+        errorMsg.innerText = "Este e-mail não está cadastrado em nosso sistema.";
+      } else {
+        errorMsg.innerText = "Erro ao enviar: " + error.message;
+      }
+      errorMsg.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.innerText = 'Enviar Link';
     }
   });
 
@@ -2133,6 +2253,58 @@ const AppController = (function () {
       console.error("Erro ao deslogar:", error);
     }
   }
+
+  // Controle do Menu Dropdown do Usuário
+  const userTrigger = document.getElementById('user-menu-trigger');
+  const userDropdown = document.getElementById('user-dropdown');
+
+  if (userTrigger && userDropdown) {
+    userTrigger.addEventListener('click', (e) => {
+      e.stopPropagation(); // Impede que o clique feche o menu instantaneamente
+      const isVisible = userDropdown.style.display === 'block';
+      userDropdown.style.display = isVisible ? 'none' : 'block';
+    });
+
+    // Fecha o menu ao clicar em qualquer outro lugar da tela
+    document.addEventListener('click', (e) => {
+      if (!userTrigger.contains(e.target) && !userDropdown.contains(e.target)) {
+        userDropdown.style.display = 'none';
+      }
+    });
+  }
+
+  function definirMesAtual() {
+    const meses = [
+      'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ];
+    const dataAtual = new Date();
+    const nomeMes = meses[dataAtual.getMonth()];
+    const ano = dataAtual.getFullYear();
+
+    const label = document.getElementById('selected-month-label');
+    if (label) {
+      label.innerText = `${nomeMes} ${ano}`;
+    }
+  }
+
+  // Abrir a tela de Perfil
+  document.getElementById('nav-profile-btn')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    document.getElementById('main-dashboard-content').style.display = 'none';
+    document.getElementById('profile-view').style.display = 'block';
+
+    // Fecha o menu dropdown após clicar
+    const userDropdown = document.getElementById('user-dropdown');
+    if (userDropdown) userDropdown.style.display = 'none';
+  });
+
+  // Voltar para o Dashboard (Adicione o id="nav-dashboard-btn" no botão "Dashboard" do seu menu superior)
+  document.getElementById('nav-dashboard-btn')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    document.getElementById('profile-view').style.display = 'none';
+    document.getElementById('main-dashboard-content').style.display = 'block';
+  });
 
   return {
     init, switchTab, setTransactionFilter, renderCreditCardsPage, renderFixedCostsPage, renderGoalsPage, renderAccountsPage, renderPlanningView, openMonthPicker, closeMonthPicker, changePickerYear, selectCurrentMonth, openModal, closeModal, submitTransaction, editTransaction, deleteTransaction, openAccountModal, closeAccountModal, submitAccount, openTransferModal, closeTransferModal, submitTransfer,
