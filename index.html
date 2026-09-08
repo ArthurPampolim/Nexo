@@ -216,42 +216,57 @@
       </div>
 
       <!-- GRID INFERIOR (Metas, Custos Fixos e Gráfico) -->
-      <div class="dashboard-layout">
-        <section class="goals-section">
-          <div class="section-header">
-            <h3>Meus Objetivos</h3>
-            <div>
-              <button class="btn-text" onclick="AppController.switchTab('goals')"
-                style="margin-right: 10px; font-size: 13px;">Ver Todos <i class="fas fa-arrow-right"></i></button>
-              <button class="btn-text" onclick="AppController.openGoalModal()">+ Novo</button>
-            </div>
+      <!-- Nova Grade Analítica do Dashboard -->
+      <div class="dashboard-grid"
+        style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 1200px; margin: 24px auto 50px auto; padding: 0 15px;">
+
+        <!-- Linha 1: Visão Geral de Longo Prazo -->
+        <div class="chart-card"
+          style="grid-column: span 2; background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+          <h3 style="color: var(--primary-color); font-size: 16px; margin-top: 0; margin-bottom: 20px;">Balanço
+            (Receitas x Despesas) - Últimos 6 meses</h3>
+          <div style="position: relative; height: 300px; width: 100%;">
+            <!-- Substitua o ID pelo que você usa no seu JS -->
+            <canvas id="historicoChart"></canvas>
           </div>
-          <div id="goals-container" class="goals-grid">
-            <div class="loading">Carregando objetivos...</div>
-          </div>
-        </section>
-        <section class="fixed-costs-section">
-          <div class="section-header">
-            <h3>Custos Fixos</h3>
-            <div>
-              <button class="btn-text" onclick="AppController.switchTab('fixed-costs')"
-                style="margin-right: 10px; font-size: 13px;">Ver Todos <i class="fas fa-arrow-right"></i></button>
-              <button class="btn-text" onclick="AppController.openFixedCostModal()">+ Novo</button>
-            </div>
-          </div>
-          <ul id="fixed-costs-container">
-            <li class="loading">Carregando custos...</li>
-          </ul>
-        </section>
-        <section class="chart-section" style="grid-column: 1 / -1; margin-top: 10px;">
-          <div class="section-header">
-            <h3>Gastos por Categoria</h3>
-          </div>
-          <div
-            style="background: var(--card-bg); border-radius: 16px; padding: 20px; border: 1px solid var(--border-color); height: 320px; position: relative; box-shadow: 0 2px 8px rgba(0,0,0,0.04); display: flex; justify-content: center; align-items: center;">
+        </div>
+
+        <!-- Linha 2: Raio-X do Mês Atual -->
+        <div class="chart-card"
+          style="background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+          <h3 style="color: var(--primary-color); font-size: 16px; margin-top: 0; margin-bottom: 20px;">Despesas por
+            Categoria</h3>
+          <div style="position: relative; height: 250px; width: 100%; display: flex; justify-content: center;">
+            <!-- Substitua o ID pelo que você usa no seu JS -->
             <canvas id="expensesChart"></canvas>
           </div>
-        </section>
+        </div>
+
+        <div class="chart-card"
+          style="background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+          <h3 style="color: var(--primary-color); font-size: 16px; margin-top: 0; margin-bottom: 20px;">Balanço do Mês
+          </h3>
+          <div style="position: relative; height: 250px; width: 100%;">
+            <!-- Substitua o ID pelo que você usa no seu JS -->
+            <canvas id="balancoMesChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Linha 3: Metas e Orçamentos (Mantenha o conteúdo que você já tinha) -->
+        <div class="chart-card"
+          style="background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+          <h3 style="color: var(--primary-color); font-size: 16px; margin-top: 0; margin-bottom: 20px;">Planejamento
+            Mensal</h3>
+          <!-- Cole aqui a sua barra de progresso -->
+        </div>
+
+        <div class="chart-card"
+          style="background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+          <h3 style="color: var(--primary-color); font-size: 16px; margin-top: 0; margin-bottom: 20px;">Meus Objetivos
+          </h3>
+          <!-- Cole aqui o card do seu Fundo de Emergência -->
+        </div>
+
       </div>
     </div>
 

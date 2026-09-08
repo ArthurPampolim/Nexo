@@ -2,6 +2,7 @@ import { db } from './firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import { auth } from './firebase.js';
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
+import { ChartManager } from './charts.js';
 
 
 const AppController = (function () {
@@ -770,82 +771,11 @@ const AppController = (function () {
         elements.transactionsContainer.appendChild(balanceRow);
       }
     });
-
-    // Atualiza o gráfico de gastos por categoria do mês selecionado
-    updateChart(monthlyTransactions);
+    
+    // Atualiza todos os gráficos do Dashboard
+    ChartManager.updateDashboardCharts(state.transactions, selectedYYYYMM);
   }
-  // --- LÓGICA DO GRÁFICO (CHART.JS) ---
-  function updateChart(transactions) {
-    const canvas = document.getElementById('expensesChart');
-    if (!canvas) return;
-
-    // 1. Filtrar apenas DESPESAS (ignora transferências)
-    const expenseTxn = (transactions || []).filter(t => t.Tipo === 'DESPESA' && !isTransferTransaction(t));
-
-    // 2. Agrupar por Categoria (soma valores positivos de gastos)
-    const categoryTotals = expenseTxn.reduce((acc, t) => {
-      const cat = t.Categoria || 'Outros';
-      const value = parseFloat(t.Valor) || 0;
-      acc[cat] = (acc[cat] || 0) + value;
-      return acc;
-    }, {});
-
-    const labels = Object.keys(categoryTotals);
-    const dataValues = Object.values(categoryTotals);
-
-    // 3. Preparar Dados para o Chart.js
-    const chartData = {
-      labels: labels.length > 0 ? labels : ['Sem despesas'],
-      datasets: [{
-        label: 'Gastos por Categoria',
-        data: dataValues.length > 0 ? dataValues : [0],
-        backgroundColor: [
-          '#6200ea', '#2196F3', '#4CAF50', '#FF9800', '#E91E63',
-          '#9C27B0', '#00BCD4', '#009688', '#8BC34A', '#FFC107',
-          '#FF5722', '#795548', '#607D8B', '#f44336'
-        ],
-        borderWidth: 0
-      }]
-    };
-
-    // 4. Desenhar ou Atualizar o Gráfico Donut
-    const ctx = canvas.getContext('2d');
-
-    if (expensesChartInstance) {
-      expensesChartInstance.data = chartData;
-      expensesChartInstance.update();
-    } else {
-      expensesChartInstance = new Chart(ctx, {
-        type: 'doughnut',
-        data: chartData,
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          cutout: '65%',
-          plugins: {
-            legend: {
-              position: 'bottom',
-              labels: {
-                boxWidth: 12,
-                font: {
-                  size: 12,
-                  family: 'Segoe UI, sans-serif'
-                }
-              }
-            },
-            tooltip: {
-              callbacks: {
-                label: function (context) {
-                  const val = context.raw || 0;
-                  return ` ${context.label}: ${currencyFormatter.format(val)}`;
-                }
-              }
-            }
-          }
-        }
-      });
-    }
-  }
+  
   function openModal() {
     state.editingId = null;
     state.editingType = null;
