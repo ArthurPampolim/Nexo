@@ -1,7 +1,7 @@
 import { db } from './firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import { auth } from './firebase.js';
-import { signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
+import { signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail, updatePassword } from "firebase/auth";
 import { ChartManager } from './charts.js';
 
 
@@ -771,11 +771,11 @@ const AppController = (function () {
         elements.transactionsContainer.appendChild(balanceRow);
       }
     });
-    
+
     // Atualiza todos os gráficos do Dashboard
     ChartManager.updateDashboardCharts(state.transactions, selectedYYYYMM);
   }
-  
+
   function openModal() {
     state.editingId = null;
     state.editingType = null;
@@ -2236,10 +2236,112 @@ const AppController = (function () {
     document.getElementById('main-dashboard-content').style.display = 'block';
   });
 
+  // Processamento do Formulário de Atualização de Cadastro
+  document.getElementById('update-profile-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const btn = e.target.querySelector('button[type="submit"]');
+    const originalText = btn.innerText;
+
+    const nome = document.getElementById('edit-nome').value;
+    const sobrenome = document.getElementById('edit-sobrenome').value;
+    const nascimento = document.getElementById('edit-nascimento').value;
+    const newPass = document.getElementById('edit-password').value;
+    const confirmPass = document.getElementById('edit-confirm-password').value;
+
+    // Se as senhas estiverem em branco, o usuário quer atualizar apenas os dados de texto
+    if (!newPass && !confirmPass) {
+      // Aqui você poderia salvar o Nome/Sobrenome no Firestore futuramente
+      alert("Dados pessoais atualizados com sucesso!");
+      return;
+    }
+
+    // Validações da Senha
+    if (newPass !== confirmPass) {
+      alert("Erro: As senhas digitadas não coincidem.");
+      return;
+    }
+
+    const regexSenha = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{6,}$/;
+    if (!regexSenha.test(newPass)) {
+      alert("A nova senha deve conter pelo menos uma letra maiúscula, uma minúscula, um número e um símbolo.");
+      return;
+    }
+
+    // Comunicação com o Firebase
+    try {
+      btn.disabled = true;
+      btn.innerText = 'Atualizando...';
+
+      const user = auth.currentUser;
+      if (user) {
+        await updatePassword(user, newPass);
+        alert("Senha atualizada com sucesso!");
+
+        // Limpa os campos de senha após o sucesso
+        document.getElementById('edit-password').value = '';
+        document.getElementById('edit-confirm-password').value = '';
+      } else {
+        alert("Erro: Nenhum usuário autenticado no momento.");
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar senha:", error);
+
+      // O Firebase exige que o usuário tenha feito login recentemente para trocar a senha
+      if (error.code === 'auth/requires-recent-login') {
+        alert("Por questões de segurança, você precisa sair e fazer login novamente antes de alterar sua senha.");
+        logout(); // Desloga o usuário automaticamente
+      } else {
+        alert("Erro ao atualizar a senha: " + error.message);
+      }
+    } finally {
+      btn.disabled = false;
+      btn.innerText = originalText;
+    }
+  });
+
+  // Alternar as abas internas da Tela de Perfil
+  function switchProfileTab(tabName) {
+    const overviewBtn = document.getElementById('tab-prof-overview');
+    const regBtn = document.getElementById('tab-prof-registration');
+
+    const overviewContent = document.getElementById('prof-content-overview');
+    const regContent = document.getElementById('prof-content-registration');
+
+    // Reseta o estilo visual dos botões
+    if (overviewBtn && regBtn) {
+      overviewBtn.style.background = 'none';
+      overviewBtn.style.color = '#666';
+
+      regBtn.style.background = 'none';
+      regBtn.style.color = '#666';
+    }
+
+    // Esconde todos os conteúdos
+    if (overviewContent) overviewContent.style.display = 'none';
+    if (regContent) regContent.style.display = 'none';
+
+    // Ativa apenas a aba clicada
+    if (tabName === 'overview') {
+      if (overviewBtn) {
+        overviewBtn.style.background = 'var(--primary-color)';
+        overviewBtn.style.color = 'white';
+      }
+      if (overviewContent) overviewContent.style.display = 'block';
+    }
+    else if (tabName === 'registration') {
+      if (regBtn) {
+        regBtn.style.background = 'var(--primary-color)';
+        regBtn.style.color = 'white';
+      }
+      if (regContent) regContent.style.display = 'block';
+    }
+  }
+
   return {
     init, switchTab, setTransactionFilter, renderCreditCardsPage, renderFixedCostsPage, renderGoalsPage, renderAccountsPage, renderPlanningView, openMonthPicker, closeMonthPicker, changePickerYear, selectCurrentMonth, openModal, closeModal, submitTransaction, editTransaction, deleteTransaction, openAccountModal, closeAccountModal, submitAccount, openTransferModal, closeTransferModal, submitTransfer,
     openGoalModal, closeGoalModal, submitGoal, editGoal, deleteGoal, openGoalDepositModal, closeGoalDepositModal, submitGoalDeposit,
-    openFixedCostModal, closeFixedCostModal, submitFixedCost, editFixedCost, deleteFixedCost, markFixedCostPaid, unmarkFixedCostPaid, openFCPayModal, closeFCPayModal, openCCModal, closeCCModal, submitCC, openCCTransModal, closeCCTransModal, submitCCTrans, openCCInvoiceModal, closeCCInvoiceModal, deleteCreditTransaction, toggleFabMenu, closeFabMenu, openNewTransaction, openNewCCTransaction, openNewTransfer, startPlanningWizard, cancelPlanningWizard, copyPreviousPlanning, maskCurrency, calculateWizardBudget, prevWizardStep, nextWizardStep, calculateWizardCategoryTotals, renderWizardCategories, selectCardPreference, finishPlanningWizard, closeFixedCostPayModal, submitFixedCostPay, logout
+    openFixedCostModal, closeFixedCostModal, submitFixedCost, editFixedCost, deleteFixedCost, markFixedCostPaid, unmarkFixedCostPaid, openFCPayModal, closeFCPayModal, openCCModal, closeCCModal, submitCC, openCCTransModal, closeCCTransModal, submitCCTrans, openCCInvoiceModal, closeCCInvoiceModal, deleteCreditTransaction, toggleFabMenu, closeFabMenu, openNewTransaction, openNewCCTransaction, openNewTransfer, startPlanningWizard, cancelPlanningWizard, copyPreviousPlanning, maskCurrency, calculateWizardBudget, prevWizardStep, nextWizardStep, calculateWizardCategoryTotals, renderWizardCategories, selectCardPreference, finishPlanningWizard, closeFixedCostPayModal, submitFixedCostPay, logout, switchProfileTab
   };
 })();
 

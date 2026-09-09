@@ -1126,6 +1126,7 @@
   </div>
 
   <!-- TELA DE PERFIL (Oculta por padrão) -->
+  <!-- TELA DE PERFIL -->
   <div id="profile-view" style="display: none; padding: 30px; max-width: 1100px; margin: 0 auto; width: 100%;">
 
     <!-- Cabeçalho e Tabs -->
@@ -1133,13 +1134,14 @@
       <h2 style="font-size: 24px; color: #111;">Meu perfil</h2>
       <div
         style="display: flex; background: #fff; border-radius: 30px; padding: 5px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-        <button
-          style="background: var(--primary-color); color: white; border: none; border-radius: 20px; padding: 8px 20px; font-weight: 600; cursor: pointer;">Visão
+        <button id="tab-prof-overview" onclick="AppController.switchProfileTab('overview')"
+          style="background: var(--primary-color); color: white; border: none; border-radius: 20px; padding: 8px 20px; font-weight: 600; cursor: pointer; transition: all 0.2s;">Visão
           geral</button>
-        <button style="background: none; border: none; color: #666; padding: 8px 20px; cursor: pointer;">Meu
+        <button id="tab-prof-registration" onclick="AppController.switchProfileTab('registration')"
+          style="background: none; border: none; color: #666; border-radius: 20px; padding: 8px 20px; font-weight: 600; cursor: pointer; transition: all 0.2s;">Meu
           cadastro</button>
-        <button
-          style="background: none; border: none; color: #666; padding: 8px 20px; cursor: pointer;">Assinatura</button>
+        <button style="background: none; border: none; color: #ccc; padding: 8px 20px; cursor: not-allowed;" disabled
+          title="Em breve">Assinatura</button>
         <button style="background: none; border: none; color: #666; padding: 8px 20px; cursor: pointer;">Convidar
           amigos</button>
         <button
@@ -1147,86 +1149,256 @@
       </div>
     </div>
 
-    <!-- Banner Roxo -->
-    <div
-      style="background: var(--primary-color); border-radius: 16px; padding: 30px; color: white; display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-      <div style="display: flex; align-items: center; gap: 20px;">
-        <div
-          style="width: 80px; height: 80px; background: white; border-radius: 50%; display: flex; justify-content: center; align-items: center; position: relative;">
-          <i class="far fa-user" style="color: #ccc; font-size: 32px;"></i>
+    <!-- CONTEÚDO 1: VISÃO GERAL (Ativo por padrão) -->
+    <div id="prof-content-overview">
+      <!-- Banner Roxo -->
+      <div
+        style="background: var(--primary-color); border-radius: 16px; padding: 30px; color: white; display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <div style="display: flex; align-items: center; gap: 20px;">
           <div
-            style="position: absolute; bottom: 0; right: 0; background: #111; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; justify-content: center; align-items: center; cursor: pointer;">
-            <i class="fas fa-pencil-alt" style="font-size: 10px;"></i>
+            style="width: 80px; height: 80px; background: white; border-radius: 50%; display: flex; justify-content: center; align-items: center; position: relative;">
+            <i class="far fa-user" style="color: #ccc; font-size: 32px;"></i>
+            <div
+              style="position: absolute; bottom: 0; right: 0; background: #111; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; justify-content: center; align-items: center; cursor: pointer;">
+              <i class="fas fa-pencil-alt" style="font-size: 10px;"></i>
+            </div>
+          </div>
+          <div>
+            <h3 style="margin: 0; font-size: 20px;">Arthur Pampolim Barbosa</h3>
+            <p style="margin: 5px 0 0 0; font-size: 14px; opacity: 0.9;">thurpampolim@gmail.com</p>
           </div>
         </div>
-        <div>
-          <h3 style="margin: 0; font-size: 20px;">Arthur Barbosa</h3>
-          <p style="margin: 5px 0 0 0; font-size: 14px; opacity: 0.9;">thurpampolim@gmail.com</p>
+      </div>
+
+      <!-- Grid de Cards -->
+      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 30px;">
+        <div style="background: white; border-radius: 16px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+          <h4 style="margin-top: 0; margin-bottom: 20px; font-size: 16px;">Dados da Conta</h4>
+          <div style="margin-bottom: 15px;">
+            <label style="font-size: 12px; color: #666;">Nome</label>
+            <input type="text" value="Arthur Pampolim Barbosa"
+              style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 16px; outline: none;"
+              readonly />
+          </div>
+          <div style="margin-bottom: 25px;">
+            <label style="font-size: 12px; color: #666;">Email</label>
+            <input type="email" value="thurpampolim@gmail.com" disabled
+              style="width: 100%; border: none; border-bottom: 1px dotted #ddd; padding: 8px 0; font-size: 16px; color: #888; background: transparent; outline: none;" />
+          </div>
+          <button
+            style="background: transparent; border: 1px solid var(--primary-color); color: var(--primary-color); padding: 8px 20px; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; margin-bottom: 25px;">ALTERAR
+            E-MAIL</button>
+          <div style="margin-bottom: 30px;">
+            <label style="font-size: 12px; color: #666;">Objetivo Financeiro</label>
+            <select
+              style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 14px; outline: none; background: transparent;">
+              <option>Selecionar objetivo...</option>
+            </select>
+          </div>
+        </div>
+        <div style="background: white; border-radius: 16px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+          <h4 style="margin-top: 0; margin-bottom: 20px; font-size: 16px;">Preferências</h4>
+          <div style="margin-bottom: 20px;">
+            <label style="font-size: 12px; color: #666;">Idioma</label>
+            <select
+              style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 14px; outline: none; background: transparent;">
+              <option>Português Brasil</option>
+            </select>
+          </div>
+          <div style="margin-bottom: 20px;">
+            <label style="font-size: 12px; color: #666;">Moeda</label>
+            <select
+              style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 14px; outline: none; background: transparent;">
+              <option>BRL (R$)</option>
+            </select>
+          </div>
+          <div style="margin-bottom: 30px;">
+            <label style="font-size: 12px; color: #666;">Aparência</label>
+            <select
+              style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 14px; outline: none; background: transparent;">
+              <option>Modo claro</option>
+            </select>
+          </div>
+          <button
+            style="background: var(--primary-color); border: none; color: white; padding: 12px 24px; border-radius: 24px; font-weight: bold; width: 100%; cursor: pointer;">SALVAR
+            ALTERAÇÕES</button>
         </div>
       </div>
     </div>
 
-    <!-- Grid de Cards -->
-    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 30px;">
-      <!-- Card Dados da Conta -->
-      <div style="background: white; border-radius: 16px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
-        <h4 style="margin-top: 0; margin-bottom: 20px; font-size: 16px;">Dados da Conta</h4>
-        <div style="margin-bottom: 15px;">
-          <label style="font-size: 12px; color: #666;">Nome</label>
-          <input type="text" value="Arthur Barbosa"
-            style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 16px; outline: none;" />
-        </div>
-        <div style="margin-bottom: 25px;">
-          <label style="font-size: 12px; color: #666;">Email</label>
-          <input type="email" value="thurpampolim@gmail.com" disabled
-            style="width: 100%; border: none; border-bottom: 1px dotted #ddd; padding: 8px 0; font-size: 16px; color: #888; background: transparent; outline: none;" />
-        </div>
-        <button
-          style="background: transparent; border: 1px solid var(--primary-color); color: var(--primary-color); padding: 8px 20px; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; margin-bottom: 25px;">ALTERAR
-          E-MAIL</button>
+    <!-- CONTEÚDO 2: MEU CADASTRO -->
+    <div id="prof-content-registration" style="display: none;">
 
-        <div style="margin-bottom: 30px;">
-          <label style="font-size: 12px; color: #666;">Objetivo Financeiro</label>
-          <select
-            style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 14px; outline: none; background: transparent;">
-            <option>Selecionar objetivo...</option>
-          </select>
+      <!-- Stepper Visual de Progresso -->
+      <div
+        style="display: flex; justify-content: space-between; position: relative; margin-bottom: 40px; padding: 0 40px; max-width: 800px; margin-left: auto; margin-right: auto;">
+        <div
+          style="position: absolute; top: 10px; left: 60px; right: 60px; height: 2px; background: #e0e0e0; z-index: 1;">
         </div>
 
-        <button
-          style="background: #e0e0e0; border: none; color: #888; padding: 12px 24px; border-radius: 24px; font-weight: bold; cursor: not-allowed;">ATUALIZAR
-          DADOS</button>
+        <div style="text-align: center; position: relative; z-index: 2;">
+          <div
+            style="width: 20px; height: 20px; background: var(--primary-color); border-radius: 50%; margin: 0 auto 10px auto;">
+          </div>
+          <span style="font-size: 13px; font-weight: 600; color: #111;">Meus dados</span>
+        </div>
+        <div style="text-align: center; position: relative; z-index: 2;">
+          <div style="width: 20px; height: 20px; background: #e0e0e0; border-radius: 50%; margin: 0 auto 10px auto;">
+          </div>
+          <span style="font-size: 13px; color: #888;">Profissional</span>
+        </div>
+        <div style="text-align: center; position: relative; z-index: 2;">
+          <div style="width: 20px; height: 20px; background: #e0e0e0; border-radius: 50%; margin: 0 auto 10px auto;">
+          </div>
+          <span style="font-size: 13px; color: #888;">Financeiro</span>
+        </div>
       </div>
 
-      <!-- Card Preferências -->
-      <div style="background: white; border-radius: 16px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
-        <h4 style="margin-top: 0; margin-bottom: 20px; font-size: 16px;">Preferências</h4>
+      <!-- Formulário Completo -->
+      <div style="background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+        <h4 style="margin-top: 0; margin-bottom: 30px; font-size: 20px; color: #111;">Meus dados</h4>
 
-        <div style="margin-bottom: 20px;">
-          <label style="font-size: 12px; color: #666;">Idioma</label>
-          <select
-            style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 14px; outline: none; background: transparent;">
-            <option>Português Brasil</option>
-          </select>
-        </div>
-        <div style="margin-bottom: 20px;">
-          <label style="font-size: 12px; color: #666;">Moeda</label>
-          <select
-            style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 14px; outline: none; background: transparent;">
-            <option>Brazil</option>
-          </select>
-        </div>
-        <div style="margin-bottom: 30px;">
-          <label style="font-size: 12px; color: #666;">Aparência</label>
-          <select
-            style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 14px; outline: none; background: transparent;">
-            <option>Modo claro</option>
-          </select>
-        </div>
+        <form id="update-profile-form">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 30px;">
 
-        <button
-          style="background: var(--primary-color); border: none; color: white; padding: 12px 24px; border-radius: 24px; font-weight: bold; width: 100%; cursor: pointer;">SALVAR
-          ALTERAÇÕES</button>
+            <!-- Coluna Esquerda -->
+            <div>
+              <div class="form-group" style="margin-bottom: 25px;">
+                <label style="font-size: 12px; color: #666;">Nome completo</label>
+                <input type="text" id="edit-nome" value="Arthur Pampolim Barbosa"
+                  style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 15px; outline: none; transition: border-color 0.3s;"
+                  onfocus="this.style.borderColor='var(--primary-color)'" onblur="this.style.borderColor='#ddd'">
+              </div>
+              <div class="form-group" style="margin-bottom: 25px;">
+                <label style="font-size: 12px; color: #666;">Como você gostaria de ser chamado?</label>
+                <input type="text" id="edit-apelido" value="Arthur Barbosa"
+                  style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 15px; outline: none; transition: border-color 0.3s;"
+                  onfocus="this.style.borderColor='var(--primary-color)'" onblur="this.style.borderColor='#ddd'">
+              </div>
+              <div class="form-group" style="margin-bottom: 25px;">
+                <label style="font-size: 12px; color: #666;">Email</label>
+                <input type="email" id="edit-email" value="thurpampolim@gmail.com" disabled
+                  style="width: 100%; border: none; border-bottom: 1px dotted #ddd; padding: 8px 0; font-size: 15px; color: #888; background: transparent; outline: none;">
+              </div>
+              <div class="form-group" style="margin-bottom: 25px;">
+                <label style="font-size: 12px; color: #666;">Telefone</label>
+                <input type="text" id="edit-telefone" placeholder="+55 "
+                  style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 15px; outline: none; transition: border-color 0.3s;"
+                  onfocus="this.style.borderColor='var(--primary-color)'" onblur="this.style.borderColor='#ddd'">
+              </div>
+              <div class="form-group" style="margin-bottom: 25px;">
+                <label style="font-size: 12px; color: #666;">CEP</label>
+                <input type="text" id="edit-cep" placeholder="00000-000"
+                  style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 15px; outline: none; transition: border-color 0.3s;"
+                  onfocus="this.style.borderColor='var(--primary-color)'" onblur="this.style.borderColor='#ddd'">
+              </div>
+              <div class="form-group" style="margin-bottom: 25px;">
+                <label style="font-size: 12px; color: #666;">Estado</label>
+                <input type="text" id="edit-estado" value="Espírito Santo"
+                  style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 15px; outline: none; transition: border-color 0.3s;"
+                  onfocus="this.style.borderColor='var(--primary-color)'" onblur="this.style.borderColor='#ddd'">
+              </div>
+              <div class="form-group" style="margin-bottom: 25px;">
+                <label style="font-size: 12px; color: #666;">Cidade</label>
+                <input type="text" id="edit-cidade" value="Vila Velha"
+                  style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 15px; outline: none; transition: border-color 0.3s;"
+                  onfocus="this.style.borderColor='var(--primary-color)'" onblur="this.style.borderColor='#ddd'">
+              </div>
+            </div>
+
+            <!-- Coluna Direita -->
+            <div>
+              <div class="form-group" style="margin-bottom: 25px;">
+                <label style="font-size: 12px; color: #666;">Aniversário</label>
+                <input type="date" id="edit-nascimento" value="2001-10-17"
+                  style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 15px; outline: none; transition: border-color 0.3s;"
+                  onfocus="this.style.borderColor='var(--primary-color)'" onblur="this.style.borderColor='#ddd'">
+                <small style="color: #999; font-size: 11px; display: block; margin-top: 5px;">Nossos termos exigem que
+                  você tenha, no mínimo, 16 anos de idade.</small>
+              </div>
+              <div class="form-group" style="margin-bottom: 25px;">
+                <label style="font-size: 12px; color: #666;">Sexo</label>
+                <select id="edit-sexo"
+                  style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 15px; outline: none; background: transparent;">
+                  <option value="" disabled selected>Selecione...</option>
+                  <option value="M">Masculino</option>
+                  <option value="F">Feminino</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin-bottom: 25px;">
+                <label style="font-size: 12px; color: #666; display: block; margin-bottom: 12px;">Nacionalidade</label>
+                <div style="display: flex; gap: 30px;">
+                  <label style="font-size: 14px; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="radio" name="nacionalidade" value="Brasileiro" checked
+                      style="accent-color: var(--primary-color); transform: scale(1.2);"> Brasileiro
+                  </label>
+                  <label style="font-size: 14px; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="radio" name="nacionalidade" value="Estrangeiro"
+                      style="accent-color: var(--primary-color); transform: scale(1.2);"> Estrangeiro
+                  </label>
+                </div>
+              </div>
+              <div class="form-group" style="margin-bottom: 25px;">
+                <label style="font-size: 12px; color: #666;">CPF</label>
+                <input type="text" id="edit-cpf"
+                  style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 15px; outline: none; transition: border-color 0.3s;"
+                  onfocus="this.style.borderColor='var(--primary-color)'" onblur="this.style.borderColor='#ddd'">
+              </div>
+              <div class="form-group" style="margin-bottom: 25px;">
+                <label style="font-size: 12px; color: #666;">Objetivo Financeiro</label>
+                <select id="edit-objetivo"
+                  style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 15px; outline: none; background: transparent;">
+                  <option value="" disabled selected>Selecione...</option>
+                  <option>Montar Fundo de Emergência</option>
+                  <option>Comprar um veículo</option>
+                  <option>Sair das dívidas</option>
+                  <option>Investir e Multiplicar</option>
+                  <option>Transição de Carreira</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin-bottom: 25px;">
+                <label style="font-size: 12px; color: #666; display: block; margin-bottom: 12px;">Deseja participar de
+                  pesquisas online em troca de pontos e prêmios?</label>
+                <div style="display: flex; gap: 30px;">
+                  <label style="font-size: 14px; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="radio" name="pesquisas" value="Sim" checked
+                      style="accent-color: var(--primary-color); transform: scale(1.2);"> Sim
+                  </label>
+                  <label style="font-size: 14px; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="radio" name="pesquisas" value="Não"
+                      style="accent-color: var(--primary-color); transform: scale(1.2);"> Não
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Seção de Segurança (Troca de Senha mantida do passo anterior) -->
+          <h4
+            style="margin-top: 40px; margin-bottom: 15px; font-size: 18px; border-top: 1px solid #eee; padding-top: 30px; color: var(--primary-color);">
+            Segurança</h4>
+          <p style="font-size: 13px; color: #666; margin-top: 0; margin-bottom: 25px;">Preencha os campos abaixo apenas
+            se desejar alterar sua senha atual.</p>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 40px;">
+            <div class="form-group">
+              <label style="font-size: 12px; color: #666;">Nova Senha</label>
+              <input type="password" id="edit-password" placeholder="••••••••"
+                style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 15px; outline: none; transition: border-color 0.3s;"
+                onfocus="this.style.borderColor='var(--primary-color)'" onblur="this.style.borderColor='#ddd'">
+            </div>
+            <div class="form-group">
+              <label style="font-size: 12px; color: #666;">Confirmar Nova Senha</label>
+              <input type="password" id="edit-confirm-password" placeholder="••••••••"
+                style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 15px; outline: none; transition: border-color 0.3s;"
+                onfocus="this.style.borderColor='var(--primary-color)'" onblur="this.style.borderColor='#ddd'">
+            </div>
+          </div>
+
+          <div style="text-align: right; border-top: 1px solid #eee; padding-top: 25px;">
+            <button type="submit" class="btn-primary"
+              style="width: auto; padding: 14px 45px; border-radius: 30px; font-size: 14px;">SALVAR DADOS</button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
