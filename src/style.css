@@ -1,7 +1,10 @@
   :root {
-    --primary-color: #0d253f; /* Azul Profundo (Base de botões e navegação) */
-    --secondary-color: #174665;   /* Azul Petróleo (Elementos secundários) */
-    --accent-color: #00c985;      /* Verde Esmeralda (Destaques, botões de ação e ícones) */
+    --primary-color: #0d253f;
+    /* Azul Profundo (Base de botões e navegação) */
+    --secondary-color: #174665;
+    /* Azul Petróleo (Elementos secundários) */
+    --accent-color: #00c985;
+    /* Verde Esmeralda (Destaques, botões de ação e ícones) */
     --bg-color: #f2f5f9;
     --bg-light: #f3f4f6;
     --card-bg: #ffffff;
@@ -1245,4 +1248,60 @@
 
   .dropdown-item:hover i {
     color: var(--primary-color);
+  }
+
+  /* ========================================= */
+  /* MODO ESCURO (DARK MODE)                   */
+  /* ========================================= */
+  body.dark-mode {
+    --bg-color: #0f172a;
+    /* Fundo principal bem escuro */
+    --bg-light: #1e293b;
+    /* Fundo secundário */
+    --card-bg: #1e293b;
+    /* Fundo dos cartões */
+    --text-main: #f8fafc;
+    /* Texto claro */
+    --text-muted: #94a3b8;
+    /* Texto acinzentado */
+    --border-color: #334155;
+    /* Bordas sutis no modo escuro */
+  }
+
+  /* Truque: Sobrescreve estilos inline (backgrounds e bordas) quando o Dark Mode está ativo */
+  body.dark-mode [style*="background: white"],
+  body.dark-mode [style*="background:#fff"],
+  body.dark-mode [style*="background: #fff"],
+  body.dark-mode [style*="background: #ffffff"] {
+    background-color: var(--card-bg) !important;
+    color: var(--text-main) !important;
+  }
+
+  body.dark-mode [style*="color: #111"],
+  body.dark-mode [style*="color: #333"] {
+    color: var(--text-main) !important;
+  }
+
+  body.dark-mode [style*="border-bottom: 1px solid #ddd"],
+  body.dark-mode [style*="border: 1px solid #ddd"],
+  body.dark-mode [style*="border-bottom: 1px dotted #ddd"],
+  body.dark-mode [style*="border-bottom: 2px solid #ccc"] {
+    border-color: var(--border-color) !important;
+  }
+
+  body.dark-mode .tx-th {
+    background-color: var(--bg-color) !important;
+    color: var(--text-main) !important;
+  }
+
+  body.dark-mode .tx-table {
+    background-color: var(--card-bg) !important;
+  }
+
+  body.dark-mode .tx-tr:hover {
+    background-color: #273549 !important;
+  }
+
+  body.dark-mode .app-tab-nav {
+    border-bottom-color: var(--border-color);
   }

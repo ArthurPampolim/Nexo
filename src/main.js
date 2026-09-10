@@ -1,5 +1,5 @@
 import { db } from './firebase';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, setDoc } from 'firebase/firestore';
 import { auth } from './firebase.js';
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail, updatePassword } from "firebase/auth";
 import { ChartManager } from './charts.js';
@@ -192,6 +192,7 @@ const AppController = (function () {
   }
   function init() {
     try {
+      loadTheme();
       loadAccounts();
       loadTransactions();
       loadGoals();
@@ -299,7 +300,16 @@ const AppController = (function () {
       btn.innerText = 'Entrar';
       document.getElementById('login-form').reset();
     } catch (error) {
-      errorMsg.innerText = registrarFalhaLogin();
+      console.error("Erro real do Firebase:", error);
+
+      // Verifica se o erro é realmente de senha/email incorreto
+      if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+        errorMsg.innerText = registrarFalhaLogin();
+      } else {
+        // Se for erro de API, configuração ou internet, mostra o erro real
+        errorMsg.innerText = "Erro de conexão: " + error.code;
+      }
+
       errorMsg.style.display = 'block';
       btn.disabled = false;
       btn.innerText = 'Entrar';
@@ -1990,6 +2000,31 @@ const AppController = (function () {
     input.value = "R$ " + value;
   }
 
+  // Máscaras de Formatação
+  function maskCPF(input) {
+    let v = input.value.replace(/\D/g, ""); // Remove o que não é número
+    if (v.length > 11) v = v.slice(0, 11);
+    v = v.replace(/(\d{3})(\d)/, "$1.$2");
+    v = v.replace(/(\d{3})(\d)/, "$1.$2");
+    v = v.replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+    input.value = v;
+  }
+
+  function maskPhone(input) {
+    let v = input.value.replace(/\D/g, "");
+    if (v.length > 11) v = v.slice(0, 11);
+    v = v.replace(/(\d{2})(\d)/, "$1 $2");
+    v = v.replace(/(\d{5})(\d)/, "$1-$2");
+    input.value = v;
+  }
+
+  function maskCEP(input) {
+    let v = input.value.replace(/\D/g, "");
+    if (v.length > 8) v = v.slice(0, 8);
+    v = v.replace(/(\d{5})(\d)/, "$1-$2");
+    input.value = v;
+  }
+
   function calculateWizardBudget() {
     const incomeInput = document.getElementById('wiz-income').value;
     const rawIncome = parseFloat(incomeInput.replace("R$ ", "").replace(/\./g, "").replace(",", ".")) || 0;
@@ -2243,56 +2278,72 @@ const AppController = (function () {
     const btn = e.target.querySelector('button[type="submit"]');
     const originalText = btn.innerText;
 
-    const nome = document.getElementById('edit-nome').value;
-    const sobrenome = document.getElementById('edit-sobrenome').value;
-    const nascimento = document.getElementById('edit-nascimento').value;
+    // Captura os dados de texto
+    const formData = {
+      nome: document.getElementById('edit-nome').value,
+      apelido: document.getElementById('edit-apelido').value,
+      telefone: document.getElementById('edit-telefone').value,
+      cep: document.getElementById('edit-cep').value,
+      estado: document.getElementById('edit-estado').value,
+      cidade: document.getElementById('edit-cidade').value,
+      nascimento: document.getElementById('edit-nascimento').value,
+      sexo: document.getElementById('edit-sexo').value,
+      cpf: document.getElementById('edit-cpf').value,
+      objetivo: document.getElementById('edit-objetivo').value,
+      // Para radio buttons, pegamos o que está marcado (checked)
+      nacionalidade: document.querySelector('input[name="nacionalidade"]:checked')?.value || '',
+      pesquisas: document.querySelector('input[name="pesquisas"]:checked')?.value || ''
+    };
+
+    // Captura as senhas (se o usuário preencheu)
     const newPass = document.getElementById('edit-password').value;
     const confirmPass = document.getElementById('edit-confirm-password').value;
 
-    // Se as senhas estiverem em branco, o usuário quer atualizar apenas os dados de texto
-    if (!newPass && !confirmPass) {
-      // Aqui você poderia salvar o Nome/Sobrenome no Firestore futuramente
-      alert("Dados pessoais atualizados com sucesso!");
-      return;
-    }
-
-    // Validações da Senha
-    if (newPass !== confirmPass) {
-      alert("Erro: As senhas digitadas não coincidem.");
-      return;
-    }
-
-    const regexSenha = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{6,}$/;
-    if (!regexSenha.test(newPass)) {
-      alert("A nova senha deve conter pelo menos uma letra maiúscula, uma minúscula, um número e um símbolo.");
-      return;
-    }
-
-    // Comunicação com o Firebase
     try {
       btn.disabled = true;
-      btn.innerText = 'Atualizando...';
+      btn.innerText = 'Salvando...';
 
       const user = auth.currentUser;
-      if (user) {
+      if (!user) {
+        alert("Erro: Nenhum usuário autenticado no momento.");
+        return;
+      }
+
+      // 1. SALVA OS DADOS NO FIRESTORE
+      // Usamos merge: true para atualizar apenas os campos enviados, sem apagar o resto do documento
+      await setDoc(doc(db, "Usuarios", user.uid), formData, { merge: true });
+
+      let mensagemSucesso = "Dados pessoais atualizados com sucesso!";
+
+      // 2. TENTA ATUALIZAR A SENHA (SE PREENCHIDA)
+      if (newPass || confirmPass) {
+        if (newPass !== confirmPass) {
+          throw new Error("As senhas digitadas não coincidem.");
+        }
+
+        const regexSenha = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{6,}$/;
+        if (!regexSenha.test(newPass)) {
+          throw new Error("A nova senha deve conter pelo menos uma letra maiúscula, uma minúscula, um número e um símbolo.");
+        }
+
         await updatePassword(user, newPass);
-        alert("Senha atualizada com sucesso!");
+        mensagemSucesso = "Dados e senha atualizados com sucesso!";
 
         // Limpa os campos de senha após o sucesso
         document.getElementById('edit-password').value = '';
         document.getElementById('edit-confirm-password').value = '';
-      } else {
-        alert("Erro: Nenhum usuário autenticado no momento.");
       }
-    } catch (error) {
-      console.error("Erro ao atualizar senha:", error);
 
-      // O Firebase exige que o usuário tenha feito login recentemente para trocar a senha
+      alert(mensagemSucesso);
+
+    } catch (error) {
+      console.error("Erro ao atualizar perfil:", error);
+
       if (error.code === 'auth/requires-recent-login') {
-        alert("Por questões de segurança, você precisa sair e fazer login novamente antes de alterar sua senha.");
-        logout(); // Desloga o usuário automaticamente
+        alert("Por segurança, você precisa sair e fazer login novamente para alterar sua senha.");
+        logout();
       } else {
-        alert("Erro ao atualizar a senha: " + error.message);
+        alert("Atenção: " + error.message);
       }
     } finally {
       btn.disabled = false;
@@ -2338,10 +2389,35 @@ const AppController = (function () {
     }
   }
 
+  // Retornar ao Dashboard clicando no Logotipo
+  document.getElementById('logo-home-btn')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    document.getElementById('profile-view').style.display = 'none';
+    document.getElementById('main-dashboard-content').style.display = 'block';
+  });
+
+  // --- MODO ESCURO (THEME) ---
+  function changeTheme(theme) {
+    if (theme === 'dark') {
+      document.body.classList.add('dark-mode');
+      localStorage.setItem('nexo_theme', 'dark');
+    } else {
+      document.body.classList.remove('dark-mode');
+      localStorage.setItem('nexo_theme', 'light');
+    }
+  }
+
+  function loadTheme() {
+    const savedTheme = localStorage.getItem('nexo_theme') || 'light';
+    const selector = document.getElementById('theme-selector');
+    if (selector) selector.value = savedTheme;
+    changeTheme(savedTheme);
+  }
+
   return {
     init, switchTab, setTransactionFilter, renderCreditCardsPage, renderFixedCostsPage, renderGoalsPage, renderAccountsPage, renderPlanningView, openMonthPicker, closeMonthPicker, changePickerYear, selectCurrentMonth, openModal, closeModal, submitTransaction, editTransaction, deleteTransaction, openAccountModal, closeAccountModal, submitAccount, openTransferModal, closeTransferModal, submitTransfer,
     openGoalModal, closeGoalModal, submitGoal, editGoal, deleteGoal, openGoalDepositModal, closeGoalDepositModal, submitGoalDeposit,
-    openFixedCostModal, closeFixedCostModal, submitFixedCost, editFixedCost, deleteFixedCost, markFixedCostPaid, unmarkFixedCostPaid, openFCPayModal, closeFCPayModal, openCCModal, closeCCModal, submitCC, openCCTransModal, closeCCTransModal, submitCCTrans, openCCInvoiceModal, closeCCInvoiceModal, deleteCreditTransaction, toggleFabMenu, closeFabMenu, openNewTransaction, openNewCCTransaction, openNewTransfer, startPlanningWizard, cancelPlanningWizard, copyPreviousPlanning, maskCurrency, calculateWizardBudget, prevWizardStep, nextWizardStep, calculateWizardCategoryTotals, renderWizardCategories, selectCardPreference, finishPlanningWizard, closeFixedCostPayModal, submitFixedCostPay, logout, switchProfileTab
+    openFixedCostModal, closeFixedCostModal, submitFixedCost, editFixedCost, deleteFixedCost, markFixedCostPaid, unmarkFixedCostPaid, openFCPayModal, closeFCPayModal, openCCModal, closeCCModal, submitCC, openCCTransModal, closeCCTransModal, submitCCTrans, openCCInvoiceModal, closeCCInvoiceModal, deleteCreditTransaction, toggleFabMenu, closeFabMenu, openNewTransaction, openNewCCTransaction, openNewTransfer, startPlanningWizard, cancelPlanningWizard, copyPreviousPlanning, maskCurrency, calculateWizardBudget, prevWizardStep, nextWizardStep, calculateWizardCategoryTotals, renderWizardCategories, selectCardPreference, finishPlanningWizard, closeFixedCostPayModal, submitFixedCostPay, logout, switchProfileTab, maskCPF, maskPhone, maskCEP, changeTheme
   };
 })();
 

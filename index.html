@@ -97,7 +97,12 @@
 
   <!-- NAVEGAÇÃO SUPERIOR -->
   <nav class="top-nav">
-    <div class="nav-left"></div>
+    <div class="nav-left">
+      <a href="#" id="logo-home-btn"
+        style="text-decoration: none; display: flex; align-items: center; cursor: pointer;">
+        <img src="src/assets/Logotipo Nexo (1).png" alt="Nexo" style="height: 32px; width: auto;" />
+      </a>
+    </div>
     <div class="nav-center">
       <button id="month-picker-trigger" class="month-picker-btn" onclick="AppController.openMonthPicker()">
         <i class="far fa-calendar-alt" style="color: var(--primary-color);"></i>
@@ -1074,29 +1079,29 @@
             <option disabled selected>Carregando...</option>
           </select>
         </div>
+        <div style="margin-bottom: 15px;">
+          <label style="display: block; font-size: 14px; margin-bottom: 5px;">Categoria da Despesa?</label>
+          <select name="categoria" required
+            style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; outline: none;">
+            <option value="" disabled selected>Selecione...</option>
+            <option value="Moradia / Contas">Moradia / Contas</option>
+            <option value="Alimentação">Alimentação</option>
+            <option value="Transporte">Transporte</option>
+            <option value="Saúde">Saúde</option>
+            <option value="Educação">Educação</option>
+            <option value="Lazer">Lazer</option>
+            <option value="Supermercado">Supermercado</option>
+            <option value="Investimentos">Investimentos</option>
+            <option value="Bar / Restaurante">Bar / Restaurante</option>
+            <option value="Eletrônicos">Eletrônicos</option>
+            <option value="Roupas">Roupas</option>
+            <option value="Salário">Salário</option>
+            <option value="Outros">Outros</option>
+          </select>
+        </div>
         <button type="submit" id="fc-pay-btn" class="btn-primary"><i class="fas fa-check-circle"
             style="margin-right: 6px;"></i>Confirmar Pagamento</button>
       </form>
-      <div style="margin-bottom: 15px;">
-        <label style="display: block; font-size: 14px; margin-bottom: 5px;">Categoria da Despesa?</label>
-        <select name="categoria" required
-          style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-          <option value="" disabled selected>Selecione...</option>
-          <option value="Moradia / Contas">Moradia / Contas</option>
-          <option value="Alimentação">Alimentação</option>
-          <option value="Transporte">Transporte</option>
-          <option value="Saúde">Saúde</option>
-          <option value="Educação">Educação</option>
-          <option value="Lazer">Lazer</option>
-          <option value="Supermercado">Supermercado</option>
-          <option value="Investimentos">Investimentos</option>
-          <option value="Bar / Restaurante">Bar / Restaurante</option>
-          <option value="Eletrônicos">Eletrônicos</option>
-          <option value="Roupas">Roupas</option>
-          <option value="Salário">Salário</option>
-          <option value="Outros">Outros</option>
-        </select>
-      </div>
     </div>
   </div>
 
@@ -1214,9 +1219,10 @@
           </div>
           <div style="margin-bottom: 30px;">
             <label style="font-size: 12px; color: #666;">Aparência</label>
-            <select
-              style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 14px; outline: none; background: transparent;">
-              <option>Modo claro</option>
+            <select id="theme-selector" onchange="AppController.changeTheme(this.value)"
+              style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 14px; outline: none; background: transparent; color: inherit;">
+              <option value="light" style="color: #111;">Modo claro</option>
+              <option value="dark" style="color: #111;">Modo escuro</option>
             </select>
           </div>
           <button
@@ -1282,13 +1288,14 @@
               </div>
               <div class="form-group" style="margin-bottom: 25px;">
                 <label style="font-size: 12px; color: #666;">Telefone</label>
-                <input type="text" id="edit-telefone" placeholder="+55 "
+                <input type="text" id="edit-telefone" placeholder="27 99999-9999"
+                  oninput="AppController.maskPhone(this)"
                   style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 15px; outline: none; transition: border-color 0.3s;"
                   onfocus="this.style.borderColor='var(--primary-color)'" onblur="this.style.borderColor='#ddd'">
               </div>
               <div class="form-group" style="margin-bottom: 25px;">
                 <label style="font-size: 12px; color: #666;">CEP</label>
-                <input type="text" id="edit-cep" placeholder="00000-000"
+                <input type="text" id="edit-cep" placeholder="00000-000" oninput="AppController.maskCEP(this)"
                   style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 15px; outline: none; transition: border-color 0.3s;"
                   onfocus="this.style.borderColor='var(--primary-color)'" onblur="this.style.borderColor='#ddd'">
               </div>
@@ -1340,7 +1347,7 @@
               </div>
               <div class="form-group" style="margin-bottom: 25px;">
                 <label style="font-size: 12px; color: #666;">CPF</label>
-                <input type="text" id="edit-cpf"
+                <input type="text" id="edit-cpf" placeholder="000.000.000-00" oninput="AppController.maskCPF(this)"
                   style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 15px; outline: none; transition: border-color 0.3s;"
                   onfocus="this.style.borderColor='var(--primary-color)'" onblur="this.style.borderColor='#ddd'">
               </div>
