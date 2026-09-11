@@ -1,5 +1,5 @@
 import { db } from './firebase';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, setDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth } from './firebase.js';
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail, updatePassword } from "firebase/auth";
 import { ChartManager } from './charts.js';
@@ -210,6 +210,7 @@ const AppController = (function () {
       document.getElementById('login-screen').style.display = 'none';
       definirMesAtual()
       init(); // Só baixa os dados do banco se tiver permissão
+      loadUserProfile();
     } else {
       document.getElementById('login-screen').style.display = 'flex';
     }
@@ -2414,10 +2415,66 @@ const AppController = (function () {
     changeTheme(savedTheme);
   }
 
+  // --- CARREGAR PERFIL DO USUÁRIO ---
+  async function loadUserProfile() {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    try {
+      const docRef = doc(db, "Usuarios", user.uid);
+      const docSnap = await getDoc(docRef);
+
+      // Preenche sempre o e-mail (vem direto do sistema de login de segurança)
+      const emailInputs = document.querySelectorAll('input[type="email"]');
+      emailInputs.forEach(el => el.value = user.email);
+
+      const bannerEmail = document.querySelector('#prof-content-overview p');
+      if (bannerEmail) bannerEmail.innerText = user.email;
+
+      // Se o usuário já salvou o perfil no banco, preenche o restante:
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+
+        // Inputs de Texto
+        if (document.getElementById('edit-nome')) document.getElementById('edit-nome').value = data.nome || '';
+        if (document.getElementById('edit-apelido')) document.getElementById('edit-apelido').value = data.apelido || '';
+        if (document.getElementById('edit-telefone')) document.getElementById('edit-telefone').value = data.telefone || '';
+        if (document.getElementById('edit-cep')) document.getElementById('edit-cep').value = data.cep || '';
+        if (document.getElementById('edit-estado')) document.getElementById('edit-estado').value = data.estado || '';
+        if (document.getElementById('edit-cidade')) document.getElementById('edit-cidade').value = data.cidade || '';
+        if (document.getElementById('edit-nascimento')) document.getElementById('edit-nascimento').value = data.nascimento || '';
+        if (document.getElementById('edit-cpf')) document.getElementById('edit-cpf').value = data.cpf || '';
+
+        // Selects
+        if (document.getElementById('edit-sexo')) document.getElementById('edit-sexo').value = data.sexo || '';
+        if (document.getElementById('edit-objetivo')) document.getElementById('edit-objetivo').value = data.objetivo || '';
+
+        // Radio Buttons
+        if (data.nacionalidade) {
+          const radioNac = document.querySelector(`input[name="nacionalidade"][value="${data.nacionalidade}"]`);
+          if (radioNac) radioNac.checked = true;
+        }
+        if (data.pesquisas) {
+          const radioPesq = document.querySelector(`input[name="pesquisas"][value="${data.pesquisas}"]`);
+          if (radioPesq) radioPesq.checked = true;
+        }
+
+        // Atualiza a Identidade Visual na tela (Nome do Banner e Menu Superior)
+        const bannerName = document.querySelector('#prof-content-overview h3');
+        if (bannerName) bannerName.innerText = data.nome || 'Usuário';
+
+        const triggerName = document.querySelector('#user-menu-trigger span');
+        if (triggerName) triggerName.innerText = data.apelido || data.nome || 'Usuário';
+      }
+    } catch (error) {
+      console.error("Erro ao carregar dados do perfil:", error);
+    }
+  }
+
   return {
     init, switchTab, setTransactionFilter, renderCreditCardsPage, renderFixedCostsPage, renderGoalsPage, renderAccountsPage, renderPlanningView, openMonthPicker, closeMonthPicker, changePickerYear, selectCurrentMonth, openModal, closeModal, submitTransaction, editTransaction, deleteTransaction, openAccountModal, closeAccountModal, submitAccount, openTransferModal, closeTransferModal, submitTransfer,
     openGoalModal, closeGoalModal, submitGoal, editGoal, deleteGoal, openGoalDepositModal, closeGoalDepositModal, submitGoalDeposit,
-    openFixedCostModal, closeFixedCostModal, submitFixedCost, editFixedCost, deleteFixedCost, markFixedCostPaid, unmarkFixedCostPaid, openFCPayModal, closeFCPayModal, openCCModal, closeCCModal, submitCC, openCCTransModal, closeCCTransModal, submitCCTrans, openCCInvoiceModal, closeCCInvoiceModal, deleteCreditTransaction, toggleFabMenu, closeFabMenu, openNewTransaction, openNewCCTransaction, openNewTransfer, startPlanningWizard, cancelPlanningWizard, copyPreviousPlanning, maskCurrency, calculateWizardBudget, prevWizardStep, nextWizardStep, calculateWizardCategoryTotals, renderWizardCategories, selectCardPreference, finishPlanningWizard, closeFixedCostPayModal, submitFixedCostPay, logout, switchProfileTab, maskCPF, maskPhone, maskCEP, changeTheme
+    openFixedCostModal, closeFixedCostModal, submitFixedCost, editFixedCost, deleteFixedCost, markFixedCostPaid, unmarkFixedCostPaid, openFCPayModal, closeFCPayModal, openCCModal, closeCCModal, submitCC, openCCTransModal, closeCCTransModal, submitCCTrans, openCCInvoiceModal, closeCCInvoiceModal, deleteCreditTransaction, toggleFabMenu, closeFabMenu, openNewTransaction, openNewCCTransaction, openNewTransfer, startPlanningWizard, cancelPlanningWizard, copyPreviousPlanning, maskCurrency, calculateWizardBudget, prevWizardStep, nextWizardStep, calculateWizardCategoryTotals, renderWizardCategories, selectCardPreference, finishPlanningWizard, closeFixedCostPayModal, submitFixedCostPay, logout, switchProfileTab, maskCPF, maskPhone, maskCEP, changeTheme, loadUserProfile
   };
 })();
 
