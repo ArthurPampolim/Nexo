@@ -207,12 +207,17 @@ const AppController = (function () {
   // Monitor de Sessão: Tranca ou destranca a tela
   onAuthStateChanged(auth, (user) => {
     if (user) {
+      // Esconde o Login e MOSTRA o Sistema
       document.getElementById('login-screen').style.display = 'none';
-      definirMesAtual()
-      init(); // Só baixa os dados do banco se tiver permissão
+      document.getElementById('app-container').style.display = 'block';
+
+      definirMesAtual();
+      init();
       loadUserProfile();
     } else {
+      // Mostra o Login e ESCONDE o Sistema
       document.getElementById('login-screen').style.display = 'flex';
+      document.getElementById('app-container').style.display = 'none';
     }
   });
 
