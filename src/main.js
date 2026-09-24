@@ -602,6 +602,37 @@ const AppController = (function () {
       return `${tYear}-${tMonth}` === selectedYYYYMM;
     });
 
+    // --- INJETAR LANÇAMENTOS DO CARTÃO ---
+    // Busca as compras onde o "Mês da Fatura" cai no mês que estamos visualizando
+    const ccTransactions = state.creditTransactions
+      .filter(ct => String(ct.MesFatura) === selectedYYYYMM)
+      .map(ct => {
+        const cardObj = state.creditCards.find(c => String(c.ID) === String(ct.IdCartao || ct.CartaoID));
+
+        // Calcula a data de vencimento real para o mês da fatura
+        const yearStr = ct.MesFatura.split('-')[0];
+        const monthStr = ct.MesFatura.split('-')[1];
+        const lastDayOfMonth = new Date(parseInt(yearStr), parseInt(monthStr), 0).getDate();
+
+        let dueDay = cardObj && cardObj.DiaVencimento ? parseInt(cardObj.DiaVencimento) : 1;
+        dueDay = Math.min(dueDay, lastDayOfMonth); // Garante que dia 31 não quebre em meses de 30 dias
+        const syntheticDate = `${ct.MesFatura}-${String(dueDay).padStart(2, '0')}`;
+
+        return {
+          ID: ct.ID,
+          Tipo: 'DESPESA',
+          Data: syntheticDate,
+          Categoria: ct.Categoria,
+          Conta: cardObj ? cardObj.Nome : 'Cartão de Crédito',
+          Valor: ct.Valor,
+          Descricao: ct.Descricao + ` (Comprado: ${formatDateBR(ct.Data)})`,
+          isCreditCard: true,
+          Status: ct.Status || 'Pendente' // <-- NOVA LINHA ADICIONADA
+        };
+      });
+    // Adiciona as compras de cartão à lista principal do mês
+    monthlyTransactions.push(...ccTransactions);
+
     // 2. Aplicação do filtro de abas (Todas, Despesas, Receitas, Transferências)
     const displayTransactions = monthlyTransactions.filter(t => {
       const isTransf = isTransferTransaction(t);
@@ -671,6 +702,15 @@ const AppController = (function () {
     if (elements.totalIncome) elements.totalIncome.innerText = currencyFormatter.format(monthlySummary.income);
     if (elements.totalExpense) elements.totalExpense.innerText = currencyFormatter.format(monthlySummary.expense);
 
+    // Atualiza os cartões dentro da aba de Transações
+    const txTotalBalance = document.getElementById('tx-total-balance');
+    const txTotalIncome = document.getElementById('tx-total-income');
+    const txTotalExpense = document.getElementById('tx-total-expense');
+
+    if (txTotalBalance) txTotalBalance.innerText = currencyFormatter.format(currentGlobalBalance);
+    if (txTotalIncome) txTotalIncome.innerText = currencyFormatter.format(monthlySummary.income);
+    if (txTotalExpense) txTotalExpense.innerText = currencyFormatter.format(monthlySummary.expense);
+
     renderAccountBalances(state.transactions);
 
     elements.transactionsContainer.innerHTML = '';
@@ -706,7 +746,7 @@ const AppController = (function () {
       const isTransf = isTransferTransaction(t);
       const isExp = t.Tipo === 'DESPESA';
       const tDate = parseLocalDate(t.Data);
-      const isPending = !isTransf && tDate > today;
+      const isPending = t.isCreditCard ? (t.Status !== 'Pago') : (!isTransf && tDate > today);
 
       let valClass = '';
       let sign = '';
@@ -731,6 +771,11 @@ const AppController = (function () {
       if (isTransf && t.Descricao) mainDesc = t.Descricao;
 
       const currentDateStr = formatDateBR(t.Data);
+      // Substitui os botões de editar/excluir por uma "tag" indicativa se for transação de cartão
+      const actionButtons = t.isCreditCard
+        ? `<span style="font-size: 11px; color: #888; background: #f1f5f9; padding: 4px 8px; border-radius: 12px; font-weight: 600;"><i class="fas fa-credit-card"></i> Fatura</span>`
+        : `<button class="btn-text" style="color: #64748b;" onclick="AppController.editTransaction('${t.ID}')" title="Editar"><i class="fas fa-pen"></i></button>
+           <button class="btn-delete" onclick="AppController.deleteTransaction('${t.ID}')" title="Excluir"><i class="fas fa-trash"></i></button>`;
 
       tr.innerHTML = `
           <td class="tx-td" style="text-align: center;">
@@ -760,9 +805,8 @@ const AppController = (function () {
             ${sign} ${currencyFormatter.format(t.Valor)}
           </td>
           <td class="tx-td" style="text-align: center;">
-            <div class="action-btn-group">
-              <button class="btn-text" style="color: #64748b;" onclick="AppController.editTransaction('${t.ID}')" title="Editar"><i class="fas fa-pen"></i></button>
-              <button class="btn-delete" onclick="AppController.deleteTransaction('${t.ID}')" title="Excluir"><i class="fas fa-trash"></i></button>
+            <div class="action-btn-group" style="${t.isCreditCard ? 'opacity: 1;' : ''}">
+              ${actionButtons}
             </div>
           </td>`;
 
@@ -1394,21 +1438,34 @@ const AppController = (function () {
     document.getElementById('fc-pay-form').reset();
   }
 
-  function openPayInvoiceModal() {
-    const totalAmount = state.creditTransactions.reduce((acc, tx) => acc + (parseFloat(tx.Valor) || 0), 0);
+  function openPayInvoiceModal(cardId) {
+    const selectedYYYYMM = getSelectedYYYYMM();
+
+    // Filtra os lançamentos APENAS do cartão selecionado que NÃO foram pagos
+    const invoiceItems = state.creditTransactions.filter(ct =>
+      String(ct.MesFatura) === selectedYYYYMM &&
+      String(ct.IdCartao || ct.CartaoID) === String(cardId) &&
+      ct.Status !== 'Pago'
+    );
+
+    const totalAmount = invoiceItems.reduce((acc, tx) => acc + (parseFloat(tx.Valor) || 0), 0);
+
     if (totalAmount <= 0) {
-      alert("Não há valor de fatura para pagar neste mês.");
+      alert("Não há fatura pendente para pagar neste cartão.");
       return;
     }
 
-    const monthTitle = document.getElementById('cc-page-period-title') ? document.getElementById('cc-page-period-title').innerText : getSelectedYYYYMM();
-    
+    const cardObj = state.creditCards.find(c => String(c.ID) === String(cardId));
+    const cardName = cardObj ? cardObj.Nome : 'Cartão';
+    const monthTitle = document.getElementById('cc-page-period-title') ? document.getElementById('cc-page-period-title').innerText : selectedYYYYMM;
+
     document.getElementById('cc-pay-invoice-amount').value = totalAmount;
-    document.getElementById('cc-pay-invoice-month').value = getSelectedYYYYMM();
-    
+    document.getElementById('cc-pay-invoice-month').value = selectedYYYYMM;
+    document.getElementById('cc-pay-invoice-card-id').value = cardId;
+
     const nameEl = document.getElementById('cc-pay-invoice-name');
-    if (nameEl) nameEl.innerText = "Fatura - " + monthTitle;
-    
+    if (nameEl) nameEl.innerText = `Fatura ${cardName} - ${monthTitle}`;
+
     const valueEl = document.getElementById('cc-pay-invoice-value');
     if (valueEl) valueEl.innerText = currencyFormatter.format(totalAmount);
 
@@ -1451,27 +1508,44 @@ const AppController = (function () {
       const formData = new FormData(formElement);
       const amount = parseFloat(formData.get('amount')) || 0;
       const monthStr = formData.get('month');
+      const cardId = formData.get('cardId');
       const contaNome = formData.get('conta');
 
       if (!contaNome) throw new Error("Selecione uma conta bancária.");
       if (amount <= 0) throw new Error("Valor inválido para pagamento.");
 
-      // Registrar pagamento com a data de hoje para aparecer nas transações deste mês
+      const cardObj = state.creditCards.find(c => String(c.ID) === String(cardId));
+      const cardName = cardObj ? cardObj.Nome : 'Cartão de Crédito';
+
       const today = new Date();
       const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
+      // 1. Cria a despesa com o nome do Cartão específico
       await addDoc(collection(db, "Transacoes"), {
         Tipo: 'DESPESA',
         Categoria: 'Cartão de Crédito',
         Valor: amount,
-        Descricao: `Pagamento de Fatura - ${monthStr}`,
+        Descricao: `Pagamento Fatura ${cardName} - ${monthStr}`,
         Conta: contaNome,
         Data: todayStr
       });
 
+      // 2. Efetiva (Pago) SOMENTE os itens do cartão selecionado
+      const invoiceItems = state.creditTransactions.filter(ct =>
+        String(ct.MesFatura) === monthStr &&
+        String(ct.IdCartao || ct.CartaoID) === String(cardId) &&
+        ct.Status !== 'Pago'
+      );
+
+      const updatePromises = invoiceItems.map(item => updateDoc(doc(db, "TransacoesCartao", item.ID), { Status: 'Pago' }));
+      await Promise.all(updatePromises);
+
       closePayInvoiceModal();
+
+      loadCreditData();
       loadTransactions();
-      alert("Pagamento da fatura registrado com sucesso!");
+
+      alert("Fatura paga com sucesso!");
 
     } catch (error) {
       console.error("Erro no pagamento da fatura:", error);
@@ -1739,6 +1813,12 @@ const AppController = (function () {
           const remainingLimit = limitVal - usedLimit;
           const remClass = remainingLimit < 0 ? 'text-red' : 'text-green';
 
+          // Lógica para verificar se há fatura pendente neste cartão específico
+          const cardInvoiceItems = state.creditTransactions.filter(ct => String(ct.MesFatura) === selectedYYYYMM && String(ct.IdCartao || ct.CartaoID) === String(card.ID));
+          const pendingItems = cardInvoiceItems.filter(ct => ct.Status !== 'Pago');
+          const hasPending = pendingItems.length > 0;
+          const pendingTotal = pendingItems.reduce((sum, item) => sum + (parseFloat(item.Valor) || 0), 0);
+
           cardDiv.innerHTML = `
               <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
                 <strong style="font-size:16px; color:#333;"><i class="fas fa-credit-card" style="color:var(--primary-color); margin-right:8px;"></i>${card.Nome}</strong>
@@ -1753,8 +1833,22 @@ const AppController = (function () {
               <div style="font-size:12px; color:#888; display:flex; gap:15px; margin-top:4px;">
                 <span>Fecha dia: <strong>${card.DiaFechamento || '--'}</strong></span>
                 <span>Vence dia: <strong>${card.DiaVencimento || '--'}</strong></span>
+              </div>
+              
+              <!-- Botão Dinâmico de Pagamento Individual -->
+              <div style="width: 100%; margin-top: 15px; border-top: 1px solid #f0f0f0; padding-top: 15px;">
+                ${hasPending ? `
+                  <button class="btn-primary" onclick="AppController.openPayInvoiceModal('${card.ID}')" style="width: 100%; padding: 8px; font-size: 13px; margin: 0; background: #00796B;">
+                    <i class="fas fa-check-circle" style="margin-right: 5px;"></i> Pagar Fatura (${currencyFormatter.format(pendingTotal)})
+                  </button>
+                ` : `
+                  <div style="text-align: center; color: #4CAF50; font-size: 13px; font-weight: 600;">
+                    <i class="fas fa-check-double" style="margin-right: 5px;"></i> Fatura Paga ou Vazia
+                  </div>
+                `}
               </div>`;
-          cardsGrid.appendChild(cardDiv);
+
+          cardsGrid.appendChild(cardDiv); // Esta era a linha vital que estava faltando!
         });
       }
     }
@@ -1829,9 +1923,28 @@ const AppController = (function () {
 
     if (gridContainer) {
       gridContainer.innerHTML = '';
-      if (state.accounts.length === 0) {
-        gridContainer.innerHTML = '<div style="color:#888; padding:15px;">Nenhuma conta bancária cadastrada.</div>';
-      } else {
+      //Injeta o Cartão Fixo de "Nova Conta" idêntico à sua referência
+      const newAccountCard = document.createElement('div');
+      newAccountCard.className = 'summary-card new-account-card';
+      newAccountCard.style.flexDirection = 'column';
+      newAccountCard.style.alignItems = 'center';
+      newAccountCard.style.justifyContent = 'center';
+      newAccountCard.style.padding = '30px 20px';
+      newAccountCard.style.cursor = 'pointer';
+      newAccountCard.style.border = '2px dashed var(--primary-color)'; // Borda tracejada
+      newAccountCard.style.backgroundColor = 'transparent';
+      newAccountCard.style.boxShadow = 'none';
+      newAccountCard.style.minHeight = '145px';
+      newAccountCard.onclick = AppController.openAccountModal;
+
+      newAccountCard.innerHTML = `
+        <div style="width: 48px; height: 48px; border-radius: 50%; border: 2px solid var(--primary-color); display: flex; justify-content: center; align-items: center; color: var(--primary-color); font-size: 18px; margin-bottom: 12px; transition: transform 0.2s;">
+          <i class="fas fa-plus"></i>
+        </div>
+        <strong style="color: var(--primary-color); font-size: 15px; font-weight: 600;">Nova conta</strong>
+      `;
+      gridContainer.appendChild(newAccountCard);
+      if (state.accounts.length > 0) {
         state.accounts.forEach(acc => {
           const bal = balances[acc.Nome];
           const bClass = bal < 0 ? 'text-red' : 'text-green';

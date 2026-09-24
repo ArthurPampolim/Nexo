@@ -165,34 +165,35 @@
       <!-- VIEW 1: DASHBOARD -->
       <div id="view-dashboard" class="app-view">
         <!-- TÍTULO E BOTÕES -->
+        <!-- TÍTULO -->
         <div class="dashboard-title-container">
           <h2>Dashboard</h2>
-          <div>
-            <button class="btn-text" onclick="AppController.openTransferModal()" style="margin-right: 15px;"><i
-                class="fas fa-exchange-alt"></i> Transferir</button>
-            <button class="btn-text" onclick="AppController.openCCModal()" style="margin-right: 15px;">+ Novo
-              Cartão</button>
-            <button class="btn-text" onclick="AppController.openAccountModal()">+ Nova Conta</button>
-          </div>
         </div>
 
         <!-- 4 CARTÕES SUPERIORES -->
         <div class="summary-cards">
-          <div class="summary-card">
+          <div class="summary-card" onclick="AppController.switchTab('accounts')" style="cursor: pointer;"
+            title="Ir para Minhas Contas">
             <div class="card-icon icon-blue"><i class="fas fa-university"></i></div>
             <div class="card-info">
               <div class="card-label">Saldo atual</div>
               <h3 class="card-value" id="total-balance">R$ 0,00</h3>
             </div>
           </div>
-          <div class="summary-card">
+          <!-- Card de Receitas (Clicável) -->
+          <div class="summary-card"
+            onclick="AppController.switchTab('transactions'); AppController.setTransactionFilter('RECEITA');"
+            style="cursor: pointer;" title="Ver Receitas do Mês">
             <div class="card-icon icon-green"><i class="fas fa-arrow-up"></i></div>
             <div class="card-info">
               <div class="card-label">Receitas</div>
               <h3 class="card-value" id="total-income">R$ 0,00</h3>
             </div>
           </div>
-          <div class="summary-card">
+          <!-- Card de Despesas (Clicável) -->
+          <div class="summary-card"
+            onclick="AppController.switchTab('transactions'); AppController.setTransactionFilter('DESPESA');"
+            style="cursor: pointer;" title="Ver Despesas do Mês">
             <div class="card-icon icon-red"><i class="fas fa-arrow-down"></i></div>
             <div class="card-info">
               <div class="card-label">Despesas</div>
@@ -279,12 +280,32 @@
       <div id="view-transactions" class="app-view hidden">
         <div class="dashboard-title-container">
           <h2>Histórico de Transações</h2>
-          <div>
-            <button class="btn-text" onclick="AppController.openModal()"><i class="fas fa-plus"></i> Nova
-              Transação</button>
-          </div>
         </div>
         <div style="max-width: 1200px; margin: 0 auto; padding: 0 15px 50px;">
+          <!-- CARTÕES DE RESUMO -->
+          <div class="summary-cards" style="padding: 0; margin-bottom: 25px;">
+            <div class="summary-card">
+              <div class="card-icon icon-blue"><i class="fas fa-university"></i></div>
+              <div class="card-info">
+                <div class="card-label">Saldo atual</div>
+                <h3 class="card-value" id="tx-total-balance">R$ 0,00</h3>
+              </div>
+            </div>
+            <div class="summary-card">
+              <div class="card-icon icon-green"><i class="fas fa-arrow-up"></i></div>
+              <div class="card-info">
+                <div class="card-label">Receitas</div>
+                <h3 class="card-value" id="tx-total-income">R$ 0,00</h3>
+              </div>
+            </div>
+            <div class="summary-card">
+              <div class="card-icon icon-red"><i class="fas fa-arrow-down"></i></div>
+              <div class="card-info">
+                <div class="card-label">Despesas</div>
+                <h3 class="card-value" id="tx-total-expense">R$ 0,00</h3>
+              </div>
+            </div>
+          </div>
           <main class="transaction-list"
             style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #eaeaea;">
             <div class="section-header" style="margin-bottom: 10px;">
@@ -344,25 +365,9 @@
           <div>
             <button class="btn-text" onclick="AppController.openCCModal()" style="margin-right: 15px;"><i
                 class="fas fa-plus"></i> Novo Cartão</button>
-            <button class="btn-text" onclick="AppController.openCCTransModal()"><i class="fas fa-credit-card"></i> +
-              Nova
-              Despesa Crédito</button>
           </div>
         </div>
         <div style="max-width: 1200px; margin: 0 auto; padding: 0 15px 50px;">
-          <!-- Card Resumo da Fatura -->
-          <div class="summary-cards" style="padding: 0; margin-bottom: 25px;">
-            <div class="summary-card" style="border-left: 4px solid #00796B;">
-              <div class="card-icon icon-dark-green"><i class="fas fa-credit-card"></i></div>
-              <div class="card-info" style="flex-grow: 1;">
-                <div class="card-label">Fatura do Mês (<span id="cc-page-period-title">--</span>)</div>
-                <h3 class="card-value" id="cc-page-total-invoice">R$ 0,00</h3>
-              </div>
-              <button class="btn-primary" onclick="AppController.openPayInvoiceModal()" style="white-space: nowrap; padding: 8px 16px; font-size: 13px; margin-left: 10px;">
-                <i class="fas fa-check-circle" style="margin-right: 5px;"></i> Pagar Fatura
-              </button>
-            </div>
-          </div>
 
           <!-- Seção Meus Cartões -->
           <div style="margin-bottom: 30px;">
@@ -391,12 +396,6 @@
       <div id="view-accounts" class="app-view hidden">
         <div class="dashboard-title-container">
           <h2>Minhas Contas Bancárias</h2>
-          <div>
-            <button class="btn-text" onclick="AppController.openTransferModal()" style="margin-right: 15px;"><i
-                class="fas fa-exchange-alt"></i> Transferir</button>
-            <button class="btn-text" onclick="AppController.openAccountModal()"><i class="fas fa-plus"></i> Nova
-              Conta</button>
-          </div>
         </div>
         <div style="max-width: 1200px; margin: 0 auto; padding: 0 15px 50px;">
           <!-- Card Saldo Total das Contas -->
@@ -1124,7 +1123,8 @@
       <div class="modal-content" style="max-width: 400px; text-align: center;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
           <h2 style="margin: 0; color: #111;">Pagar Fatura</h2>
-          <button type="button" class="btn-text" onclick="AppController.closePayInvoiceModal()" style="font-size: 20px; color: #666;"><i class="fas fa-times"></i></button>
+          <button type="button" class="btn-text" onclick="AppController.closePayInvoiceModal()"
+            style="font-size: 20px; color: #666;"><i class="fas fa-times"></i></button>
         </div>
         <div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
           <div id="cc-pay-invoice-name" style="font-size: 18px; font-weight: 600; color: #333;">Fatura Total</div>
@@ -1134,6 +1134,7 @@
         <form id="cc-pay-invoice-form" onsubmit="AppController.submitPayInvoice(event)">
           <input type="hidden" id="cc-pay-invoice-amount" name="amount">
           <input type="hidden" id="cc-pay-invoice-month" name="month">
+          <input type="hidden" id="cc-pay-invoice-card-id" name="cardId">
           <div class="form-group" style="text-align: left; margin-bottom: 20px;">
             <label>De qual conta o dinheiro irá sair?</label>
             <select id="cc-pay-invoice-account" name="conta" required>
