@@ -12,6 +12,11 @@ export const ChartManager = {
 
     // Função principal que orquestra a atualização de todos os gráficos
     updateDashboardCharts: function (allTransactions, selectedYYYYMM) {
+        if (typeof Chart !== 'undefined') {
+            const isDark = document.body.classList.contains('dark-mode');
+            Chart.defaults.color = isDark ? '#cbd5e1' : '#64748b';
+            Chart.defaults.borderColor = isDark ? '#334155' : '#e2e8f0';
+        }
         this.renderExpensesChart(allTransactions, selectedYYYYMM);
         this.renderMonthlyBalanceChart(allTransactions, selectedYYYYMM);
         this.renderHistoricalChart(allTransactions);

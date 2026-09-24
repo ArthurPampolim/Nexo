@@ -779,8 +779,8 @@ const AppController = (function () {
 
         const balanceRow = document.createElement('tr');
         balanceRow.innerHTML = `
-            <td colspan="8" style="padding: 20px; text-align: center; border-bottom: 1px solid var(--border-color); background-color: #ffffff;">
-              <span style="background: #f8fafc; color: #333; padding: 8px 16px; border-radius: 20px; font-size: 13.5px; border: 1px solid #e2e8f0;">
+            <td colspan="8" style="padding: 20px; text-align: center; border-bottom: 1px solid var(--border-color); background-color: var(--bg-color);">
+              <span style="background: var(--bg-light); color: var(--text-main); padding: 8px 16px; border-radius: 20px; font-size: 13.5px; border: 1px solid var(--border-color);">
                 Saldo do Final do Dia <strong>${currencyFormatter.format(balanceOfDay)}</strong>
               </span>
             </td>`;
@@ -834,14 +834,14 @@ const AppController = (function () {
     const dateInput = dateElement && dateElement._flatpickr ? dateElement._flatpickr.altInput : null;
 
     if (tipo === 'RECEITA') {
-      if (header) { header.innerText = 'Nova Receita'; header.style.color = '#333'; }
+      if (header) { header.innerText = 'Nova Receita'; header.style.color = 'var(--text-main)'; }
       if (valueInput) { valueInput.style.color = '#4CAF50'; valueInput.style.borderBottomColor = '#4CAF50'; }
       if (dateInput) {
         dateInput.style.color = '#4CAF50';
         dateInput.style.fontWeight = '600';
       }
     } else {
-      if (header) { header.innerText = 'Nova Despesa'; header.style.color = '#333'; }
+      if (header) { header.innerText = 'Nova Despesa'; header.style.color = 'var(--text-main)'; }
       if (valueInput) { valueInput.style.color = '#F44336'; valueInput.style.borderBottomColor = '#F44336'; }
       if (dateInput) {
         dateInput.style.color = '#F44336';
@@ -1393,6 +1393,97 @@ const AppController = (function () {
     document.getElementById('fc-pay-modal').classList.add('hidden');
     document.getElementById('fc-pay-form').reset();
   }
+
+  function openPayInvoiceModal() {
+    const totalAmount = state.creditTransactions.reduce((acc, tx) => acc + (parseFloat(tx.Valor) || 0), 0);
+    if (totalAmount <= 0) {
+      alert("Não há valor de fatura para pagar neste mês.");
+      return;
+    }
+
+    const monthTitle = document.getElementById('cc-page-period-title') ? document.getElementById('cc-page-period-title').innerText : getSelectedYYYYMM();
+    
+    document.getElementById('cc-pay-invoice-amount').value = totalAmount;
+    document.getElementById('cc-pay-invoice-month').value = getSelectedYYYYMM();
+    
+    const nameEl = document.getElementById('cc-pay-invoice-name');
+    if (nameEl) nameEl.innerText = "Fatura - " + monthTitle;
+    
+    const valueEl = document.getElementById('cc-pay-invoice-value');
+    if (valueEl) valueEl.innerText = currencyFormatter.format(totalAmount);
+
+    const select = document.getElementById('cc-pay-invoice-account');
+    if (select) {
+      select.innerHTML = '<option value="" disabled selected>Selecione a conta...</option>';
+      state.accounts.forEach(acc => {
+        const opt = document.createElement('option');
+        opt.value = acc.Nome;
+        opt.text = acc.Nome;
+        select.appendChild(opt);
+      });
+      upgradeSelects();
+    }
+
+    const modal = document.getElementById('cc-pay-invoice-modal');
+    if (modal) modal.classList.remove('hidden');
+  }
+
+  function closePayInvoiceModal() {
+    const modal = document.getElementById('cc-pay-invoice-modal');
+    const form = document.getElementById('cc-pay-invoice-form');
+    if (modal) modal.classList.add('hidden');
+    if (form) form.reset();
+  }
+
+  async function submitPayInvoice(event) {
+    event.preventDefault();
+    const btn = document.getElementById('submit-cc-pay-btn');
+
+    try {
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+      }
+
+      const formElement = document.getElementById('cc-pay-invoice-form');
+      if (!formElement) throw new Error("A tag <form> perdeu o id 'cc-pay-invoice-form'.");
+
+      const formData = new FormData(formElement);
+      const amount = parseFloat(formData.get('amount')) || 0;
+      const monthStr = formData.get('month');
+      const contaNome = formData.get('conta');
+
+      if (!contaNome) throw new Error("Selecione uma conta bancária.");
+      if (amount <= 0) throw new Error("Valor inválido para pagamento.");
+
+      // Registrar pagamento com a data de hoje para aparecer nas transações deste mês
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+      await addDoc(collection(db, "Transacoes"), {
+        Tipo: 'DESPESA',
+        Categoria: 'Cartão de Crédito',
+        Valor: amount,
+        Descricao: `Pagamento de Fatura - ${monthStr}`,
+        Conta: contaNome,
+        Data: todayStr
+      });
+
+      closePayInvoiceModal();
+      loadTransactions();
+      alert("Pagamento da fatura registrado com sucesso!");
+
+    } catch (error) {
+      console.error("Erro no pagamento da fatura:", error);
+      alert(error.message);
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check-circle" style="margin-right: 6px;"></i>Confirmar Pagamento';
+      }
+    }
+  }
+
 
   async function unmarkFixedCostPaid(id) {
     if (!confirm("Desmarcar como pago? A despesa automática será removida do histórico.")) return;
@@ -2368,10 +2459,10 @@ const AppController = (function () {
     // Reseta o estilo visual dos botões
     if (overviewBtn && regBtn) {
       overviewBtn.style.background = 'none';
-      overviewBtn.style.color = '#666';
+      overviewBtn.style.color = 'var(--text-muted)';
 
       regBtn.style.background = 'none';
-      regBtn.style.color = '#666';
+      regBtn.style.color = 'var(--text-muted)';
     }
 
     // Esconde todos os conteúdos
@@ -2479,7 +2570,7 @@ const AppController = (function () {
   return {
     init, switchTab, setTransactionFilter, renderCreditCardsPage, renderFixedCostsPage, renderGoalsPage, renderAccountsPage, renderPlanningView, openMonthPicker, closeMonthPicker, changePickerYear, selectCurrentMonth, openModal, closeModal, submitTransaction, editTransaction, deleteTransaction, openAccountModal, closeAccountModal, submitAccount, openTransferModal, closeTransferModal, submitTransfer,
     openGoalModal, closeGoalModal, submitGoal, editGoal, deleteGoal, openGoalDepositModal, closeGoalDepositModal, submitGoalDeposit,
-    openFixedCostModal, closeFixedCostModal, submitFixedCost, editFixedCost, deleteFixedCost, markFixedCostPaid, unmarkFixedCostPaid, openFCPayModal, closeFCPayModal, openCCModal, closeCCModal, submitCC, openCCTransModal, closeCCTransModal, submitCCTrans, openCCInvoiceModal, closeCCInvoiceModal, deleteCreditTransaction, toggleFabMenu, closeFabMenu, openNewTransaction, openNewCCTransaction, openNewTransfer, startPlanningWizard, cancelPlanningWizard, copyPreviousPlanning, maskCurrency, calculateWizardBudget, prevWizardStep, nextWizardStep, calculateWizardCategoryTotals, renderWizardCategories, selectCardPreference, finishPlanningWizard, closeFixedCostPayModal, submitFixedCostPay, logout, switchProfileTab, maskCPF, maskPhone, maskCEP, changeTheme, loadUserProfile
+    openFixedCostModal, closeFixedCostModal, submitFixedCost, editFixedCost, deleteFixedCost, markFixedCostPaid, unmarkFixedCostPaid, openFCPayModal, closeFCPayModal, openCCModal, closeCCModal, submitCC, openCCTransModal, closeCCTransModal, submitCCTrans, openCCInvoiceModal, closeCCInvoiceModal, deleteCreditTransaction, toggleFabMenu, closeFabMenu, openNewTransaction, openNewCCTransaction, openNewTransfer, startPlanningWizard, cancelPlanningWizard, copyPreviousPlanning, maskCurrency, calculateWizardBudget, prevWizardStep, nextWizardStep, calculateWizardCategoryTotals, renderWizardCategories, selectCardPreference, finishPlanningWizard, closeFixedCostPayModal, submitFixedCostPay, logout, switchProfileTab, maskCPF, maskPhone, maskCEP, changeTheme, loadUserProfile, openPayInvoiceModal, closePayInvoiceModal, submitPayInvoice
   };
 })();
 

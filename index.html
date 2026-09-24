@@ -354,10 +354,13 @@
           <div class="summary-cards" style="padding: 0; margin-bottom: 25px;">
             <div class="summary-card" style="border-left: 4px solid #00796B;">
               <div class="card-icon icon-dark-green"><i class="fas fa-credit-card"></i></div>
-              <div class="card-info">
+              <div class="card-info" style="flex-grow: 1;">
                 <div class="card-label">Fatura do Mês (<span id="cc-page-period-title">--</span>)</div>
                 <h3 class="card-value" id="cc-page-total-invoice">R$ 0,00</h3>
               </div>
+              <button class="btn-primary" onclick="AppController.openPayInvoiceModal()" style="white-space: nowrap; padding: 8px 16px; font-size: 13px; margin-left: 10px;">
+                <i class="fas fa-check-circle" style="margin-right: 5px;"></i> Pagar Fatura
+              </button>
             </div>
           </div>
 
@@ -1112,6 +1115,34 @@
           </div>
           <button type="submit" id="fc-pay-btn" class="btn-primary"><i class="fas fa-check-circle"
               style="margin-right: 6px;"></i>Confirmar Pagamento</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL: PAGAR FATURA -->
+    <div id="cc-pay-invoice-modal" class="modal-overlay hidden">
+      <div class="modal-content" style="max-width: 400px; text-align: center;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <h2 style="margin: 0; color: #111;">Pagar Fatura</h2>
+          <button type="button" class="btn-text" onclick="AppController.closePayInvoiceModal()" style="font-size: 20px; color: #666;"><i class="fas fa-times"></i></button>
+        </div>
+        <div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+          <div id="cc-pay-invoice-name" style="font-size: 18px; font-weight: 600; color: #333;">Fatura Total</div>
+          <div style="font-size: 14px; color: #777; margin: 5px 0;">Valor da Fatura:</div>
+          <div id="cc-pay-invoice-value" style="font-size: 24px; font-weight: 700; color: #F44336;"></div>
+        </div>
+        <form id="cc-pay-invoice-form" onsubmit="AppController.submitPayInvoice(event)">
+          <input type="hidden" id="cc-pay-invoice-amount" name="amount">
+          <input type="hidden" id="cc-pay-invoice-month" name="month">
+          <div class="form-group" style="text-align: left; margin-bottom: 20px;">
+            <label>De qual conta o dinheiro irá sair?</label>
+            <select id="cc-pay-invoice-account" name="conta" required>
+              <option value="">Carregando...</option>
+            </select>
+          </div>
+          <button type="submit" id="submit-cc-pay-btn" class="btn-primary" style="width: 100%;">
+            <i class="fas fa-check-circle" style="margin-right: 6px;"></i>Confirmar Pagamento
+          </button>
         </form>
       </div>
     </div>
