@@ -531,56 +531,6 @@
     padding: 5px;
   }
 
-  /* Metas */
-  .goal-card {
-    background: var(--card-bg);
-    border-radius: 12px;
-    padding: 15px;
-    margin-bottom: 15px;
-    border: 1px solid var(--border-color);
-  }
-
-  .goal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-  }
-
-  .goal-header h4 {
-    margin: 0;
-    font-size: 15px;
-  }
-
-  .goal-percentage {
-    font-weight: bold;
-    color: var(--primary-color);
-    font-size: 14px;
-  }
-
-  .progress-container {
-    width: 100%;
-    height: 8px;
-    background: #e0e0e0;
-    border-radius: 4px;
-    overflow: hidden;
-    margin-bottom: 8px;
-  }
-
-  .progress-fill {
-    height: 100%;
-    background: var(--primary-color);
-    border-radius: 4px;
-    transition: width 0.5s ease;
-  }
-
-  .goal-footer {
-    display: flex;
-    justify-content: space-between;
-    font-size: 12px;
-    color: var(--text-muted);
-  }
-
   /* Botão Flutuante (+) */
   .fab {
     position: fixed;
@@ -1851,7 +1801,7 @@
     background: var(--bg-color) !important;
   }
 
-  body.dark-mode #login-screen > div {
+  body.dark-mode #login-screen>div {
     background: var(--card-bg) !important;
     color: var(--text-main) !important;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3) !important;
@@ -2026,73 +1976,349 @@
   }
 
   /* ========================================= */
-/* RESPONSIVIDADE (MODO MOBILE)              */
-/* ========================================= */
+  /* RESPONSIVIDADE (MODO MOBILE)              */
+  /* ========================================= */
 
-/* 1. Trava a tela para não "sambar" para os lados */
-html, body {
-  overflow-x: hidden;
-  width: 100%;
-}
-
-@media (max-width: 768px) {
-  /* 2. Ajusta o espaçamento geral do aplicativo */
-  .layout-container {
-    padding: 10px !important;
+  /* 1. Trava a tela para não "sambar" para os lados */
+  html,
+  body {
+    overflow-x: hidden;
+    width: 100%;
   }
 
-  /* 3. Menu Superior (Logo, Data e Perfil) - Empilha um sobre o outro */
-  .top-nav {
-    flex-direction: column !important;
-    height: auto !important;
-    padding: 15px !important;
+  /* ========================================= */
+  /* NOVOS OBJETIVOS                           */
+  /* ========================================= */
+  .goal-type-item {
+    display: flex;
+    align-items: center;
     gap: 15px;
+    padding: 10px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.2s;
   }
 
-  /* 4. Menu de Abas (Navegação) - Cria o efeito "Swipe" (arrastar para o lado) */
-  .app-tab-nav,
-  [style*="display: flex; gap: 30px"],
-  [style*="display: flex; gap: 20px"],
-  [style*="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;"] {
-    flex-direction: row !important;
-    flex-wrap: nowrap !important;
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 10px;
+  .goal-type-item:hover {
+    background: #f8fafc;
+  }
+
+  .goal-type-item span {
+    font-size: 16px;
+    color: #333;
+    font-weight: 500;
+  }
+
+  .gt-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-size: 16px;
+  }
+
+  .goal-floating-input label {
+    font-size: 12px;
+    color: #888;
+    font-weight: normal;
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .goal-floating-input input:focus {
+    outline: none;
+    border-color: #6200ea !important;
+  }
+
+  /* Novo Card de Objetivo */
+  .new-goal-card {
+    background: #ffffff;
+    border: 1px solid #eaeaea;
+    border-radius: 20px;
+    padding: 24px;
+    width: 340px;
+    flex-grow: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .new-goal-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+  }
+
+  .ng-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .ng-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .ng-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #111;
+    margin-left: 12px;
+    flex-grow: 1;
     white-space: nowrap;
-    justify-content: flex-start !important;
-  }
-  
-  /* Esconde a barrinha de rolagem nas abas para ficar com cara de App nativo */
-  .app-tab-nav::-webkit-scrollbar,
-  [style*="display: flex; gap: 30px"]::-webkit-scrollbar {
-    display: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  /* 5. Cartões do Dashboard - Transforma as colunas em 1 item por linha */
-  [style*="grid-template-columns: repeat(4"],
-  [style*="grid-template-columns: repeat(3"],
-  [style*="grid-template-columns: repeat(2"] {
-    grid-template-columns: 1fr !important;
-    gap: 15px !important;
+  .ng-progress-track {
+    background: #f1f5f9;
+    height: 8px;
+    border-radius: 4px;
+    width: 100%;
+    overflow: hidden;
+    margin-bottom: 8px;
   }
 
-  /* 6. Gráficos, Tabelas e Caixas - Permite rolar apenas o conteúdo interno deles */
-  [style*="background: white; border-radius: 12px; padding: 20px"],
-  .tx-table-container {
-    overflow-x: auto !important;
-    padding: 15px !important;
-    max-width: 100vw;
+  .ng-progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease-out;
   }
 
-  /* 7. Ajusta tamanhos de fontes para o celular */
-  h2 {
-    font-size: 20px !important;
-  }
-  
-  /* Ajuste específico para os botões do cabeçalho do Perfil não esmagarem */
-  [style*="display: flex; background: #fff; border-radius: 30px;"] {
+  @media (max-width: 768px) {
+
+    /* 2. Ajusta o espaçamento geral do aplicativo */
+    .layout-container {
+      padding: 10px !important;
+    }
+
+    /* 3. Menu Superior (Logo, Data e Perfil) - Empilha um sobre o outro */
+    .top-nav {
+      flex-direction: column !important;
+      height: auto !important;
+      padding: 15px !important;
+      gap: 15px;
+    }
+
+    /* 4. Menu de Abas (Navegação) - Cria o efeito "Swipe" (arrastar para o lado) */
+    .app-tab-nav,
+    [style*="display: flex; gap: 30px"],
+    [style*="display: flex; gap: 20px"],
+    [style*="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;"] {
+      flex-direction: row !important;
       flex-wrap: nowrap !important;
       overflow-x: auto !important;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 10px;
+      white-space: nowrap;
+      justify-content: flex-start !important;
+    }
+
+    /* Esconde a barrinha de rolagem nas abas para ficar com cara de App nativo */
+    .app-tab-nav::-webkit-scrollbar,
+    [style*="display: flex; gap: 30px"]::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* 5. Cartões do Dashboard - Transforma as colunas em 1 item por linha */
+    [style*="grid-template-columns: repeat(4"],
+    [style*="grid-template-columns: repeat(3"],
+    [style*="grid-template-columns: repeat(2"] {
+      grid-template-columns: 1fr !important;
+      gap: 15px !important;
+    }
+
+    /* 6. Gráficos, Tabelas e Caixas - Permite rolar apenas o conteúdo interno deles */
+    [style*="background: white; border-radius: 12px; padding: 20px"],
+    .tx-table-container {
+      overflow-x: auto !important;
+      padding: 15px !important;
+      max-width: 100vw;
+    }
+
+    /* 7. Ajusta tamanhos de fontes para o celular */
+    h2 {
+      font-size: 20px !important;
+    }
+
+    /* Ajuste específico para os botões do cabeçalho do Perfil não esmagarem */
+    [style*="display: flex; background: #fff; border-radius: 30px;"] {
+      flex-wrap: nowrap !important;
+      overflow-x: auto !important;
+    }
+
+    /* Objetivos Novos Estilos */
+    .goal-type-item {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      padding: 10px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .goal-type-item:hover {
+      background: #f8fafc;
+    }
+
+    .goal-type-item span {
+      font-size: 16px;
+      color: #333;
+      font-weight: 500;
+    }
+
+    .gt-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      font-size: 16px;
+    }
+
+    .goal-floating-input label {
+      font-size: 12px;
+      color: #888;
+      font-weight: normal;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .goal-floating-input input:focus {
+      outline: none;
+      border-color: #6200ea !important;
+    }
+
+    /* Novo Card de Objetivo */
+    .new-goal-card {
+      background: #ffffff;
+      border: 1px solid #eaeaea;
+      border-radius: 20px;
+      padding: 24px;
+      width: 340px;
+      /* Largura fixa para o card não encolher */
+      flex-grow: 0;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      /* Espaçamento entre as 3 partes do card */
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .new-goal-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+    }
+
+    .ng-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+
+    .ng-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .ng-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #111;
+      margin-left: 12px;
+      flex-grow: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .ng-progress-track {
+      background: #f1f5f9;
+      height: 8px;
+      border-radius: 4px;
+      width: 100%;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+
+    .ng-progress-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.5s ease-out;
+    }
+
+    /* ========================================= */
+    /* DETALHES DO OBJETIVO (SPLIT VIEW)         */
+    /* ========================================= */
+    .gd-container {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .gd-card {
+      background: #fff;
+      border: 1px solid #eaeaea;
+      border-radius: 16px;
+      padding: 30px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+      flex: 1;
+      min-width: 320px;
+    }
+
+    .gd-deposit-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 0;
+      border-bottom: 1px solid #f4f6f8;
+    }
+
+    .gd-deposit-item:last-child {
+      border-bottom: none;
+    }
+
+    .gd-btn-add {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(76, 175, 80, 0.3);
+      transition: transform 0.2s;
+    }
+
+    .gd-btn-add:hover {
+      transform: scale(1.1);
+    }
   }
-}

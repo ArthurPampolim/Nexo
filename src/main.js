@@ -16,6 +16,11 @@ const AppController = (function () {
     txFilter: 'ALL'
   };
 
+  state.currentGoalId = null;
+  state.currentGoalDeposits = [];
+  state.goalsSortOrder = 'DATA'; // Começa organizando pela data de conclusão
+  let goalDonutChartInstance = null;
+
   function setTransactionFilter(filterType) {
     state.txFilter = filterType;
     ['ALL', 'DESPESA', 'RECEITA', 'TRANSFERENCIA'].forEach(type => {
@@ -995,7 +1000,6 @@ const AppController = (function () {
       const querySnapshot = await getDocs(collection(db, "Objetivos"));
       const metasBrutas = querySnapshot.docs.map(doc => ({ ID: doc.id, ...doc.data() }));
 
-      // Recalcula o progresso matemático para a interface gráfica
       state.goals = metasBrutas.map(goal => {
         const target = parseFloat(goal.ValorAlvo) || 0;
         const current = parseFloat(goal.ValorAtual) || 0;
@@ -1003,116 +1007,151 @@ const AppController = (function () {
         return { ...goal, Progresso: parseFloat(Math.min(percentage, 100).toFixed(2)) };
       });
 
-      renderGoals(state.goals);
+      renderGoalsPage();
     } catch (error) {
       console.error("Erro ao carregar objetivos:", error);
     }
   }
 
-  function createGoalCard(goal) {
-    const card = document.createElement('div'); card.className = 'goal-card';
-    card.innerHTML = `
-        <div class="goal-header"><h4>${goal.Nome}</h4>
-          <div>
-            <span class="goal-percentage">${goal.Progresso}%</span>
-            <button class="btn-text" style="color: #2196F3; margin-left:8px;" onclick="AppController.openGoalDepositModal('${goal.ID}')" title="Aportar"><i class="fas fa-plus-circle"></i></button>
-            <button class="btn-text" style="color: var(--primary-color); margin-left:8px;" onclick="AppController.editGoal('${goal.ID}')" title="Editar"><i class="fas fa-edit"></i></button>
-            <button class="btn-text" style="color:#ff5252; margin-left:8px;" onclick="AppController.deleteGoal('${goal.ID}')" title="Excluir"><i class="fas fa-trash"></i></button>
-          </div>
-        </div>
-        <div class="progress-container"><div class="progress-fill" style="width: 0%" data-target="${goal.Progresso}%"></div></div>
-        <div class="goal-footer"><span>${currencyFormatter.format(goal.ValorAtual)}</span><span>de ${currencyFormatter.format(goal.ValorAlvo)}</span></div>`;
-    return card;
-  }
-
-  function renderGoals(goals) {
-    const dashContainer = elements.goalsContainer;
+  function renderGoalsPage() {
     const pageContainer = document.getElementById('goals-page-container');
+    if (!pageContainer) return;
+    pageContainer.innerHTML = '';
 
-    const countElem = document.getElementById('goals-page-count');
-    const targetElem = document.getElementById('goals-page-total-target');
-    const currentElem = document.getElementById('goals-page-total-current');
-    const countBadge = document.getElementById('goals-count-badge');
+    const activeTab = state.goalsTab || 'ANDAMENTO';
+    const targetStatus = activeTab === 'ANDAMENTO' ? 'Ativo' : 'Concluido';
 
-    const safeGoals = goals || [];
-    let totalTarget = 0;
-    let totalCurrent = 0;
+    // Filtra os objetivos
+    const filteredGoals = (state.goals || []).filter(g => g.Status === targetStatus);
 
-    safeGoals.forEach(g => {
-      totalTarget += parseFloat(g.ValorAlvo) || 0;
-      totalCurrent += parseFloat(g.ValorAtual) || 0;
+    // Ordena a lista de acordo com a escolha do utilizador
+    filteredGoals.sort((a, b) => {
+      if (state.goalsSortOrder === 'DATA') {
+        const dateA = a.DataLimite ? new Date(a.DataLimite).getTime() : Infinity;
+        const dateB = b.DataLimite ? new Date(b.DataLimite).getTime() : Infinity;
+        return dateA - dateB;
+      } else if (state.goalsSortOrder === 'MAIS_AVANCADOS') {
+        return (b.Progresso || 0) - (a.Progresso || 0);
+      } else if (state.goalsSortOrder === 'MENOS_AVANCADOS') {
+        return (a.Progresso || 0) - (b.Progresso || 0);
+      }
+      return 0;
     });
 
-    if (countElem) countElem.innerText = safeGoals.length;
-    if (targetElem) targetElem.innerText = currencyFormatter.format(totalTarget);
-    if (currentElem) currentElem.innerText = currencyFormatter.format(totalCurrent);
-    if (countBadge) countBadge.innerText = `${safeGoals.length} objetivo(s) cadastrado(s)`;
+    if (filteredGoals.length === 0) {
+      pageContainer.style.justifyContent = 'center';
 
-    if (dashContainer) {
-      dashContainer.innerHTML = '';
-      if (safeGoals.length === 0) {
-        dashContainer.innerHTML = '<div style="color:#888; font-size:14px;">Nenhum objetivo.</div>';
+      if (activeTab === 'ANDAMENTO') {
+        pageContainer.innerHTML = `
+          <div style="text-align: center; padding: 60px 20px; width: 100%;">
+            <i class="fas fa-clipboard-list" style="font-size: 80px; color: #6200ea; margin-bottom: 20px; opacity: 0.8;"></i>
+            <h3 style="font-size: 18px; color: #111; margin-bottom: 10px;">Definindo objetivos você alcança seus sonhos mais rápido!</h3>
+            <p style="font-size: 14px; color: #888; margin-bottom: 25px;">Que tal criar um pra te ajudar?</p>
+            <button class="btn-primary" style="width: auto; padding: 12px 30px; border-radius: 24px; background: #6200ea; font-size: 14px;" onclick="AppController.openGoalTypeModal()">CRIAR NOVO OBJETIVO</button>
+          </div>
+        `;
       } else {
-        safeGoals.forEach(goal => dashContainer.appendChild(createGoalCard(goal)));
+        pageContainer.innerHTML = `
+          <div style="text-align: center; padding: 60px 20px; width: 100%;">
+            <i class="fas fa-clipboard-check" style="font-size: 80px; color: #6200ea; margin-bottom: 20px; opacity: 0.8;"></i>
+            <h3 style="font-size: 18px; color: #111; margin-bottom: 10px;">Você ainda não concluiu um objetivo</h3>
+            <p style="font-size: 14px; color: #888; margin-bottom: 25px;">Que tal continuar guardando dinheiro?</p>
+          </div>
+        `;
       }
-    }
+    } else {
+      pageContainer.style.justifyContent = 'flex-start';
+      filteredGoals.forEach(goal => {
+        const cor = goal.Cor || '#00BCD4';
+        const icone = goal.Icone || 'fa-bullseye';
+        const pct = goal.Progresso || 0;
 
-    if (pageContainer) {
-      pageContainer.innerHTML = '';
-      if (safeGoals.length === 0) {
-        pageContainer.innerHTML = '<div style="color:#888; font-size:14px;">Nenhum objetivo cadastrado.</div>';
-      } else {
-        safeGoals.forEach(goal => pageContainer.appendChild(createGoalCard(goal)));
-      }
+        const card = document.createElement('div');
+        card.className = 'new-goal-card';
+        card.innerHTML = `
+          <div class="ng-header">
+            <div style="display: flex; align-items: center; width: calc(100% - 25px);">
+              <div class="ng-icon" style="background: ${cor};"><i class="fas ${icone}"></i></div>
+              <div class="ng-title">${goal.Nome}</div>
+            </div>
+            <i class="fas fa-chevron-right" style="color: #ccc; cursor: pointer; padding: 5px;" onclick="AppController.openGoalDetails('${goal.ID}')"></i>
+          </div>
+          <div>
+            <div class="ng-progress-track">
+              <div class="ng-progress-fill" style="width: ${pct}%; background: ${cor};"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: baseline;">
+              <span style="color: #111; font-weight: 700; font-size: 14px;">
+                ${currencyFormatter.format(goal.ValorAtual)} 
+                <span style="color: #888; font-weight: 400; font-size: 12px;">guardados</span>
+              </span>
+              <span style="color: #888; font-size: 12px; font-weight: 500;">${pct.toFixed(2)}%</span>
+            </div>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 13px; color: #666; border-top: 1px solid #f4f6f8; padding-top: 15px;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <i class="fas fa-trophy" style="color: #aaa; font-size: 14px;"></i> 
+              <strong style="color: #111;">${currencyFormatter.format(goal.ValorAlvo)}</strong>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <i class="far fa-calendar-check" style="color: #aaa; font-size: 14px;"></i> 
+              <span>${formatDateBR(goal.DataLimite)}</span>
+            </div>
+          </div>
+        `;
+        pageContainer.appendChild(card);
+      });
     }
-
-    setTimeout(() => { document.querySelectorAll('.progress-fill').forEach(bar => { bar.style.width = bar.getAttribute('data-target'); }); }, 100);
   }
 
-  function renderGoalsPage() {
-    renderGoals(state.goals);
+  function openGoalTypeModal() {
+    document.getElementById('goal-type-modal').classList.remove('hidden');
   }
-  function openGoalModal() {
+
+  function openGoalForm(nome, icone, cor) {
+    document.getElementById('goal-type-modal').classList.add('hidden');
     state.editingId = null;
-    state.editingType = null;
     elements.goalForm.reset();
-    elements.submitGoalBtn.innerText = 'Salvar Objetivo';
+
+    document.getElementById('goal-name-input').value = nome;
+    document.getElementById('goal-icon-val').value = icone;
+    document.getElementById('goal-color-val').value = cor;
+    document.getElementById('submit-goal-btn').innerText = 'CRIAR OBJETIVO';
+
     elements.goalModal.classList.remove('hidden');
   }
-  function editGoal(id) {
-    const g = state.goals.find(x => String(x.ID) === String(id)); if (!g) return;
-    state.editingId = id; state.editingType = 'GOAL';
-    document.querySelector(`#goal-form input[name="nome"]`).value = g.Nome;
-    document.querySelector(`#goal-form input[name="valorAlvo"]`).value = g.ValorAlvo;
 
-    const dateStr = g.DataLimite ? String(g.DataLimite).split('T')[0] : '';
-    const dateInput = document.querySelector(`#goal-form input[name="dataLimite"]`);
-    if (dateInput && dateInput._flatpickr) dateInput._flatpickr.setDate(dateStr);
-    else if (dateInput) dateInput.value = dateStr;
-
-    elements.submitGoalBtn.innerText = 'Atualizar Objetivo'; elements.goalModal.classList.remove('hidden');
+  function closeGoalModal() {
+    elements.goalModal.classList.add('hidden');
+    elements.goalForm.reset();
+    state.editingId = null;
   }
-  function closeGoalModal() { elements.goalModal.classList.add('hidden'); elements.goalForm.reset(); state.editingId = null; state.editingType = null; elements.submitGoalBtn.innerText = 'Salvar Objetivo'; }
 
   async function submitGoal(event) {
     event.preventDefault();
-    elements.submitGoalBtn.disabled = true;
-    elements.submitGoalBtn.innerHTML = 'Salvando...';
+    const btn = document.getElementById('submit-goal-btn');
+    btn.disabled = true;
+    btn.innerHTML = 'Salvando...';
 
     const formDados = Object.fromEntries(new FormData(elements.goalForm).entries());
+
+    const valorAlvoNum = parseFloat(formDados.valorAlvo.replace(/\D/g, "")) / 100 || 0;
+    const valorAtualNum = formDados.valorAtual ? (parseFloat(formDados.valorAtual.replace(/\D/g, "")) / 100 || 0) : 0;
+
     const payloadFormatado = {
       Nome: formDados.nome,
-      ValorAlvo: parseFloat(formDados.valorAlvo) || 0,
-      DataLimite: formDados.dataLimite || ''
+      ValorAlvo: valorAlvoNum,
+      ValorAtual: valorAtualNum,
+      DataLimite: formDados.dataLimite || '',
+      Icone: formDados.icone,
+      Cor: formDados.cor,
+      Status: 'Ativo'
     };
 
     try {
-      if (state.editingId && state.editingType === 'GOAL') {
+      if (state.editingId) {
         await updateDoc(doc(db, "Objetivos", state.editingId), payloadFormatado);
       } else {
-        // Na criação, injeta os campos iniciais
-        payloadFormatado.ValorAtual = 0;
-        payloadFormatado.Status = 'Ativo';
         await addDoc(collection(db, "Objetivos"), payloadFormatado);
       }
       closeGoalModal();
@@ -1120,12 +1159,30 @@ const AppController = (function () {
     } catch (error) {
       alert("Erro ao salvar objetivo: " + error.message);
     } finally {
-      elements.submitGoalBtn.disabled = false;
+      btn.disabled = false;
     }
   }
 
+  function editGoal(id) {
+    const g = state.goals.find(x => String(x.ID) === String(id)); if (!g) return;
+    state.editingId = id;
+
+    document.querySelector(`#goal-form input[name="nome"]`).value = g.Nome;
+    document.querySelector(`#goal-form input[name="valorAlvo"]`).value = currencyFormatter.format(g.ValorAlvo);
+    document.querySelector(`#goal-form input[name="valorAtual"]`).value = currencyFormatter.format(g.ValorAtual || 0);
+    document.getElementById('goal-icon-val').value = g.Icone || 'fa-bullseye';
+    document.getElementById('goal-color-val').value = g.Cor || '#6200ea';
+
+    const dateStr = g.DataLimite ? String(g.DataLimite).split('T')[0] : '';
+    const dateInput = document.querySelector(`#goal-form input[name="dataLimite"]`);
+    if (dateInput) dateInput.value = dateStr;
+
+    document.getElementById('submit-goal-btn').innerText = 'ATUALIZAR OBJETIVO';
+    elements.goalModal.classList.remove('hidden');
+  }
+
   async function deleteGoal(id) {
-    if (!confirm("Excluir meta?")) return;
+    if (!confirm("Tem certeza que deseja excluir este objetivo?")) return;
     try {
       await deleteDoc(doc(db, "Objetivos", id));
       loadGoals();
@@ -1139,6 +1196,8 @@ const AppController = (function () {
     if (!g) return;
     document.getElementById('gd-goal-id').value = g.ID;
     document.getElementById('gd-goal-name').value = g.Nome;
+    document.getElementById('gd-deposit-id').value = ''; // Limpa para Novo Aporte
+    document.querySelector('#goal-deposit-form input[name="valor"]').value = '';
     document.getElementById('goal-deposit-modal').classList.remove('hidden');
   }
   function closeGoalDepositModal() {
@@ -1150,20 +1209,43 @@ const AppController = (function () {
     event.preventDefault();
     const btn = document.getElementById('submit-gd-btn');
     btn.disabled = true;
-    btn.innerText = 'Guardando...';
+    btn.innerHTML = 'Guardando...';
 
     const formDados = Object.fromEntries(new FormData(document.getElementById('goal-deposit-form')).entries());
     const depositAmount = parseFloat(formDados.valor) || 0;
+    const goalId = formDados.id;
+    const depositId = formDados.depositId; // Verifica se é Edição
 
     try {
-      const goal = state.goals.find(g => String(g.ID) === String(formDados.id));
+      const goal = state.goals.find(g => String(g.ID) === String(goalId));
       if (!goal) throw new Error("Objetivo não encontrado.");
 
-      const newVal = (parseFloat(goal.ValorAtual) || 0) + depositAmount;
-      await updateDoc(doc(db, "Objetivos", goal.ID), { ValorAtual: newVal });
+      const localISO = new Date(new Date().getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+
+      if (depositId) {
+        // Modo Edição: Altera o valor e calcula a diferença no objetivo
+        const oldDeposit = state.currentGoalDeposits.find(d => String(d.ID) === String(depositId));
+        const difference = depositAmount - (parseFloat(oldDeposit.Valor) || 0);
+
+        await updateDoc(doc(db, "AportesObjetivo", depositId), { Valor: depositAmount });
+        await updateDoc(doc(db, "Objetivos", goalId), { ValorAtual: (parseFloat(goal.ValorAtual) || 0) + difference });
+      } else {
+        // Modo Novo: Cria um registro e soma no objetivo
+        await addDoc(collection(db, "AportesObjetivo"), {
+          IdObjetivo: goalId,
+          Valor: depositAmount,
+          Data: localISO
+        });
+        await updateDoc(doc(db, "Objetivos", goalId), { ValorAtual: (parseFloat(goal.ValorAtual) || 0) + depositAmount });
+      }
 
       closeGoalDepositModal();
-      loadGoals();
+      await loadGoals();
+
+      // Se a tela de detalhes estiver aberta, atualiza ela ao vivo
+      if (!document.getElementById('view-goal-details').classList.contains('hidden')) {
+        openGoalDetails(goalId);
+      }
     } catch (error) {
       alert("Erro ao salvar aporte: " + error.message);
     } finally {
@@ -1520,10 +1602,10 @@ const AppController = (function () {
       const today = new Date();
       const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
-      // 1. Cria a despesa com o nome do Cartão específico
+      // 1. Desconta o dinheiro da conta sem gerar uma nova "Despesa" no painel
       await addDoc(collection(db, "Transacoes"), {
         Tipo: 'DESPESA',
-        Categoria: 'Cartão de Crédito',
+        Categoria: 'Transferência', // <-- A MÁGICA ACONTECE AQUI
         Valor: amount,
         Descricao: `Pagamento Fatura ${cardName} - ${monthStr}`,
         Conta: contaNome,
@@ -2680,9 +2762,283 @@ const AppController = (function () {
     }
   }
 
+  // ==========================================
+  // LÓGICA DA TELA DE DETALHES DO OBJETIVO
+  // ==========================================
+
+  function calculateMonthlySavings(targetValue, currentValue, targetDateStr) {
+    const remaining = targetValue - currentValue;
+    if (remaining <= 0) return 0;
+    if (!targetDateStr) return -1; // Sem data definida
+
+    const today = new Date();
+    const target = new Date(targetDateStr + 'T12:00:00');
+
+    let months = (target.getFullYear() - today.getFullYear()) * 12;
+    months -= today.getMonth();
+    months += target.getMonth();
+    if (target.getDate() < today.getDate()) months--; // Mês incompleto
+
+    if (months <= 0) months = 1; // Evita divisão por zero
+    return remaining / months;
+  }
+
+  function renderGoalChart(pct, color) {
+    const canvas = document.getElementById('goalDonutChart');
+    if (!canvas) return;
+    if (goalDonutChartInstance) goalDonutChartInstance.destroy();
+
+    goalDonutChartInstance = new Chart(canvas.getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        datasets: [{
+          data: [pct, Math.max(0, 100 - pct)],
+          backgroundColor: [color, '#f0f0f0'],
+          borderWidth: 0,
+          cutout: '80%',
+          borderRadius: [20, 0] // Arredonda as pontas do gráfico
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { tooltip: { enabled: false } },
+        animation: { animateScale: true }
+      }
+    });
+  }
+
+  async function openGoalDetails(id) {
+    const g = state.goals.find(x => String(x.ID) === String(id));
+    if (!g) return;
+    state.currentGoalId = id;
+
+    // Troca as telas
+    document.getElementById('view-goals').classList.add('hidden');
+    document.getElementById('view-goal-details').classList.remove('hidden');
+
+    // Preenche os textos
+    document.getElementById('gd-page-title').innerText = g.Nome;
+    document.getElementById('gd-target-val').innerText = currencyFormatter.format(g.ValorAlvo);
+    document.getElementById('gd-name-val').innerText = g.Nome;
+    document.getElementById('gd-date-val').innerText = formatDateBR(g.DataLimite) || '--/--/----';
+
+    const pct = g.Progresso || 0;
+    document.getElementById('gd-pct-val').innerText = `${pct.toFixed(0)}%`;
+
+    // Cálculo de quanto poupar por mês
+    const monthly = calculateMonthlySavings(g.ValorAlvo, g.ValorAtual || 0, g.DataLimite);
+    const box = document.getElementById('gd-monthly-box');
+    if (monthly === 0) {
+      box.innerHTML = `<i class="fas fa-check-circle" style="color: #4CAF50; font-size: 20px; margin-top: 2px;"></i><div style="font-size: 13px; color: #555;">Parabéns! Você já alcançou a meta deste objetivo.</div>`;
+    } else if (monthly < 0) {
+      box.innerHTML = `<i class="fas fa-info-circle" style="color: #2196F3; font-size: 20px; margin-top: 2px;"></i><div style="font-size: 13px; color: #555;">Edite o objetivo e defina uma <strong>Data Limite</strong> para calcular sua meta mensal.</div>`;
+    } else {
+      box.innerHTML = `<i class="fas fa-chess-board" style="color: ${g.Cor || '#6200ea'}; font-size: 20px; margin-top: 2px;"></i><div style="font-size: 13px; color: #555;">Para atingir seu objetivo a tempo, você precisa poupar a cada mês <strong style="color: #111;">${currencyFormatter.format(monthly)}</strong></div>`;
+    }
+
+    renderGoalChart(pct, g.Cor || '#00BCD4');
+
+    // Carrega a lista de Depósitos
+    await loadGoalDeposits(id);
+  }
+
+  function closeGoalDetails() {
+    document.getElementById('view-goal-details').classList.add('hidden');
+    document.getElementById('view-goals').classList.remove('hidden');
+    state.currentGoalId = null;
+  }
+
+  function editGoalFromDetails() {
+    if (state.currentGoalId) editGoal(state.currentGoalId);
+  }
+
+  async function loadGoalDeposits(id) {
+    const listEl = document.getElementById('gd-deposits-list');
+    listEl.innerHTML = '<div style="color:#888; font-size:14px; margin-top:10px;">Carregando depósitos...</div>';
+
+    try {
+      // Como você não tinha uma coleção separada de aportes, o sistema buscará da nova coleção "AportesObjetivo"
+      const snap = await getDocs(collection(db, "AportesObjetivo"));
+      const todosAportes = snap.docs.map(d => ({ ID: d.id, ...d.data() }));
+
+      state.currentGoalDeposits = todosAportes.filter(a => String(a.IdObjetivo) === String(id));
+      state.currentGoalDeposits.sort((a, b) => new Date(b.Data).getTime() - new Date(a.Data).getTime());
+
+      renderGoalDeposits();
+    } catch (e) {
+      console.error(e);
+      listEl.innerHTML = '<div style="color:#F44336; font-size:14px;">Erro ao carregar aportes.</div>';
+    }
+  }
+
+  function renderGoalDeposits() {
+    const listEl = document.getElementById('gd-deposits-list');
+    listEl.innerHTML = '';
+
+    if (state.currentGoalDeposits.length === 0) {
+      listEl.innerHTML = '<div style="color:#888; font-size:14px; margin-top:10px;">Nenhum depósito realizado ainda.</div>';
+      return;
+    }
+
+    state.currentGoalDeposits.forEach(dep => {
+      const li = document.createElement('li');
+      li.className = 'gd-deposit-item';
+      li.innerHTML = `
+        <div style="font-size: 13px; color: #888;">${formatDateBR(dep.Data)}</div>
+        <div style="display: flex; align-items: center; gap: 15px;">
+          <strong style="color: #4CAF50; font-size: 14px;">${currencyFormatter.format(dep.Valor)}</strong>
+          <button class="btn-text" style="color: #bbb; font-size: 13px; padding: 0;" onclick="AppController.deleteGoalDeposit('${dep.ID}', '${dep.IdObjetivo}', ${dep.Valor})" title="Excluir"><i class="fas fa-trash"></i></button>
+          <button class="btn-text" style="color: #bbb; font-size: 13px; padding: 0;" onclick="AppController.editGoalDeposit('${dep.ID}', '${dep.IdObjetivo}', ${dep.Valor})" title="Editar"><i class="fas fa-pen"></i></button>
+        </div>
+      `;
+      listEl.appendChild(li);
+    });
+  }
+
+  async function deleteGoalDeposit(idAporte, idObjetivo, valorAporte) {
+    if (!confirm("Excluir este depósito? O valor será subtraído do progresso do objetivo.")) return;
+    try {
+      await deleteDoc(doc(db, "AportesObjetivo", idAporte));
+
+      // Subtrai o valor apagado do saldo principal do objetivo
+      const goal = state.goals.find(g => String(g.ID) === String(idObjetivo));
+      if (goal) {
+        const newVal = Math.max(0, (parseFloat(goal.ValorAtual) || 0) - valorAporte);
+        await updateDoc(doc(db, "Objetivos", idObjetivo), { ValorAtual: newVal });
+      }
+
+      await loadGoals();
+      openGoalDetails(idObjetivo); // Atualiza a tela inteira
+    } catch (e) {
+      alert("Erro ao excluir: " + e.message);
+    }
+  }
+
+  function editGoalDeposit(idAporte, idObjetivo, valorAporte) {
+    const g = state.goals.find(x => String(x.ID) === String(idObjetivo));
+    if (!g) return;
+    document.getElementById('gd-goal-id').value = g.ID;
+    document.getElementById('gd-goal-name').value = g.Nome;
+    document.getElementById('gd-deposit-id').value = idAporte; // Avisa que é Edição
+    document.querySelector('#goal-deposit-form input[name="valor"]').value = valorAporte;
+
+    document.getElementById('goal-deposit-modal').classList.remove('hidden');
+  }
+
+  // Lógica do Menu de Opções Suspenso
+  function toggleGoalOptions(event) {
+    if (event) event.stopPropagation();
+    const dropdown = document.getElementById('goal-options-dropdown');
+    if (dropdown) {
+      dropdown.style.display = (dropdown.style.display === 'none' || dropdown.style.display === '') ? 'block' : 'none';
+    }
+  }
+
+  // Fechar o menu de opções ao clicar fora dele
+  document.addEventListener('click', (e) => {
+    const dropdown = document.getElementById('goal-options-dropdown');
+    if (dropdown && dropdown.style.display === 'block') {
+      dropdown.style.display = 'none';
+    }
+  });
+
+  // Abrir modal de depósito para o objetivo que está aberto na tela
+  function openCurrentGoalDepositModal() {
+    if (state.currentGoalId) {
+      openGoalDepositModal(state.currentGoalId);
+    }
+  }
+
+  // Apagar o objetivo que está aberto na tela
+  async function deleteCurrentGoal() {
+    if (!state.currentGoalId) return;
+    if (!confirm("Tem certeza que deseja excluir este objetivo completamente?")) return;
+
+    try {
+      await deleteDoc(doc(db, "Objetivos", state.currentGoalId));
+      closeGoalDetails();
+      loadGoals();
+    } catch (error) {
+      alert("Erro ao excluir: " + error.message);
+    }
+  }
+
+  // Alterna entre a aba Em Andamento e Concluídos
+  function switchGoalsTab(tabName) {
+    state.goalsTab = tabName;
+    const btnAndamento = document.getElementById('btn-goal-andamento');
+    const btnConcluidos = document.getElementById('btn-goal-concluidos');
+
+    if (tabName === 'ANDAMENTO') {
+      btnAndamento.style.background = '#6200ea';
+      btnAndamento.style.color = 'white';
+      btnConcluidos.style.background = 'transparent';
+      btnConcluidos.style.color = '#666';
+    } else {
+      btnConcluidos.style.background = '#6200ea';
+      btnConcluidos.style.color = 'white';
+      btnAndamento.style.background = 'transparent';
+      btnAndamento.style.color = '#666';
+    }
+
+    renderGoalsPage();
+  }
+
+  // Marca o objetivo atual como Concluído
+  async function markGoalAsCompleted() {
+    if (!state.currentGoalId) return;
+    if (!confirm("Deseja marcar este objetivo como concluído? Ele será movido para a aba 'Concluídos'.")) return;
+
+    try {
+      await updateDoc(doc(db, "Objetivos", state.currentGoalId), { Status: 'Concluido' });
+      closeGoalDetails();
+      await loadGoals();
+    } catch (error) {
+      alert("Erro ao concluir objetivo: " + error.message);
+    }
+  }
+
+  // ==========================================
+  // LÓGICA DE ORDENAÇÃO DE OBJETIVOS
+  // ==========================================
+  function toggleGoalsSortDropdown(event) {
+    if (event) event.stopPropagation();
+    const dropdown = document.getElementById('goals-sort-dropdown');
+    if (dropdown) {
+      dropdown.style.display = (dropdown.style.display === 'none' || dropdown.style.display === '') ? 'block' : 'none';
+    }
+  }
+
+  function setGoalsSortOrder(order) {
+    state.goalsSortOrder = order;
+
+    // Esconde o menu após clicar
+    const dropdown = document.getElementById('goals-sort-dropdown');
+    if (dropdown) dropdown.style.display = 'none';
+
+    // Atualiza a tela com a nova ordem
+    renderGoalsPage();
+  }
+
+  // Fechar menus suspensos ao clicar fora
+  document.addEventListener('click', (e) => {
+    const optionsDropdown = document.getElementById('goal-options-dropdown');
+    if (optionsDropdown && optionsDropdown.style.display === 'block') {
+      optionsDropdown.style.display = 'none';
+    }
+    const sortDropdown = document.getElementById('goals-sort-dropdown');
+    if (sortDropdown && sortDropdown.style.display === 'block') {
+      sortDropdown.style.display = 'none';
+    }
+  });
+
   return {
     init, switchTab, setTransactionFilter, renderCreditCardsPage, renderFixedCostsPage, renderGoalsPage, renderAccountsPage, renderPlanningView, openMonthPicker, closeMonthPicker, changePickerYear, selectCurrentMonth, openModal, closeModal, submitTransaction, editTransaction, deleteTransaction, openAccountModal, closeAccountModal, submitAccount, openTransferModal, closeTransferModal, submitTransfer,
-    openGoalModal, closeGoalModal, submitGoal, editGoal, deleteGoal, openGoalDepositModal, closeGoalDepositModal, submitGoalDeposit,
+    openGoalTypeModal, openGoalForm, closeGoalModal, submitGoal, editGoal, deleteGoal, openGoalDepositModal, closeGoalDepositModal, submitGoalDeposit,
+    openGoalDetails, closeGoalDetails, editGoalFromDetails, deleteGoalDeposit, editGoalDeposit,
+    toggleGoalOptions, openCurrentGoalDepositModal, deleteCurrentGoal,
+    switchGoalsTab, markGoalAsCompleted,
+    toggleGoalsSortDropdown, setGoalsSortOrder,
     openFixedCostModal, closeFixedCostModal, submitFixedCost, editFixedCost, deleteFixedCost, markFixedCostPaid, unmarkFixedCostPaid, openFCPayModal, closeFCPayModal, openCCModal, closeCCModal, submitCC, openCCTransModal, closeCCTransModal, submitCCTrans, openCCInvoiceModal, closeCCInvoiceModal, deleteCreditTransaction, toggleFabMenu, closeFabMenu, openNewTransaction, openNewCCTransaction, openNewTransfer, startPlanningWizard, cancelPlanningWizard, copyPreviousPlanning, maskCurrency, calculateWizardBudget, prevWizardStep, nextWizardStep, calculateWizardCategoryTotals, renderWizardCategories, selectCardPreference, finishPlanningWizard, closeFixedCostPayModal, submitFixedCostPay, logout, switchProfileTab, maskCPF, maskPhone, maskCEP, changeTheme, loadUserProfile, openPayInvoiceModal, closePayInvoiceModal, submitPayInvoice
   };
 })();

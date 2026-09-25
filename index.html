@@ -476,49 +476,138 @@
       <!-- VIEW 6: MEUS OBJETIVOS -->
       <div id="view-goals" class="app-view hidden">
         <div class="dashboard-title-container">
-          <h2>Meus Objetivos</h2>
-          <div>
-            <button class="btn-text" onclick="AppController.openGoalModal()"><i class="fas fa-plus"></i> Novo
-              Objetivo</button>
+          <h2 style="font-size: 28px;">Objetivos</h2>
+          <div style="display: flex; align-items: center; gap: 15px;">
+            <!-- Menu Dropdown de Ordenação -->
+            <div style="position: relative;">
+              <button class="btn-text" style="color: #6200ea; font-size: 15px; font-weight: 500;"
+                onclick="AppController.toggleGoalsSortDropdown(event)">
+                <span style="text-decoration: underline;">Ordenar por</span> <i class="fas fa-chevron-down"
+                  style="font-size: 12px; margin-left: 4px;"></i>
+              </button>
+
+              <div id="goals-sort-dropdown"
+                style="display: none; position: absolute; top: 35px; right: 0; background: white; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); width: 240px; padding: 10px 0; z-index: 1000; border: 1px solid #eaeaea;">
+                <a href="#" class="dropdown-item" onclick="AppController.setGoalsSortOrder('DATA'); return false;">Data
+                  de conclusão</a>
+                <a href="#" class="dropdown-item"
+                  onclick="AppController.setGoalsSortOrder('MAIS_AVANCADOS'); return false;">Mais avançados primeiro</a>
+                <a href="#" class="dropdown-item"
+                  onclick="AppController.setGoalsSortOrder('MENOS_AVANCADOS'); return false;">Menos avançados
+                  primeiro</a>
+              </div>
+            </div>
+
+            <button class="btn-primary"
+              style="margin: 0; padding: 10px 24px; width: auto; border-radius: 24px; background: #6200ea; font-size: 13px;"
+              onclick="AppController.openGoalTypeModal()">
+              <i class="fas fa-plus"></i> CRIAR NOVO
+            </button>
           </div>
         </div>
         <div style="max-width: 1200px; margin: 0 auto; padding: 0 15px 50px;">
-          <!-- Cartões de Resumo para Objetivos -->
-          <div class="summary-cards" style="padding: 0; margin-bottom: 25px;">
-            <div class="summary-card" style="border-left: 4px solid #2196F3;">
-              <div class="card-icon icon-blue"><i class="fas fa-bullseye"></i></div>
-              <div class="card-info">
-                <div class="card-label">Total de Objetivos</div>
-                <h3 class="card-value" id="goals-page-count">0</h3>
-              </div>
-            </div>
-            <div class="summary-card" style="border-left: 4px solid #6200ea;">
-              <div class="card-icon" style="background-color: #6200ea;"><i class="fas fa-crosshairs"></i></div>
-              <div class="card-info">
-                <div class="card-label">Valor Alvo Total</div>
-                <h3 class="card-value" id="goals-page-total-target">R$ 0,00</h3>
-              </div>
-            </div>
-            <div class="summary-card" style="border-left: 4px solid #4CAF50;">
-              <div class="card-icon icon-green"><i class="fas fa-piggy-bank"></i></div>
-              <div class="card-info">
-                <div class="card-label">Total Acumulado</div>
-                <h3 class="card-value" id="goals-page-total-current">R$ 0,00</h3>
-              </div>
-            </div>
-          </div>
+          <main
+            style="background: white; border-radius: 20px; padding: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #eaeaea;">
 
-          <!-- Lista de Objetivos -->
-          <main class="transaction-list"
-            style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #eaeaea;">
-            <div class="section-header" style="margin-bottom: 20px;">
-              <h3 style="margin: 0; font-size: 18px; color: #333;">Metas Financeiras</h3>
-              <span id="goals-count-badge" style="font-size: 13px; color: #777; font-weight: 500;"></span>
+            <!-- Segmented Control (Toggle) -->
+            <div
+              style="display: flex; background: #ffffff; border-radius: 30px; margin-bottom: 40px; border: 1px solid #e0e0e0; padding: 2px;">
+              <button id="btn-goal-andamento"
+                style="flex: 1; padding: 12px; border: none; background: #6200ea; color: white; font-weight: 600; border-radius: 30px; cursor: pointer; transition: all 0.3s;"
+                onclick="AppController.switchGoalsTab('ANDAMENTO')">Em Andamento</button>
+              <button id="btn-goal-concluidos"
+                style="flex: 1; padding: 12px; border: none; background: transparent; color: #666; font-weight: 500; cursor: pointer; border-radius: 30px; transition: all 0.3s;"
+                onclick="AppController.switchGoalsTab('CONCLUIDOS')">Concluídos</button>
             </div>
-            <div id="goals-page-container" class="goals-grid">
-              <div class="loading">Carregando objetivos...</div>
+
+            <div id="goals-page-container" style="display: flex; flex-wrap: wrap; gap: 20px;">
+              <!-- Cards ou Estado Vazio serão injetados aqui -->
             </div>
           </main>
+        </div>
+      </div>
+
+      <!-- VIEW 6.1: DETALHES DO OBJETIVO -->
+      <div id="view-goal-details" class="app-view hidden">
+
+        <!-- Cabeçalho de Detalhes -->
+        <div class="dashboard-title-container" style="justify-content: flex-start; gap: 15px; margin-bottom: 20px;">
+          <button class="btn-text" style="color: #666; font-size: 20px; padding: 0;"
+            onclick="AppController.closeGoalDetails()"><i class="fas fa-arrow-left"></i></button>
+          <h2 style="font-size: 24px; color: #111; margin: 0;" id="gd-page-title">Nome do Objetivo</h2>
+
+          <!-- Menu Dropdown de Opções -->
+          <div style="margin-left: auto; position: relative;">
+            <button class="btn-text" style="color: #6200ea; font-size: 15px; font-weight: 600;"
+              onclick="AppController.toggleGoalOptions(event)">
+              Opções <i class="fas fa-chevron-down" style="font-size: 12px; margin-left: 4px;"></i>
+            </button>
+
+            <div id="goal-options-dropdown"
+              style="display: none; position: absolute; top: 35px; right: 0; background: white; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); width: 220px; padding: 10px 0; z-index: 1000; border: 1px solid #eaeaea;">
+              <a href="#" class="dropdown-item"
+                onclick="AppController.editGoalFromDetails(); AppController.toggleGoalOptions(); return false;">Editar</a>
+              <a href="#" class="dropdown-item" onclick="AppController.toggleGoalOptions(); return false;">Pausar</a>
+              <a href="#" class="dropdown-item" onclick="AppController.toggleGoalOptions(); return false;">Duplicar</a>
+              <a href="#" class="dropdown-item"
+                onclick="AppController.markGoalAsCompleted(); AppController.toggleGoalOptions(); return false;">Marcar
+                como concluído</a>
+              <div style="height: 1px; background: #f0f0f0; margin: 5px 0;"></div>
+              <a href="#" class="dropdown-item" style="color: #F44336;"
+                onclick="AppController.deleteCurrentGoal(); AppController.toggleGoalOptions(); return false;">Apagar</a>
+            </div>
+          </div>
+        </div>
+
+        <div style="max-width: 1200px; margin: 0 auto; padding: 0 15px 50px;">
+          <!-- Contentor Flex para ficar Lado a Lado -->
+          <div style="display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start;">
+
+            <!-- Lado Esquerdo: Gráfico e Resumo -->
+            <div
+              style="flex: 1; min-width: 320px; background: #fff; border: 1px solid #eaeaea; border-radius: 16px; padding: 40px; box-shadow: 0 2px 10px rgba(0,0,0,0.02); display: flex; flex-direction: column; align-items: center;">
+
+              <div style="text-align: center; margin-bottom: 30px;">
+                <div style="font-size: 14px; color: #555;"><i class="fas fa-trophy" style="color: #888;"></i> <span
+                    id="gd-target-val">R$ 0,00</span></div>
+                <div style="font-size: 18px; font-weight: 600; color: #111; margin: 6px 0;">
+                  <span id="gd-name-val">Nome</span> <span style="color: #aaa; margin: 0 5px;">|</span> <i
+                    class="far fa-calendar-check" style="color: #aaa;"></i> <span id="gd-date-val"
+                    style="color: #888; font-size: 14px; font-weight: normal;">--/--/----</span>
+                </div>
+              </div>
+
+              <div style="position: relative; width: 220px; height: 220px; margin-bottom: 40px;">
+                <canvas id="goalDonutChart"></canvas>
+                <div id="gd-pct-val"
+                  style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; font-weight: 600; color: #555;">
+                  0%</div>
+              </div>
+
+              <div id="gd-monthly-box"
+                style="display: flex; align-items: flex-start; gap: 12px; width: 100%; justify-content: center;">
+                <!-- Preenchido via JS -->
+              </div>
+            </div>
+
+            <!-- Lado Direito: Aportes -->
+            <div
+              style="flex: 1.5; min-width: 320px; background: #fff; border: 1px solid #eaeaea; border-radius: 16px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                <h3 style="margin: 0; font-size: 18px; color: #111;">Depósitos</h3>
+                <!-- Botão "+" corrigido -->
+                <button class="gd-btn-add" onclick="AppController.openCurrentGoalDepositModal()"
+                  title="Adicionar Depósito">
+                  <i class="fas fa-plus"></i>
+                </button>
+              </div>
+              <ul id="gd-deposits-list"
+                style="list-style: none; padding: 0; margin: 0; max-height: 400px; overflow-y: auto;">
+                <!-- Depósitos injetados via JS -->
+              </ul>
+            </div>
+
+          </div>
         </div>
       </div>
 
@@ -1019,19 +1108,91 @@
       </div>
     </div>
 
-    <!-- MODAL: NOVA META -->
-    <div id="goal-modal" class="modal-overlay hidden">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2>Novo Objetivo</h2><button class="close-btn" onclick="AppController.closeGoalModal()"><i
+    <!-- MODAL 1: TIPO DE OBJETIVO -->
+    <div id="goal-type-modal" class="modal-overlay hidden">
+      <div class="modal-content" style="max-width: 400px; padding: 30px; border-radius: 24px;">
+        <div class="modal-header" style="margin-bottom: 30px;">
+          <h2 style="font-size: 22px; color: #111;">Criar objetivo</h2>
+          <button class="close-btn" onclick="document.getElementById('goal-type-modal').classList.add('hidden')"><i
               class="fas fa-times"></i></button>
         </div>
-        <form id="goal-form" onsubmit="AppController.submitGoal(event)">
-          <div class="form-group"><label>Nome</label><input type="text" name="nome" required></div>
-          <div class="form-group"><label>Valor Alvo</label><input type="number" name="valorAlvo" step="0.01" required>
+        <div style="display: flex; flex-direction: column; gap: 15px;">
+          <div class="goal-type-item"
+            onclick="AppController.openGoalForm('Objetivo personalizado', 'fa-plus', '#424242')">
+            <div class="gt-icon" style="background: #424242;"><i class="fas fa-plus"></i></div>
+            <span>Objetivo personalizado</span>
           </div>
-          <div class="form-group"><label>Data Limite</label><input type="date" name="dataLimite" required></div>
-          <button type="submit" id="submit-goal-btn" class="btn-primary">Salvar Objetivo</button>
+          <div class="goal-type-item"
+            onclick="AppController.openGoalForm('Fundo de emergência', 'fa-dollar-sign', '#1b5e20')">
+            <div class="gt-icon" style="background: #1b5e20;"><i class="fas fa-dollar-sign"></i></div>
+            <span>Fundo de emergência</span>
+          </div>
+          <div class="goal-type-item" onclick="AppController.openGoalForm('Novo carro', 'fa-car', '#9c27b0')">
+            <div class="gt-icon" style="background: #9c27b0;"><i class="fas fa-car"></i></div>
+            <span>Novo carro</span>
+          </div>
+          <div class="goal-type-item" onclick="AppController.openGoalForm('Nova casa', 'fa-home', '#00796b')">
+            <div class="gt-icon" style="background: #00796b;"><i class="fas fa-home"></i></div>
+            <span>Nova casa</span>
+          </div>
+          <div class="goal-type-item"
+            onclick="AppController.openGoalForm('Viagem nas férias', 'fa-umbrella-beach', '#d32f2f')">
+            <div class="gt-icon" style="background: #d32f2f;"><i class="fas fa-umbrella-beach"></i></div>
+            <span>Viagem nas férias</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL 2: FORMULÁRIO DO OBJETIVO -->
+    <div id="goal-modal" class="modal-overlay hidden">
+      <div class="modal-content" style="max-width: 450px; padding: 30px; border-radius: 24px;">
+        <div class="modal-header" style="margin-bottom: 30px;">
+          <h2 style="font-size: 22px; color: #111;">Criar objetivo</h2>
+          <button class="close-btn" onclick="AppController.closeGoalModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <form id="goal-form" onsubmit="AppController.submitGoal(event)">
+          <input type="hidden" id="goal-icon-val" name="icone" value="fa-bullseye">
+          <input type="hidden" id="goal-color-val" name="cor" value="#6200ea">
+
+          <div class="form-group goal-floating-input">
+            <label>Valor do objetivo</label>
+            <div style="display: flex; align-items: center; border-bottom: 2px solid #333; padding-bottom: 5px;">
+              <i class="fas fa-trophy" style="color: #999; margin-right: 10px; font-size: 18px;"></i>
+              <input type="text" name="valorAlvo" required placeholder="R$ 0,00"
+                oninput="AppController.maskCurrency(this)"
+                style="border: none; padding: 0; font-size: 24px; color: #6200ea;">
+            </div>
+          </div>
+
+          <div class="form-group goal-floating-input">
+            <label>Valor inicial do objetivo</label>
+            <div style="display: flex; align-items: center; border-bottom: 2px solid #ddd; padding-bottom: 5px;">
+              <i class="fas fa-plus" style="color: #999; margin-right: 10px; font-size: 18px;"></i>
+              <input type="text" name="valorAtual" placeholder="R$ 0,00" oninput="AppController.maskCurrency(this)"
+                style="border: none; padding: 0; font-size: 24px; color: #6200ea;">
+            </div>
+          </div>
+
+          <div class="form-group goal-floating-input">
+            <label>Nome do objetivo</label>
+            <div style="display: flex; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 5px;">
+              <i class="far fa-bookmark" style="color: #999; margin-right: 10px; font-size: 18px;"></i>
+              <input type="text" id="goal-name-input" name="nome" required
+                style="border: none; padding: 0; font-size: 16px;">
+            </div>
+          </div>
+
+          <div class="form-group goal-floating-input">
+            <label>Data</label>
+            <div style="display: flex; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 5px;">
+              <i class="far fa-calendar-alt" style="color: #999; margin-right: 10px; font-size: 18px;"></i>
+              <input type="date" name="dataLimite" required style="border: none; padding: 0; font-size: 16px;">
+            </div>
+          </div>
+
+          <button type="submit" id="submit-goal-btn" class="btn-primary"
+            style="background: #6200ea; border-radius: 24px; padding: 15px; margin-top: 20px;">CRIAR OBJETIVO</button>
         </form>
       </div>
     </div>
@@ -1045,6 +1206,7 @@
         </div>
         <form id="goal-deposit-form" onsubmit="AppController.submitGoalDeposit(event)">
           <input type="hidden" id="gd-goal-id" name="id">
+          <input type="hidden" id="gd-deposit-id" name="depositId">
           <div class="form-group"><label>Objetivo</label><input type="text" id="gd-goal-name" disabled
               style="background:#f0f0f0;"></div>
           <div class="form-group"><label>Valor do Aporte (R$)</label><input type="number" name="valor" step="0.01"
