@@ -459,12 +459,6 @@
     padding: 0 15px 50px;
   }
 
-  @media (min-width: 768px) {
-    .dashboard-layout {
-      grid-template-columns: 1fr 2fr;
-    }
-  }
-
   .section-header {
     display: flex;
     justify-content: space-between;
@@ -1127,18 +1121,7 @@
     background: white;
     border-radius: 50%;
   }
-
-  @media (max-width: 768px) {
-    .wizard-split-layout {
-      flex-direction: column;
-    }
-
-    .wizard-right-col {
-      width: 100%;
-      position: static;
-    }
-  }
-
+  
   /* ========================================= */
   /* CARTÕES SELECIONÁVEIS (PASSO 3 WIZARD)    */
   /* ========================================= */
@@ -2098,240 +2081,69 @@
     transition: width 0.5s ease-out;
   }
 
-  @media (max-width: 768px) {
+  /* ========================================= */
+  /* TOAST NOTIFICATIONS (ALERTAS FLUTUANTES)  */
+  /* ========================================= */
+  .toast-container {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
 
-    /* 2. Ajusta o espaçamento geral do aplicativo */
-    .layout-container {
-      padding: 10px !important;
+  .toast {
+    background: #333;
+    color: white;
+    padding: 16px 24px;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 280px;
+    max-width: 400px;
+    transform: translateX(120%);
+    opacity: 0;
+    animation: slideInToast 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  }
+
+  /* Cores por tipo de notificação */
+  .toast.success {
+    background: #4CAF50;
+  }
+
+  /* Verde */
+  .toast.error {
+    background: #F44336;
+  }
+
+  /* Vermelho */
+  .toast.info {
+    background: #2196F3;
+  }
+
+  /* Azul */
+
+  /* Animação de saída */
+  .toast.hiding {
+    animation: slideOutToast 0.3s ease-in forwards;
+  }
+
+  @keyframes slideInToast {
+    to {
+      transform: translateX(0);
+      opacity: 1;
     }
+  }
 
-    /* 3. Menu Superior (Logo, Data e Perfil) - Empilha um sobre o outro */
-    .top-nav {
-      flex-direction: column !important;
-      height: auto !important;
-      padding: 15px !important;
-      gap: 15px;
-    }
-
-    /* 4. Menu de Abas (Navegação) - Cria o efeito "Swipe" (arrastar para o lado) */
-    .app-tab-nav,
-    [style*="display: flex; gap: 30px"],
-    [style*="display: flex; gap: 20px"],
-    [style*="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;"] {
-      flex-direction: row !important;
-      flex-wrap: nowrap !important;
-      overflow-x: auto !important;
-      -webkit-overflow-scrolling: touch;
-      padding-bottom: 10px;
-      white-space: nowrap;
-      justify-content: flex-start !important;
-    }
-
-    /* Esconde a barrinha de rolagem nas abas para ficar com cara de App nativo */
-    .app-tab-nav::-webkit-scrollbar,
-    [style*="display: flex; gap: 30px"]::-webkit-scrollbar {
-      display: none;
-    }
-
-    /* 5. Cartões do Dashboard - Transforma as colunas em 1 item por linha */
-    [style*="grid-template-columns: repeat(4"],
-    [style*="grid-template-columns: repeat(3"],
-    [style*="grid-template-columns: repeat(2"] {
-      grid-template-columns: 1fr !important;
-      gap: 15px !important;
-    }
-
-    /* 6. Gráficos, Tabelas e Caixas - Permite rolar apenas o conteúdo interno deles */
-    [style*="background: white; border-radius: 12px; padding: 20px"],
-    .tx-table-container {
-      overflow-x: auto !important;
-      padding: 15px !important;
-      max-width: 100vw;
-    }
-
-    /* 7. Ajusta tamanhos de fontes para o celular */
-    h2 {
-      font-size: 20px !important;
-    }
-
-    /* Ajuste específico para os botões do cabeçalho do Perfil não esmagarem */
-    [style*="display: flex; background: #fff; border-radius: 30px;"] {
-      flex-wrap: nowrap !important;
-      overflow-x: auto !important;
-    }
-
-    /* Objetivos Novos Estilos */
-    .goal-type-item {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-      padding: 10px;
-      border-radius: 12px;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    .goal-type-item:hover {
-      background: #f8fafc;
-    }
-
-    .goal-type-item span {
-      font-size: 16px;
-      color: #333;
-      font-weight: 500;
-    }
-
-    .gt-icon {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      color: white;
-      font-size: 16px;
-    }
-
-    .goal-floating-input label {
-      font-size: 12px;
-      color: #888;
-      font-weight: normal;
-      margin-bottom: 8px;
-      display: block;
-    }
-
-    .goal-floating-input input:focus {
-      outline: none;
-      border-color: #6200ea !important;
-    }
-
-    /* Novo Card de Objetivo */
-    .new-goal-card {
-      background: #ffffff;
-      border: 1px solid #eaeaea;
-      border-radius: 20px;
-      padding: 24px;
-      width: 340px;
-      /* Largura fixa para o card não encolher */
-      flex-grow: 0;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-      /* Espaçamento entre as 3 partes do card */
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-
-    .new-goal-card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
-    }
-
-    .ng-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      width: 100%;
-    }
-
-    .ng-icon {
-      width: 42px;
-      height: 42px;
-      border-radius: 50%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      color: white;
-      font-size: 16px;
-      flex-shrink: 0;
-    }
-
-    .ng-title {
-      font-size: 16px;
-      font-weight: 700;
-      color: #111;
-      margin-left: 12px;
-      flex-grow: 1;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .ng-progress-track {
-      background: #f1f5f9;
-      height: 8px;
-      border-radius: 4px;
-      width: 100%;
-      overflow: hidden;
-      margin-bottom: 8px;
-    }
-
-    .ng-progress-fill {
-      height: 100%;
-      border-radius: 4px;
-      transition: width 0.5s ease-out;
-    }
-
-    /* ========================================= */
-    /* DETALHES DO OBJETIVO (SPLIT VIEW)         */
-    /* ========================================= */
-    .gd-container {
-      display: flex;
-      gap: 20px;
-      flex-wrap: wrap;
-    }
-
-    .gd-card {
-      background: #fff;
-      border: 1px solid #eaeaea;
-      border-radius: 16px;
-      padding: 30px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
-      flex: 1;
-      min-width: 320px;
-    }
-
-    .gd-deposit-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 15px 0;
-      border-bottom: 1px solid #f4f6f8;
-    }
-
-    .gd-deposit-item:last-child {
-      border-bottom: none;
-    }
-
-    .gd-btn-add {
-      background: #6200ea;
-      /* Cor roxa principal do sistema */
-      color: white;
-      border: none;
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      /* Torna o botão num círculo perfeito */
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      cursor: pointer;
-      box-shadow: 0 4px 12px rgba(98, 0, 234, 0.3);
-      /* Sombra roxa suave */
-      transition: all 0.3s ease;
-      font-size: 16px;
-    }
-
-    .gd-btn-add:hover {
-      transform: translateY(-2px) scale(1.05);
-      /* Efeito de flutuar e crescer ligeiramente */
-      box-shadow: 0 6px 16px rgba(98, 0, 234, 0.4);
-      background: #5300c8;
-      /* Fica um pouco mais escuro ao passar o rato */
-    }
-
-    .gd-btn-add:active {
-      transform: translateY(0) scale(0.95);
-      /* Efeito de clique */
+  @keyframes slideOutToast {
+    to {
+      transform: translateX(120%);
+      opacity: 0;
     }
   }

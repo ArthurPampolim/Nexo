@@ -338,7 +338,7 @@ const AppController = (function () {
 
     try {
       await createUserWithEmailAndPassword(auth, email, pass);
-      alert("Conta criada com sucesso! O sistema fará o login automático.");
+      AppController.showToast("Conta criada com sucesso! O sistema fará o login automático.", 'success');
     } catch (error) {
       errorMsg.innerText = "Erro ao criar: A senha deve ter no mínimo 6 caracteres.";
       errorMsg.style.display = 'block';
@@ -395,7 +395,7 @@ const AppController = (function () {
 
       // (Opcional) Aqui você poderá enviar o nome/nascimento para uma tabela "Usuarios" no banco de dados posteriormente
 
-      alert(`Conta criada com sucesso, ${nome}! O login será feito automaticamente.`);
+      AppController.showToast(`Conta criada com sucesso, ${nome}! O login será feito automaticamente.`, 'success');
     } catch (error) {
       errorMsg.innerText = "Erro ao criar conta: " + error.message;
       errorMsg.style.display = 'block';
@@ -522,7 +522,7 @@ const AppController = (function () {
       closeAccountModal();
       loadAccounts();
     } catch (error) {
-      alert("Erro ao salvar conta: " + error.message);
+      AppController.showToast("Erro ao salvar conta: " + error.message, 'error');
     } finally {
       elements.submitAccountBtn.disabled = false;
       elements.submitAccountBtn.innerText = 'Salvar';
@@ -575,7 +575,7 @@ const AppController = (function () {
       loadTransactions();
       if (formDados.tipoTransferencia === 'OBJETIVO') loadGoals();
     } catch (error) {
-      alert("Erro na transferência: " + error.message);
+      AppController.showToast("Erro na transferência: " + error.message, 'error');
     } finally {
       btn.disabled = false;
       btn.innerText = 'Realizar Transferência';
@@ -593,6 +593,7 @@ const AppController = (function () {
     }
   }
   function renderTransactions() {
+    updateTransactionSummary();
     const selectedYYYYMM = getSelectedYYYYMM();
 
     const today = new Date();
@@ -978,7 +979,7 @@ const AppController = (function () {
       closeModal();
       loadTransactions();
     } catch (error) {
-      alert("Erro ao salvar transação: " + error.message);
+      AppController.showToast("Erro ao salvar transação: " + error.message, 'error');
     } finally {
       elements.submitBtn.disabled = false;
     }
@@ -990,7 +991,7 @@ const AppController = (function () {
       await deleteDoc(doc(db, "Transacoes", id));
       loadTransactions();
     } catch (error) {
-      alert("Erro ao excluir: " + error.message);
+      AppController.showToast("Erro ao excluir: " + error.message, 'error');
     }
   }
 
@@ -1157,7 +1158,7 @@ const AppController = (function () {
       closeGoalModal();
       loadGoals();
     } catch (error) {
-      alert("Erro ao salvar objetivo: " + error.message);
+      AppController.showToast("Erro ao salvar objetivo: " + error.message, 'error');
     } finally {
       btn.disabled = false;
     }
@@ -1187,17 +1188,31 @@ const AppController = (function () {
       await deleteDoc(doc(db, "Objetivos", id));
       loadGoals();
     } catch (error) {
-      alert("Erro ao excluir: " + error.message);
+      AppController.showToast("Erro ao excluir: " + error.message, 'error');
     }
   }
 
-  function openGoalDepositModal(goalId) {
+  function openGoalDepositModal(goalId, type = 'deposit') {
     const g = state.goals.find(x => String(x.ID) === String(goalId));
     if (!g) return;
+
     document.getElementById('gd-goal-id').value = g.ID;
     document.getElementById('gd-goal-name').value = g.Nome;
-    document.getElementById('gd-deposit-id').value = ''; // Limpa para Novo Aporte
+    document.getElementById('gd-deposit-id').value = '';
+    document.getElementById('gd-transaction-type').value = type;
     document.querySelector('#goal-deposit-form input[name="valor"]').value = '';
+
+    const title = document.getElementById('gd-modal-title');
+    const btn = document.getElementById('submit-gd-btn');
+
+    if (type === 'withdraw') {
+      title.innerText = 'Resgatar Valor';
+      btn.innerText = 'Confirmar Resgate';
+    } else {
+      title.innerText = 'Adicionar Depósito';
+      btn.innerText = 'Confirmar Aporte';
+    }
+
     document.getElementById('goal-deposit-modal').classList.remove('hidden');
   }
   function closeGoalDepositModal() {
@@ -1208,13 +1223,19 @@ const AppController = (function () {
   async function submitGoalDeposit(event) {
     event.preventDefault();
     const btn = document.getElementById('submit-gd-btn');
+    const originalText = btn.innerText;
     btn.disabled = true;
-    btn.innerHTML = 'Guardando...';
+    btn.innerHTML = 'Processando...';
 
     const formDados = Object.fromEntries(new FormData(document.getElementById('goal-deposit-form')).entries());
-    const depositAmount = parseFloat(formDados.valor) || 0;
+    let depositAmount = parseFloat(formDados.valor.replace(/\D/g, "")) / 100 || 0;
+
+    const type = formDados.type;
+    if (type === 'withdraw') depositAmount = -Math.abs(depositAmount);
+    else depositAmount = Math.abs(depositAmount);
+
     const goalId = formDados.id;
-    const depositId = formDados.depositId; // Verifica se é Edição
+    const depositId = formDados.depositId;
 
     try {
       const goal = state.goals.find(g => String(g.ID) === String(goalId));
@@ -1223,14 +1244,16 @@ const AppController = (function () {
       const localISO = new Date(new Date().getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().split('T')[0];
 
       if (depositId) {
-        // Modo Edição: Altera o valor e calcula a diferença no objetivo
         const oldDeposit = state.currentGoalDeposits.find(d => String(d.ID) === String(depositId));
         const difference = depositAmount - (parseFloat(oldDeposit.Valor) || 0);
 
         await updateDoc(doc(db, "AportesObjetivo", depositId), { Valor: depositAmount });
         await updateDoc(doc(db, "Objetivos", goalId), { ValorAtual: (parseFloat(goal.ValorAtual) || 0) + difference });
       } else {
-        // Modo Novo: Cria um registro e soma no objetivo
+        if (type === 'withdraw' && Math.abs(depositAmount) > (parseFloat(goal.ValorAtual) || 0)) {
+          throw new Error("Saldo insuficiente no objetivo para este resgate.");
+        }
+
         await addDoc(collection(db, "AportesObjetivo"), {
           IdObjetivo: goalId,
           Valor: depositAmount,
@@ -1242,15 +1265,18 @@ const AppController = (function () {
       closeGoalDepositModal();
       await loadGoals();
 
-      // Se a tela de detalhes estiver aberta, atualiza ela ao vivo
       if (!document.getElementById('view-goal-details').classList.contains('hidden')) {
         openGoalDetails(goalId);
       }
+
+      // Usa o novo sistema de Toasts!
+      AppController.showToast(type === 'withdraw' ? "Resgate realizado com sucesso!" : "Aporte realizado com sucesso!", 'success');
+
     } catch (error) {
-      alert("Erro ao salvar aporte: " + error.message);
+      AppController.showToast(error.message, 'error');
     } finally {
       btn.disabled = false;
-      btn.innerText = 'Confirmar Aporte';
+      btn.innerText = originalText;
     }
   }
 
@@ -1397,7 +1423,7 @@ const AppController = (function () {
       closeFixedCostModal();
       loadFixedCosts();
     } catch (error) {
-      alert("Erro ao salvar custo fixo: " + error.message);
+      AppController.showToast("Erro ao salvar custo fixo: " + error.message, 'error');
     } finally {
       elements.submitFixedCostBtn.disabled = false;
     }
@@ -1409,7 +1435,7 @@ const AppController = (function () {
       await deleteDoc(doc(db, "Custos Fixos", id));
       loadFixedCosts();
     } catch (error) {
-      alert("Erro ao excluir: " + error.message);
+      AppController.showToast("Erro ao excluir: " + error.message, 'error');
     }
   }
 
@@ -1627,7 +1653,7 @@ const AppController = (function () {
       loadCreditData();
       loadTransactions();
 
-      alert("Fatura paga com sucesso!");
+      AppController.showToast("Fatura paga com sucesso!", 'success');
 
     } catch (error) {
       console.error("Erro no pagamento da fatura:", error);
@@ -1668,7 +1694,7 @@ const AppController = (function () {
       loadFixedCosts();
       loadTransactions();
     } catch (error) {
-      alert("Erro ao desmarcar pagamento: " + error.message);
+      AppController.showToast("Erro ao desmarcar pagamento: " + error.message, 'error');
     }
   }
 
@@ -1728,7 +1754,7 @@ const AppController = (function () {
       closeCCModal();
       loadCreditData();
     } catch (error) {
-      alert("Erro ao salvar cartão: " + error.message);
+      AppController.showToast("Erro ao salvar cartão: " + error.message, 'error');
     } finally {
       elements.submitCCBtn.disabled = false;
       elements.submitCCBtn.innerText = 'Salvar Cartão';
@@ -1791,7 +1817,7 @@ const AppController = (function () {
       closeCCTransModal();
       loadCreditTransactions();
     } catch (error) {
-      alert("Erro ao lançar fatura: " + error.message);
+      AppController.showToast("Erro ao lançar fatura: " + error.message, 'error');
     } finally {
       elements.submitCCTransBtn.disabled = false;
       elements.submitCCTransBtn.innerText = 'Lançar na Fatura';
@@ -1854,7 +1880,7 @@ const AppController = (function () {
       loadCreditTransactions();
       setTimeout(() => { renderInvoiceItems(); renderCreditCardsPage(); }, 300);
     } catch (error) {
-      alert("Erro ao excluir: " + error.message);
+      AppController.showToast("Erro ao excluir: " + error.message, 'error');
     }
   }
 
@@ -2496,7 +2522,7 @@ const AppController = (function () {
       document.getElementById('planning-dashboard').classList.remove('hidden');
       loadPlanning();
     } catch (error) {
-      alert("Erro ao salvar planejamento: " + error.message);
+      AppController.showToast("Erro ao salvar planejamento: " + error.message, 'error');
     } finally {
       btn.disabled = false;
       btn.innerHTML = originalBtnText;
@@ -2626,7 +2652,7 @@ const AppController = (function () {
         document.getElementById('edit-confirm-password').value = '';
       }
 
-      alert(mensagemSucesso);
+      AppController.showToast(mensagemSucesso, 'success');
 
     } catch (error) {
       console.error("Erro ao atualizar perfil:", error);
@@ -2635,7 +2661,7 @@ const AppController = (function () {
         alert("Por segurança, você precisa sair e fazer login novamente para alterar sua senha.");
         logout();
       } else {
-        alert("Atenção: " + error.message);
+        AppController.showToast("Atenção: " + error.message, 'error');
       }
     } finally {
       btn.disabled = false;
@@ -2876,17 +2902,26 @@ const AppController = (function () {
     listEl.innerHTML = '';
 
     if (state.currentGoalDeposits.length === 0) {
-      listEl.innerHTML = '<div style="color:#888; font-size:14px; margin-top:10px;">Nenhum depósito realizado ainda.</div>';
+      listEl.innerHTML = '<div style="color:#888; font-size:14px; margin-top:10px;">Nenhuma movimentação realizada ainda.</div>';
       return;
     }
 
     state.currentGoalDeposits.forEach(dep => {
+      const isWithdraw = dep.Valor < 0;
+      const displayValue = Math.abs(dep.Valor);
+      const color = isWithdraw ? '#F44336' : '#4CAF50';
+      const sign = isWithdraw ? '-' : '+';
+      const label = isWithdraw ? 'Resgate' : 'Depósito';
+
       const li = document.createElement('li');
       li.className = 'gd-deposit-item';
       li.innerHTML = `
-        <div style="font-size: 13px; color: #888;">${formatDateBR(dep.Data)}</div>
+        <div>
+          <div style="font-size: 13px; color: #888;">${formatDateBR(dep.Data)}</div>
+          <div style="font-size: 12px; color: ${color}; font-weight: 500;">${label}</div>
+        </div>
         <div style="display: flex; align-items: center; gap: 15px;">
-          <strong style="color: #4CAF50; font-size: 14px;">${currencyFormatter.format(dep.Valor)}</strong>
+          <strong style="color: ${color}; font-size: 14px;">${sign} ${currencyFormatter.format(displayValue)}</strong>
           <button class="btn-text" style="color: #bbb; font-size: 13px; padding: 0;" onclick="AppController.deleteGoalDeposit('${dep.ID}', '${dep.IdObjetivo}', ${dep.Valor})" title="Excluir"><i class="fas fa-trash"></i></button>
           <button class="btn-text" style="color: #bbb; font-size: 13px; padding: 0;" onclick="AppController.editGoalDeposit('${dep.ID}', '${dep.IdObjetivo}', ${dep.Valor})" title="Editar"><i class="fas fa-pen"></i></button>
         </div>
@@ -2910,17 +2945,33 @@ const AppController = (function () {
       await loadGoals();
       openGoalDetails(idObjetivo); // Atualiza a tela inteira
     } catch (e) {
-      alert("Erro ao excluir: " + e.message);
+      AppController.showToast("Erro ao excluir: " + e.message, 'error');
     }
   }
 
   function editGoalDeposit(idAporte, idObjetivo, valorAporte) {
     const g = state.goals.find(x => String(x.ID) === String(idObjetivo));
     if (!g) return;
+
+    const isWithdraw = valorAporte < 0;
+
     document.getElementById('gd-goal-id').value = g.ID;
     document.getElementById('gd-goal-name').value = g.Nome;
-    document.getElementById('gd-deposit-id').value = idAporte; // Avisa que é Edição
-    document.querySelector('#goal-deposit-form input[name="valor"]').value = valorAporte;
+    document.getElementById('gd-deposit-id').value = idAporte;
+    document.getElementById('gd-transaction-type').value = isWithdraw ? 'withdraw' : 'deposit';
+
+    document.querySelector('#goal-deposit-form input[name="valor"]').value = currencyFormatter.format(Math.abs(valorAporte));
+
+    const title = document.getElementById('gd-modal-title');
+    const btn = document.getElementById('submit-gd-btn');
+
+    if (isWithdraw) {
+      title.innerText = 'Editar Resgate';
+      btn.innerText = 'Atualizar Resgate';
+    } else {
+      title.innerText = 'Editar Depósito';
+      btn.innerText = 'Atualizar Aporte';
+    }
 
     document.getElementById('goal-deposit-modal').classList.remove('hidden');
   }
@@ -2944,9 +2995,11 @@ const AppController = (function () {
 
   // Abrir modal de depósito para o objetivo que está aberto na tela
   function openCurrentGoalDepositModal() {
-    if (state.currentGoalId) {
-      openGoalDepositModal(state.currentGoalId);
-    }
+    if (state.currentGoalId) openGoalDepositModal(state.currentGoalId, 'deposit');
+  }
+
+  function openCurrentGoalWithdrawModal() {
+    if (state.currentGoalId) openGoalDepositModal(state.currentGoalId, 'withdraw');
   }
 
   // Apagar o objetivo que está aberto na tela
@@ -2959,7 +3012,7 @@ const AppController = (function () {
       closeGoalDetails();
       loadGoals();
     } catch (error) {
-      alert("Erro ao excluir: " + error.message);
+      AppController.showToast("Erro ao excluir: " + error.message, 'error');
     }
   }
 
@@ -2994,7 +3047,7 @@ const AppController = (function () {
       closeGoalDetails();
       await loadGoals();
     } catch (error) {
-      alert("Erro ao concluir objetivo: " + error.message);
+      AppController.showToast("Erro ao concluir objetivo: " + error.message, 'error');
     }
   }
 
@@ -3032,14 +3085,162 @@ const AppController = (function () {
     }
   });
 
+  // ==========================================
+  // SISTEMA DE NOTIFICAÇÕES (TOASTS)
+  // ==========================================
+  function showToast(message, type = 'success') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    // Cria o elemento
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+
+    // Define o ícone com base no tipo
+    let icon = 'fa-check-circle';
+    if (type === 'error') icon = 'fa-exclamation-circle';
+    if (type === 'info') icon = 'fa-info-circle';
+
+    toast.innerHTML = `<i class="fas ${icon}" style="font-size: 18px;"></i> <span>${message}</span>`;
+    container.appendChild(toast);
+
+    // Remove o Toast automaticamente após 3.5 segundos
+    setTimeout(() => {
+      toast.classList.add('hiding');
+      toast.addEventListener('animationend', () => {
+        toast.remove();
+      });
+    }, 3500);
+  }
+
+  // RESUMO DINÂMICO DE TRANSAÇÕES
+  function updateTransactionSummary() {
+    const container = document.getElementById('transactions-summary-container');
+    if (!container) return;
+
+    // PROTEÇÃO 1: Procura a lista de transações com nomes em Inglês ou Português
+    const todasTransacoes = state.transactions || state.transacoes || state.lancamentos || [];
+
+    // PROTEÇÃO 2: Filtragem inteligente da Data
+    const currentTxs = todasTransacoes.filter(t => {
+      if (!t.Data) return false;
+
+      let txMes, txAno;
+      if (t.Data.includes('-')) {
+        // Ex: "2026-09-04"
+        const partes = t.Data.split('-');
+        txAno = Number(partes[0]);
+        txMes = Number(partes[1]);
+      } else if (t.Data.includes('/')) {
+        // Ex: "04/09/2026"
+        const partes = t.Data.split('/');
+        txAno = Number(partes[2]);
+        txMes = Number(partes[1]);
+      }
+
+      const mesState = Number(state.currentMonth);
+      const anoState = Number(state.currentYear);
+
+      // Compara os meses (cobre lógicas de mês indexado em 0 ou 1)
+      const isMesIgual = (txMes === mesState) || (txMes === mesState + 1) || (txMes === mesState - 1);
+      const isAnoIgual = (txAno === anoState);
+
+      return isMesIgual && isAnoIgual;
+    });
+
+    let recPagas = 0, recPendentes = 0;
+    let desPagas = 0, desPendentes = 0;
+
+    currentTxs.forEach(t => {
+      // PROTEÇÃO 3: Limpeza do Valor (lida com Números do Firebase ou Textos)
+      let v = t.Valor || t.valor || 0;
+      if (typeof v === 'string') {
+        v = v.replace(/[^\d,-]/g, ''); // Remove R$ e letras
+        v = parseFloat(v.replace(',', '.')) || 0; // Troca vírgula por ponto
+      } else {
+        v = parseFloat(v) || 0;
+      }
+      v = Math.abs(v); // Força a ser positivo para a soma
+
+      // PROTEÇÃO 4: Identifica o Tipo ("DESPESA" ou "RECEITA")
+      let tipo = String(t.Tipo || t.tipo || '').toUpperCase();
+      if (!tipo || tipo === 'UNDEFINED') {
+        if (Number(t.Valor) < 0 || String(t.Valor).includes('-')) tipo = 'DESPESA';
+        else tipo = 'RECEITA';
+      }
+
+      // PROTEÇÃO 5: Identifica o Status (Se não existir campo, assume como Pago)
+      let isPaid = true;
+      if ('Pago' in t) isPaid = (String(t.Pago).toLowerCase() === 'true' || t.Pago === true);
+      if ('Status' in t) isPaid = String(t.Status).toLowerCase() === 'pago';
+      if ('Situacao' in t) isPaid = String(t.Situacao).toLowerCase() === 'pago';
+
+      // Distribui os valores
+      if (tipo.includes('REC') || tipo.includes('ENTRADA')) {
+        if (isPaid) recPagas += v; else recPendentes += v;
+      } else if (tipo.includes('DESP') || tipo.includes('SAIDA') || tipo.includes('FATURA')) {
+        if (isPaid) desPagas += v; else desPendentes += v;
+      }
+    });
+
+    const totalRec = recPagas + recPendentes;
+    const totalDes = desPagas + desPendentes;
+    const balanco = totalRec - totalDes;
+
+    // Procura o filtro ativo
+    const filter = state.transactionFilter || state.transacoesFilter || 'ALL';
+
+    // PROTEÇÃO 6: Saldo Atual Global (Inglês ou Português)
+    let saldoAtual = 0;
+    const allAccounts = state.accounts || state.contas || [];
+    allAccounts.forEach(conta => {
+      let sv = conta.Saldo || conta.saldo || 0;
+      if (typeof sv === 'string') {
+        if (sv.includes(',')) sv = parseFloat(sv.replace(/\./g, '').replace(',', '.'));
+        else sv = parseFloat(sv);
+      }
+      saldoAtual += (parseFloat(sv) || 0);
+    });
+
+    // Função que desenha o cartão HTML
+    const buildCard = (icon, iconBg, title, value) => `
+      <div style="background: white; border-radius: 16px; padding: 20px; display: flex; align-items: center; gap: 15px; border: 1px solid #eaeaea; min-width: 240px; flex: 1; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+        <div style="width: 48px; height: 48px; border-radius: 50%; background: ${iconBg}; display: flex; justify-content: center; align-items: center; flex-shrink: 0;">
+          <i class="fas ${icon}" style="color: white; font-size: 20px;"></i>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 4px; width: 100%;">
+          <div style="display: flex; justify-content: space-between; align-items: center; color: #888; font-size: 14px; font-weight: 500;">
+            ${title} <i class="fas fa-chevron-right" style="font-size: 12px; color: #ccc;"></i>
+          </div>
+          <div style="color: #111; font-size: 18px; font-weight: 600;">${currencyFormatter.format(value)}</div>
+        </div>
+      </div>
+    `;
+
+    let html = '';
+
+    if (filter === 'INCOME' || filter === 'RECEITA') {
+      html += buildCard('fa-arrow-up', '#4CAF50', 'Receitas pendentes', recPendentes);
+      html += buildCard('fa-arrow-down', '#4CAF50', 'Receitas recebidas', recPagas);
+      html += buildCard('fa-balance-scale', '#4CAF50', 'Total', totalRec);
+    } else if (filter === 'EXPENSE' || filter === 'DESPESA') {
+      html += buildCard('fa-arrow-up', '#F44336', 'Despesas pendentes', desPendentes);
+      html += buildCard('fa-arrow-down', '#F44336', 'Despesas pagas', desPagas);
+      html += buildCard('fa-balance-scale', '#F44336', 'Total', totalDes);
+    } else {
+      html += buildCard('fa-wallet', 'var(--primary-color)', 'Saldo Atual', saldoAtual);
+      html += buildCard('fa-arrow-up', '#4CAF50', 'Receitas', totalRec);
+      html += buildCard('fa-arrow-down', '#F44336', 'Despesas', totalDes);
+      html += buildCard('fa-coins', balanco >= 0 ? '#4CAF50' : '#F44336', 'Balanço mensal', Math.abs(balanco));
+    }
+
+    container.innerHTML = html;
+  }
+
   return {
     init, switchTab, setTransactionFilter, renderCreditCardsPage, renderFixedCostsPage, renderGoalsPage, renderAccountsPage, renderPlanningView, openMonthPicker, closeMonthPicker, changePickerYear, selectCurrentMonth, openModal, closeModal, submitTransaction, editTransaction, deleteTransaction, openAccountModal, closeAccountModal, submitAccount, openTransferModal, closeTransferModal, submitTransfer,
     openGoalTypeModal, openGoalForm, closeGoalModal, submitGoal, editGoal, deleteGoal, openGoalDepositModal, closeGoalDepositModal, submitGoalDeposit,
-    openGoalDetails, closeGoalDetails, editGoalFromDetails, deleteGoalDeposit, editGoalDeposit,
-    toggleGoalOptions, openCurrentGoalDepositModal, deleteCurrentGoal,
-    switchGoalsTab, markGoalAsCompleted,
-    toggleGoalsSortDropdown, setGoalsSortOrder,
-    openFixedCostModal, closeFixedCostModal, submitFixedCost, editFixedCost, deleteFixedCost, markFixedCostPaid, unmarkFixedCostPaid, openFCPayModal, closeFCPayModal, openCCModal, closeCCModal, submitCC, openCCTransModal, closeCCTransModal, submitCCTrans, openCCInvoiceModal, closeCCInvoiceModal, deleteCreditTransaction, toggleFabMenu, closeFabMenu, openNewTransaction, openNewCCTransaction, openNewTransfer, startPlanningWizard, cancelPlanningWizard, copyPreviousPlanning, maskCurrency, calculateWizardBudget, prevWizardStep, nextWizardStep, calculateWizardCategoryTotals, renderWizardCategories, selectCardPreference, finishPlanningWizard, closeFixedCostPayModal, submitFixedCostPay, logout, switchProfileTab, maskCPF, maskPhone, maskCEP, changeTheme, loadUserProfile, openPayInvoiceModal, closePayInvoiceModal, submitPayInvoice
+    openGoalDetails, closeGoalDetails, editGoalFromDetails, deleteGoalDeposit, editGoalDeposit, toggleGoalOptions, openCurrentGoalDepositModal, deleteCurrentGoal, switchGoalsTab, markGoalAsCompleted, toggleGoalsSortDropdown, setGoalsSortOrder, openFixedCostModal, closeFixedCostModal, submitFixedCost, editFixedCost, deleteFixedCost, markFixedCostPaid, unmarkFixedCostPaid, openFCPayModal, closeFCPayModal, openCCModal, closeCCModal, submitCC, openCCTransModal, closeCCTransModal, submitCCTrans, openCCInvoiceModal, closeCCInvoiceModal, deleteCreditTransaction, toggleFabMenu, closeFabMenu, openNewTransaction, openNewCCTransaction, openNewTransfer, startPlanningWizard, cancelPlanningWizard, copyPreviousPlanning, maskCurrency, calculateWizardBudget, prevWizardStep, nextWizardStep, calculateWizardCategoryTotals, renderWizardCategories, selectCardPreference, finishPlanningWizard, closeFixedCostPayModal, submitFixedCostPay, logout, switchProfileTab, maskCPF, maskPhone, maskCEP, changeTheme, loadUserProfile, openPayInvoiceModal, closePayInvoiceModal, submitPayInvoice, showToast, openCurrentGoalWithdrawModal, updateTransactionSummary
   };
 })();
 
