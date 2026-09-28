@@ -1044,16 +1044,16 @@ const AppController = (function () {
       if (activeTab === 'ANDAMENTO') {
         pageContainer.innerHTML = `
           <div style="text-align: center; padding: 60px 20px; width: 100%;">
-            <i class="fas fa-clipboard-list" style="font-size: 80px; color: #6200ea; margin-bottom: 20px; opacity: 0.8;"></i>
+            <i class="fas fa-clipboard-list" style="font-size: 80px; color: var(--primary-color); margin-bottom: 20px; opacity: 0.8;"></i>
             <h3 style="font-size: 18px; color: #111; margin-bottom: 10px;">Definindo objetivos você alcança seus sonhos mais rápido!</h3>
             <p style="font-size: 14px; color: #888; margin-bottom: 25px;">Que tal criar um pra te ajudar?</p>
-            <button class="btn-primary" style="width: auto; padding: 12px 30px; border-radius: 24px; background: #6200ea; font-size: 14px;" onclick="AppController.openGoalTypeModal()">CRIAR NOVO OBJETIVO</button>
+            <button class="btn-primary" style="width: auto; padding: 12px 30px; border-radius: 24px; background: var(--primary-color); font-size: 14px;" onclick="AppController.openGoalTypeModal()">CRIAR NOVO OBJETIVO</button>
           </div>
         `;
       } else {
         pageContainer.innerHTML = `
           <div style="text-align: center; padding: 60px 20px; width: 100%;">
-            <i class="fas fa-clipboard-check" style="font-size: 80px; color: #6200ea; margin-bottom: 20px; opacity: 0.8;"></i>
+            <i class="fas fa-clipboard-check" style="font-size: 80px; color: var(--primary-color); margin-bottom: 20px; opacity: 0.8;"></i>
             <h3 style="font-size: 18px; color: #111; margin-bottom: 10px;">Você ainda não concluiu um objetivo</h3>
             <p style="font-size: 14px; color: #888; margin-bottom: 25px;">Que tal continuar guardando dinheiro?</p>
           </div>
@@ -2970,12 +2970,12 @@ const AppController = (function () {
     const btnConcluidos = document.getElementById('btn-goal-concluidos');
 
     if (tabName === 'ANDAMENTO') {
-      btnAndamento.style.background = '#6200ea';
+      btnAndamento.style.background = 'var(--primary-color)';
       btnAndamento.style.color = 'white';
       btnConcluidos.style.background = 'transparent';
       btnConcluidos.style.color = '#666';
     } else {
-      btnConcluidos.style.background = '#6200ea';
+      btnConcluidos.style.background = 'var(--primary-color)';
       btnConcluidos.style.color = 'white';
       btnAndamento.style.background = 'transparent';
       btnAndamento.style.color = '#666';
