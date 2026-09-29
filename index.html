@@ -127,7 +127,7 @@
         <div id="user-dropdown"
           style="display: none; position: absolute; top: 45px; right: 0; background: white; border-radius: 12px; box-shadow: 0 8px 16px rgba(0,0,0,0.1); width: 200px; padding: 10px 0; z-index: 1000; border: 1px solid #eee;">
           <a href="#" class="dropdown-item" id="nav-profile-btn"><i class="far fa-user"></i> Meu perfil</a>
-          <a href="#" class="dropdown-item"><i class="fas fa-cog"></i> Configurações</a>
+          <a href="#" class="dropdown-item" id="nav-settings-btn"><i class="fas fa-cog"></i> Configurações</a>
           <div style="height: 1px; background: #eee; margin: 5px 0;"></div>
           <!-- O botão de Sair continua chamando a mesma função -->
           <a href="#" class="dropdown-item" onclick="AppController.logout(); return false;"><i
@@ -335,6 +335,31 @@
                   </tr>
                 </tbody>
               </table>
+            </div>
+            <div class="pagination-controls" id="tx-pagination-controls">
+              <div class="pagination-left">
+                <label for="tx-items-per-page">Linhas por página:</label>
+                <select id="tx-items-per-page" class="no-choices"
+                  onchange="AppController.changeTxItemsPerPage(this.value)">
+                  <option value="5">5</option>
+                  <option value="10">10</option>
+                  <option value="25">25</option>
+                  <option value="50" selected>50</option>
+                  <option value="100">100</option>
+                  <option value="200">200</option>
+                </select>
+              </div>
+              <div class="pagination-right">
+                <span id="tx-pagination-info">1-50 de 0</span>
+                <button class="page-btn" id="tx-page-first" onclick="AppController.changeTxPage('first')"
+                  title="Primeira página"><i class="fas fa-step-backward"></i></button>
+                <button class="page-btn" id="tx-page-prev" onclick="AppController.changeTxPage('prev')"
+                  title="Página anterior"><i class="fas fa-chevron-left"></i></button>
+                <button class="page-btn" id="tx-page-next" onclick="AppController.changeTxPage('next')"
+                  title="Próxima página"><i class="fas fa-chevron-right"></i></button>
+                <button class="page-btn" id="tx-page-last" onclick="AppController.changeTxPage('last')"
+                  title="Última página"><i class="fas fa-step-forward"></i></button>
+              </div>
             </div>
           </main>
         </div>
@@ -873,6 +898,245 @@
         </div>
       </div> <!-- FIM DA VIEW 7: PLANEJAMENTO MENSAL -->
 
+      <!-- VIEW 8: CONFIGURAÇÕES -->
+      <div id="view-settings" class="app-view hidden">
+
+        <!-- Cabeçalho e Menu em Pílulas -->
+        <div class="dashboard-title-container"
+          style="align-items: center; margin-bottom: 30px; gap: 20px; flex-wrap: wrap;">
+          <h2 style="font-size: 28px; margin: 0;">Configurações</h2>
+
+          <div
+            style="display: flex; background: white; border-radius: 30px; padding: 5px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #eaeaea; margin-left: auto;">
+            <button id="tab-set-pref" onclick="AppController.switchSettingsTab('pref')"
+              style="background: var(--primary-color); color: white; border: none; border-radius: 24px; padding: 10px 24px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-size: 14px;">Preferências</button>
+            <button id="tab-set-alerts" onclick="AppController.switchSettingsTab('alerts')"
+              style="background: transparent; color: #666; border: none; border-radius: 24px; padding: 10px 24px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-size: 14px;">Alertas
+              e notificações</button>
+            <button id="tab-set-dash" onclick="AppController.switchSettingsTab('dash')"
+              style="background: transparent; color: #666; border: none; border-radius: 24px; padding: 10px 24px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-size: 14px;">Dashboard</button>
+            <button id="tab-set-sec" onclick="AppController.switchSettingsTab('sec')"
+              style="background: transparent; color: #666; border: none; border-radius: 24px; padding: 10px 24px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-size: 14px;">Segurança</button>
+          </div>
+        </div>
+
+        <div style="max-width: 1200px; margin: 0 auto; padding: 0 15px 50px;">
+
+          <!-- CONTEÚDO 1: PREFERÊNCIAS -->
+          <div id="set-content-pref"
+            style="background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #eaeaea;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 60px;">
+              <div>
+                <div style="margin-bottom: 30px;">
+                  <label style="font-size: 12px; color: #888; margin-bottom: 5px; display: block;">Idioma</label>
+                  <select
+                    style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 16px; outline: none; background: transparent; color: #111;">
+                    <option>Português Brasil</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size: 12px; color: #888; margin-bottom: 5px; display: block;">Aparência</label>
+                  <select id="theme-selector-settings"
+                    style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 16px; outline: none; background: transparent; color: #111;">
+                    <option value="light">Modo claro</option>
+                    <option value="dark">Modo escuro</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <div style="margin-bottom: 30px;">
+                  <label style="font-size: 12px; color: #888; margin-bottom: 5px; display: block;">Moeda</label>
+                  <select
+                    style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 16px; outline: none; background: transparent; color: #111;">
+                    <option>BRL (R$)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div style="text-align: right;">
+              <button class="btn-primary" onclick="AppController.savePreferences()"
+                style="width: auto; padding: 12px 30px; border-radius: 24px; font-size: 13px; background: var(--primary-color);">SALVAR
+                ALTERAÇÕES</button>
+            </div>
+          </div>
+
+          <!-- CONTEÚDO 2: ALERTAS E NOTIFICAÇÕES -->
+          <div id="set-content-alerts" class="hidden"
+            style="background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #eaeaea;">
+            <h4 style="font-size: 16px; color: #111; margin-top: 0; margin-bottom: 25px;">Email</h4>
+
+            <div
+              style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid #f0f0f0; margin-bottom: 20px;">
+              <strong style="font-size: 16px; color: #111; font-weight: 500;">Receber notificações</strong>
+              <label class="nexo-toggle">
+                <input type="checkbox" checked>
+                <span class="nexo-toggle-slider"></span>
+              </label>
+            </div>
+
+            <div
+              style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid #f0f0f0; margin-bottom: 20px;">
+              <div>
+                <strong style="font-size: 16px; color: #111; font-weight: 500;">Novidades do Nexo</strong>
+                <p style="margin: 5px 0 0 0; font-size: 13px; color: #888; max-width: 500px;">Novas funcionalidades e as
+                  melhores dicas para transformar sua vida financeira para melhor.</p>
+              </div>
+              <label class="nexo-toggle">
+                <input type="checkbox" checked>
+                <span class="nexo-toggle-slider"></span>
+              </label>
+            </div>
+
+            <div
+              style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 40px; margin-bottom: 20px;">
+              <div>
+                <strong style="font-size: 16px; color: #111; font-weight: 500;">Alertas financeiros</strong>
+                <p style="margin: 5px 0 0 0; font-size: 13px; color: #888; max-width: 500px;">Lembretes sobre datas de
+                  vencimento, gastos, transferências, pagamentos, desempenho, planejamento mensal e objetivos.</p>
+              </div>
+              <label class="nexo-toggle">
+                <input type="checkbox" checked>
+                <span class="nexo-toggle-slider"></span>
+              </label>
+            </div>
+
+            <div style="text-align: right;">
+              <button class="btn-primary"
+                style="width: auto; padding: 12px 30px; border-radius: 24px; font-size: 13px; background: #e0e0e0; color: #999; cursor: not-allowed;"
+                disabled>SALVAR ALTERAÇÕES</button>
+            </div>
+          </div>
+
+          <!-- CONTEÚDO 3: DASHBOARD -->
+          <div id="set-content-dash" class="hidden"
+            style="background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #eaeaea; text-align: center; color: #888;">
+            <i class="fas fa-chart-pie" style="font-size: 40px; color: #ddd; margin-bottom: 15px;"></i>
+            <p>Configurações do Dashboard (Em breve)</p>
+          </div>
+
+          <!-- CONTEÚDO 4: SEGURANÇA -->
+          <div id="set-content-sec" class="hidden">
+            <h3 style="font-size: 18px; color: #666; font-weight: normal; margin-bottom: 20px;">Informações da conta
+            </h3>
+
+            <div
+              style="background: white; border-radius: 16px; padding: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #eaeaea; margin-bottom: 25px;">
+              <strong style="font-size: 16px; color: #111; font-weight: 600; display: block; margin-bottom: 15px;">Mudar
+                meu e-mail</strong>
+              <p style="font-size: 13px; color: #888; margin-bottom: 30px; line-height: 1.5;">Após solicitar a mudança,
+                enviaremos uma confirmação para o novo e-mail cadastrado. Até a confirmação, sua conta continuará
+                vinculada ao seu e-mail atual.</p>
+              <button class="btn-primary"
+                style="width: auto; padding: 12px 30px; border-radius: 24px; font-size: 13px; background: var(--primary-color);">MUDAR
+                E-MAIL</button>
+            </div>
+
+            <div
+              style="background: white; border-radius: 16px; padding: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #eaeaea; margin-bottom: 40px;">
+              <strong style="font-size: 16px; color: #111; font-weight: 600; display: block; margin-bottom: 15px;">Mudar
+                minha senha</strong>
+              <p style="font-size: 13px; color: #888; margin-bottom: 30px;">Dica: Se possível, use uma senha que
+                contenha números, letras maiúsculas, minúsculas e caracteres especiais.</p>
+              <button class="btn-primary"
+                style="width: auto; padding: 12px 30px; border-radius: 24px; font-size: 13px; background: var(--primary-color);">ALTERAR
+                SENHA</button>
+            </div>
+
+            <h3 style="font-size: 18px; color: #666; font-weight: normal; margin-bottom: 20px;">Dispositivos conectados
+            </h3>
+
+            <div
+              style="background: white; border-radius: 16px; padding: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #eaeaea;">
+              <strong style="font-size: 16px; color: #111; font-weight: 600; display: block; margin-bottom: 10px;">Meus
+                dispositivos</strong>
+              <p style="font-size: 13px; color: #666; margin-bottom: 5px;">Você tem 5 dispositivo(s) conectado(s).</p>
+              <p style="font-size: 13px; color: #888; margin-bottom: 30px;">Se achar que algum deles não é seu, você
+                pode "desconectar dispositivos" para finalizar as sessões abertas.</p>
+
+              <!-- Selecionar todos -->
+              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 25px;">
+                <input type="checkbox" id="select-all-devices" onchange="AppController.toggleAllDevices(this.checked)"
+                  style="width: 16px; height: 16px; accent-color: var(--primary-color); cursor: pointer;">
+                <label for="select-all-devices" style="font-size: 14px; color: #333; cursor: pointer;">Selecionar
+                  todos</label>
+              </div>
+
+              <!-- Grid de Dispositivos -->
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-bottom: 35px;">
+
+                <!-- Dispositivo Atual -->
+                <div style="display: flex; align-items: flex-start; gap: 15px;">
+                  <div style="width: 16px; height: 16px;"></div> <!-- Espaçador para alinhar -->
+                  <i class="fas fa-desktop" style="font-size: 20px; color: #555; margin-top: 2px;"></i>
+                  <div>
+                    <div style="font-size: 14px; color: #111; font-weight: 500;">Chrome Windows <span
+                        style="color: var(--primary-color); font-size: 11px; font-weight: normal; margin-left: 5px;">Dispositivo
+                        atual</span></div>
+                  </div>
+                </div>
+
+                <!-- Dispositivo 2 -->
+                <div style="display: flex; align-items: flex-start; gap: 15px;">
+                  <input type="checkbox" class="device-checkbox" onchange="AppController.checkDeviceSelection()"
+                    style="width: 16px; height: 16px; accent-color: var(--primary-color); margin-top: 4px; cursor: pointer;">
+                  <i class="fas fa-desktop" style="font-size: 20px; color: #555; margin-top: 2px;"></i>
+                  <div>
+                    <div style="font-size: 14px; color: #111; font-weight: 500;">Brave Windows <span
+                        style="color: #999; font-size: 11px; font-weight: normal; margin-left: 5px;">há 5 dias</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Dispositivo 3 (Com Localização) -->
+                <div style="display: flex; align-items: flex-start; gap: 15px;">
+                  <input type="checkbox" class="device-checkbox" onchange="AppController.checkDeviceSelection()"
+                    style="width: 16px; height: 16px; accent-color: var(--primary-color); margin-top: 4px; cursor: pointer;">
+                  <i class="fas fa-desktop" style="font-size: 20px; color: #555; margin-top: 2px;"></i>
+                  <div>
+                    <div style="font-size: 14px; color: #111; font-weight: 500;">Brave Windows <span
+                        style="color: #999; font-size: 11px; font-weight: normal; margin-left: 5px;">há 5 dias</span>
+                    </div>
+                    <div style="font-size: 12px; color: #999; margin-top: 3px;">Guarapari, Espírito Santo</div>
+                  </div>
+                </div>
+
+                <!-- Dispositivo 4 -->
+                <div style="display: flex; align-items: flex-start; gap: 15px;">
+                  <input type="checkbox" class="device-checkbox" onchange="AppController.checkDeviceSelection()"
+                    style="width: 16px; height: 16px; accent-color: var(--primary-color); margin-top: 4px; cursor: pointer;">
+                  <i class="fas fa-desktop" style="font-size: 20px; color: #555; margin-top: 2px;"></i>
+                  <div>
+                    <div style="font-size: 14px; color: #111; font-weight: 500;">Brave Windows <span
+                        style="color: #999; font-size: 11px; font-weight: normal; margin-left: 5px;">há 3 dias</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Dispositivo 5 (Mobile) -->
+                <div style="display: flex; align-items: flex-start; gap: 15px;">
+                  <input type="checkbox" class="device-checkbox" onchange="AppController.checkDeviceSelection()"
+                    style="width: 16px; height: 16px; accent-color: var(--primary-color); margin-top: 4px; cursor: pointer;">
+                  <i class="fas fa-mobile-alt"
+                    style="font-size: 20px; color: #555; margin-top: 2px; margin-left: 4px;"></i>
+                  <div>
+                    <div style="font-size: 14px; color: #111; font-weight: 500;">POCO 2412DPCOAG <span
+                        style="color: #999; font-size: 11px; font-weight: normal; margin-left: 5px;">há 5 dias</span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Botão Desconectar -->
+              <button id="btn-disconnect-devices"
+                style="width: auto; padding: 12px 24px; border-radius: 24px; font-size: 13px; font-weight: 600; background: #e0e0e0; color: #999; cursor: not-allowed; border: none; transition: all 0.3s;"
+                disabled onclick="AppController.disconnectSelectedDevices()">Desconectar dispositivos</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
       <!-- FAB ESTENDIDO E MENU SUSPENSO -->
       <div class="fab-container">
         <div id="fab-menu" class="fab-menu hidden">
@@ -1366,81 +1630,45 @@
         </div>
       </div>
 
-      <!-- CONTEÚDO 1: VISÃO GERAL (Ativo por padrão) -->
-      <div id="prof-content-overview">
-        <!-- Banner Roxo -->
-        <div
-          style="background: var(--primary-color); border-radius: 16px; padding: 30px; color: white; display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-          <div style="display: flex; align-items: center; gap: 20px;">
-            <div
-              style="width: 80px; height: 80px; background: white; border-radius: 50%; display: flex; justify-content: center; align-items: center; position: relative;">
-              <i class="far fa-user" style="color: #ccc; font-size: 32px;"></i>
-              <div
-                style="position: absolute; bottom: 0; right: 0; background: #111; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; justify-content: center; align-items: center; cursor: pointer;">
-                <i class="fas fa-pencil-alt" style="font-size: 10px;"></i>
-              </div>
+      <!-- CONTEÚDO 1: PREFERÊNCIAS -->
+      <div id="set-content-pref"
+        style="background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #eaeaea;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 60px;">
+          <div>
+            <div style="margin-bottom: 30px;">
+              <label style="font-size: 12px; color: #888; margin-bottom: 5px; display: block;">Idioma</label>
+              <select id="lang-selector-settings"
+                style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 16px; outline: none; background: transparent; color: #111;">
+                <option value="pt-BR">Português Brasil</option>
+                <option value="en-US">English (US)</option>
+                <option value="es-ES">Español</option>
+              </select>
             </div>
             <div>
-              <h3 style="margin: 0; font-size: 20px;">Arthur Pampolim Barbosa</h3>
-              <p style="margin: 5px 0 0 0; font-size: 14px; opacity: 0.9;">thurpampolim@gmail.com</p>
+              <label style="font-size: 12px; color: #888; margin-bottom: 5px; display: block;">Aparência</label>
+              <select id="theme-selector-settings"
+                style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 16px; outline: none; background: transparent; color: #111;">
+                <option value="light">Modo claro</option>
+                <option value="dark">Modo escuro</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <div style="margin-bottom: 30px;">
+              <label style="font-size: 12px; color: #888; margin-bottom: 5px; display: block;">Moeda</label>
+              <select id="currency-selector-settings"
+                style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 16px; outline: none; background: transparent; color: #111;">
+                <option value="BRL">BRL (R$)</option>
+                <option value="USD">USD ($)</option>
+                <option value="EUR">EUR (€)</option>
+              </select>
             </div>
           </div>
         </div>
-
-        <!-- Grid de Cards -->
-        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 30px;">
-          <div style="background: white; border-radius: 16px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
-            <h4 style="margin-top: 0; margin-bottom: 20px; font-size: 16px;">Dados da Conta</h4>
-            <div style="margin-bottom: 15px;">
-              <label style="font-size: 12px; color: #666;">Nome</label>
-              <input type="text" value="Arthur Pampolim Barbosa"
-                style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 16px; outline: none;"
-                readonly />
-            </div>
-            <div style="margin-bottom: 25px;">
-              <label style="font-size: 12px; color: #666;">Email</label>
-              <input type="email" value="thurpampolim@gmail.com" disabled
-                style="width: 100%; border: none; border-bottom: 1px dotted #ddd; padding: 8px 0; font-size: 16px; color: #888; background: transparent; outline: none;" />
-            </div>
-            <button
-              style="background: transparent; border: 1px solid var(--primary-color); color: var(--primary-color); padding: 8px 20px; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; margin-bottom: 25px;">ALTERAR
-              E-MAIL</button>
-            <div style="margin-bottom: 30px;">
-              <label style="font-size: 12px; color: #666;">Objetivo Financeiro</label>
-              <select
-                style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 14px; outline: none; background: transparent;">
-                <option>Selecionar objetivo...</option>
-              </select>
-            </div>
-          </div>
-          <div style="background: white; border-radius: 16px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
-            <h4 style="margin-top: 0; margin-bottom: 20px; font-size: 16px;">Preferências</h4>
-            <div style="margin-bottom: 20px;">
-              <label style="font-size: 12px; color: #666;">Idioma</label>
-              <select
-                style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 14px; outline: none; background: transparent;">
-                <option>Português Brasil</option>
-              </select>
-            </div>
-            <div style="margin-bottom: 20px;">
-              <label style="font-size: 12px; color: #666;">Moeda</label>
-              <select
-                style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 14px; outline: none; background: transparent;">
-                <option>BRL (R$)</option>
-              </select>
-            </div>
-            <div style="margin-bottom: 30px;">
-              <label style="font-size: 12px; color: #666;">Aparência</label>
-              <select id="theme-selector" onchange="AppController.changeTheme(this.value)"
-                style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 14px; outline: none; background: transparent; color: inherit;">
-                <option value="light" style="color: #111;">Modo claro</option>
-                <option value="dark" style="color: #111;">Modo escuro</option>
-              </select>
-            </div>
-            <button
-              style="background: var(--primary-color); border: none; color: white; padding: 12px 24px; border-radius: 24px; font-weight: bold; width: 100%; cursor: pointer;">SALVAR
-              ALTERAÇÕES</button>
-          </div>
+        <div style="text-align: right;">
+          <button class="btn-primary" onclick="AppController.savePreferences()"
+            style="width: auto; padding: 12px 30px; border-radius: 24px; font-size: 13px; background: var(--primary-color);">SALVAR
+            ALTERAÇÕES</button>
         </div>
       </div>
 

@@ -40,7 +40,7 @@ const AppController = (function () {
 
   function switchTab(tabName) {
     state.currentTab = tabName;
-    ['dashboard', 'transactions', 'credit-cards', 'fixed-costs', 'goals', 'accounts', 'planning'].forEach(t => {
+    ['dashboard', 'transactions', 'credit-cards', 'fixed-costs', 'goals', 'accounts', 'planning', 'settings'].forEach(t => {
       const btn = document.getElementById(`tab-btn-${t}`);
       const view = document.getElementById(`view-${t}`);
       if (btn) {
@@ -190,7 +190,7 @@ const AppController = (function () {
   // Sincroniza selects nativos com a interface do Choices.js
   function upgradeSelects() {
     const config = { searchEnabled: false, itemSelectText: '', shouldSort: false };
-    document.querySelectorAll('select').forEach(selectEl => {
+    document.querySelectorAll('select:not(.no-choices)').forEach(selectEl => {
       if (selectEl.choicesInstance) selectEl.choicesInstance.destroy();
       selectEl.choicesInstance = new Choices(selectEl, config);
     });
@@ -592,6 +592,7 @@ const AppController = (function () {
       console.error("Erro ao carregar transações:", error);
     }
   }
+
   function renderTransactions() {
     updateTransactionSummary();
     const selectedYYYYMM = getSelectedYYYYMM();
@@ -609,37 +610,33 @@ const AppController = (function () {
     });
 
     // --- INJETAR LANÇAMENTOS DO CARTÃO ---
-    // Busca as compras onde o "Mês da Fatura" cai no mês que estamos visualizando
+
     const ccTransactions = state.creditTransactions
       .filter(ct => String(ct.MesFatura) === selectedYYYYMM)
       .map(ct => {
         const cardObj = state.creditCards.find(c => String(c.ID) === String(ct.IdCartao || ct.CartaoID));
 
-        // Calcula a data de vencimento real para o mês da fatura
+        
         const yearStr = ct.MesFatura.split('-')[0];
+
         const monthStr = ct.MesFatura.split('-')[1];
         const lastDayOfMonth = new Date(parseInt(yearStr), parseInt(monthStr), 0).getDate();
 
         let dueDay = cardObj && cardObj.DiaVencimento ? parseInt(cardObj.DiaVencimento) : 1;
-        dueDay = Math.min(dueDay, lastDayOfMonth); // Garante que dia 31 não quebre em meses de 30 dias
+        dueDay = Math.min(dueDay, lastDayOfMonth);
         const syntheticDate = `${ct.MesFatura}-${String(dueDay).padStart(2, '0')}`;
 
         return {
-          ID: ct.ID,
-          Tipo: 'DESPESA',
-          Data: syntheticDate,
-          Categoria: ct.Categoria,
-          Conta: cardObj ? cardObj.Nome : 'Cartão de Crédito',
-          Valor: ct.Valor,
+          ID: ct.ID, Tipo: 'DESPESA', Data: syntheticDate, Categoria: ct.Categoria,
+          Conta: cardObj ? cardObj.Nome : 'Cartão de Crédito', Valor: ct.Valor,
           Descricao: ct.Descricao + ` (Comprado: ${formatDateBR(ct.Data)})`,
-          isCreditCard: true,
-          Status: ct.Status || 'Pendente' // <-- NOVA LINHA ADICIONADA
+          isCreditCard: true, Status: ct.Status || 'Pendente'
         };
       });
-    // Adiciona as compras de cartão à lista principal do mês
+
     monthlyTransactions.push(...ccTransactions);
 
-    // 2. Aplicação do filtro de abas (Todas, Despesas, Receitas, Transferências)
+    // 2. Aplicação do filtro de abas
     const displayTransactions = monthlyTransactions.filter(t => {
       const isTransf = isTransferTransaction(t);
       if (state.txFilter === 'DESPESA') return t.Tipo === 'DESPESA' && !isTransf;
@@ -648,7 +645,7 @@ const AppController = (function () {
       return true;
     });
 
-    // 3. Ordenação decrescente para exibição na tabela (Mais recente no topo)
+    // 3. Ordenação decrescente (Mais recente no topo)
     displayTransactions.sort((a, b) => {
       const dateA = parseLocalDate(a.Data).getTime();
       const dateB = parseLocalDate(b.Data).getTime();
@@ -656,22 +653,15 @@ const AppController = (function () {
       return String(b.ID || '').localeCompare(String(a.ID || ''));
     });
 
-    // ============================================================================
-    // A MÁGICA DO SALDO DO FINAL DO DIA
-    // Calculamos o saldo cronológico (do passado para o futuro) para gravar o 
-    // saldo exato que a conta tinha no final de cada dia específico.
-    // ============================================================================
+    // 4. LÓGICA DO SALDO DO FINAL DO DIA
     const baseBalance = state.accounts.reduce((acc, currentAcc) => acc + (parseFloat(currentAcc.SaldoInicial) || 0), 0);
-
     const allSortedChronologically = [...state.transactions].sort((a, b) => {
       return parseLocalDate(a.Data).getTime() - parseLocalDate(b.Data).getTime();
     });
 
     let runningBalance = baseBalance;
     const endOfDayBalances = {};
-
     allSortedChronologically.forEach(t => {
-      // Transferências não afetam o saldo global consolidado
       if (!isTransferTransaction(t)) {
         const amount = parseFloat(t.Valor) || 0;
         if (t.Tipo === 'RECEITA') runningBalance += amount;
@@ -679,12 +669,30 @@ const AppController = (function () {
       }
       endOfDayBalances[formatDateBR(t.Data)] = runningBalance;
     });
-    // ============================================================================
+
+    // =========================================================
+    // 5. MÁGICA DA PAGINAÇÃO
+    // =========================================================
+    state.txItemsPerPage = state.txItemsPerPage || 50;
+    state.txCurrentPage = state.txCurrentPage || 1;
+
+    const totalItems = displayTransactions.length;
+    const totalPages = Math.ceil(totalItems / state.txItemsPerPage);
+
+    // Corrigir página se estiver fora dos limites
+    if (state.txCurrentPage > totalPages && totalPages > 0) state.txCurrentPage = totalPages;
+    if (state.txCurrentPage < 1) state.txCurrentPage = 1;
+
+    const startIndex = (state.txCurrentPage - 1) * state.txItemsPerPage;
+    const endIndex = Math.min(startIndex + state.txItemsPerPage, totalItems);
+
+    // FATIA a lista para mostrar apenas os itens desta página
+    const paginatedTransactions = displayTransactions.slice(startIndex, endIndex);
 
     const countBadge = document.getElementById('tx-count-badge');
-    if (countBadge) countBadge.innerText = `${displayTransactions.length} registro(s)`;
+    if (countBadge) countBadge.innerText = `${totalItems} registro(s)`;
 
-    // Atualiza os Cards Superiores do Dashboard
+    // Resumos Superiores
     const globalSummary = state.transactions.reduce((acc, current) => {
       const tDate = parseLocalDate(current.Data);
       if (tDate <= today) {
@@ -708,26 +716,26 @@ const AppController = (function () {
     if (elements.totalIncome) elements.totalIncome.innerText = currencyFormatter.format(monthlySummary.income);
     if (elements.totalExpense) elements.totalExpense.innerText = currencyFormatter.format(monthlySummary.expense);
 
-    // Atualiza os cartões dentro da aba de Transações
-    const txTotalBalance = document.getElementById('tx-total-balance');
-    const txTotalIncome = document.getElementById('tx-total-income');
-    const txTotalExpense = document.getElementById('tx-total-expense');
-
-    if (txTotalBalance) txTotalBalance.innerText = currencyFormatter.format(currentGlobalBalance);
-    if (txTotalIncome) txTotalIncome.innerText = currencyFormatter.format(monthlySummary.income);
-    if (txTotalExpense) txTotalExpense.innerText = currencyFormatter.format(monthlySummary.expense);
-
     renderAccountBalances(state.transactions);
-
     elements.transactionsContainer.innerHTML = '';
 
+    // =========================================================
+    // SE NÃO HOUVER TRANSAÇÕES
+    // =========================================================
     if (displayTransactions.length === 0) {
       elements.transactionsContainer.innerHTML = '<tr><td colspan="8" style="padding:15px; color:#888; text-align:center;">Nenhuma transação encontrada com este filtro.</td></tr>';
-      updateChart(monthlyTransactions);
+
+      const pagInfo = document.getElementById('tx-pagination-info');
+      if (pagInfo) pagInfo.innerText = `0-0 de 0`;
+      ['first', 'prev', 'next', 'last'].forEach(id => {
+        const btn = document.getElementById(`tx-page-${id}`);
+        if (btn) btn.disabled = true;
+      });
+
+      ChartManager.updateDashboardCharts(state.transactions, selectedYYYYMM);
       return;
     }
 
-    // Função auxiliar para cores e ícones das categorias
     function getCategoryStyle(cat) {
       const styles = {
         'Alimentação': { icon: 'fa-utensils', color: '#E91E63' },
@@ -745,7 +753,8 @@ const AppController = (function () {
       return styles[cat] || { icon: 'fa-tag', color: '#9e9e9e' };
     }
 
-    displayTransactions.forEach((t, index) => {
+    // DESENHAR LINHAS PAGINADAS
+    paginatedTransactions.forEach((t, index) => {
       const tr = document.createElement('tr');
       tr.className = 'tx-tr';
 
@@ -777,56 +786,35 @@ const AppController = (function () {
       if (isTransf && t.Descricao) mainDesc = t.Descricao;
 
       const currentDateStr = formatDateBR(t.Data);
-      // Substitui os botões de editar/excluir por uma "tag" indicativa se for transação de cartão
       const actionButtons = t.isCreditCard
         ? `<span style="font-size: 11px; color: #888; background: #f1f5f9; padding: 4px 8px; border-radius: 12px; font-weight: 600;"><i class="fas fa-credit-card"></i> Fatura</span>`
         : `<button class="btn-text" style="color: #64748b;" onclick="AppController.editTransaction('${t.ID}')" title="Editar"><i class="fas fa-pen"></i></button>
            <button class="btn-delete" onclick="AppController.deleteTransaction('${t.ID}')" title="Excluir"><i class="fas fa-trash"></i></button>`;
 
       tr.innerHTML = `
-          <td class="tx-td" style="text-align: center;">
-            <input type="checkbox" class="tx-checkbox" ${!isPending ? 'checked' : ''} disabled>
-          </td>
-          <td class="tx-td" style="text-align: center;">
-            ${statusHtml}
-          </td>
-          <td class="tx-td" style="${isPending ? 'opacity:0.6;' : ''}">
-            ${currentDateStr}
-          </td>
-          <td class="tx-td" style="${isPending ? 'opacity:0.6;' : ''}; font-weight: 500;">
-            ${mainDesc}
-          </td>
+          <td class="tx-td" style="text-align: center;"><input type="checkbox" class="tx-checkbox" ${!isPending ? 'checked' : ''} disabled></td>
+          <td class="tx-td" style="text-align: center;">${statusHtml}</td>
+          <td class="tx-td" style="${isPending ? 'opacity:0.6;' : ''}">${currentDateStr}</td>
+          <td class="tx-td" style="${isPending ? 'opacity:0.6;' : ''}; font-weight: 500;">${mainDesc}</td>
           <td class="tx-td" style="${isPending ? 'opacity:0.6;' : ''}">
             <div class="cat-badge-container">
-              <div class="cat-icon-circle" style="background-color: ${catStyle.color};">
-                <i class="fas ${catStyle.icon}"></i>
-              </div>
+              <div class="cat-icon-circle" style="background-color: ${catStyle.color};"><i class="fas ${catStyle.icon}"></i></div>
               <span>${t.Categoria || 'Outros'}</span>
             </div>
           </td>
-          <td class="tx-td" style="${isPending ? 'opacity:0.6;' : ''}">
-            ${t.Conta || '--'}
-          </td>
-          <td class="tx-td ${valClass}" style="text-align: right; ${isPending ? 'opacity:0.6;' : ''}">
-            ${sign} ${currencyFormatter.format(t.Valor)}
-          </td>
-          <td class="tx-td" style="text-align: center;">
-            <div class="action-btn-group" style="${t.isCreditCard ? 'opacity: 1;' : ''}">
-              ${actionButtons}
-            </div>
-          </td>`;
+          <td class="tx-td" style="${isPending ? 'opacity:0.6;' : ''}">${t.Conta || '--'}</td>
+          <td class="tx-td ${valClass}" style="text-align: right; ${isPending ? 'opacity:0.6;' : ''}">${sign} ${currencyFormatter.format(t.Valor)}</td>
+          <td class="tx-td" style="text-align: center;"><div class="action-btn-group" style="${t.isCreditCard ? 'opacity: 1;' : ''}">${actionButtons}</div></td>`;
 
       elements.transactionsContainer.appendChild(tr);
 
-      // --- INJEÇÃO DA PÍLULA DE SALDO DO DIA ---
-      // Verifica se a PRÓXIMA transação pertence a um dia diferente. 
-      // Se pertencer, significa que as transações deste dia acabaram e devemos mostrar o saldo!
-      const nextTx = displayTransactions[index + 1];
+      // PÍLULA DE SALDO DO DIA (Atenção ao Indice Absoluto!)
+      const absoluteIndex = startIndex + index;
+      const nextTx = displayTransactions[absoluteIndex + 1];
       const nextDateStr = nextTx ? formatDateBR(nextTx.Data) : null;
 
       if (currentDateStr !== nextDateStr) {
         const balanceOfDay = endOfDayBalances[currentDateStr] || 0;
-
         const balanceRow = document.createElement('tr');
         balanceRow.innerHTML = `
             <td colspan="8" style="padding: 20px; text-align: center; border-bottom: 1px solid var(--border-color); background-color: var(--bg-color);">
@@ -838,7 +826,20 @@ const AppController = (function () {
       }
     });
 
-    // Atualiza todos os gráficos do Dashboard
+    // ATUALIZAR INTERFACE DA PAGINAÇÃO
+    const pagInfo = document.getElementById('tx-pagination-info');
+    if (pagInfo) pagInfo.innerText = `${startIndex + 1}-${endIndex} de ${totalItems}`;
+
+    const btnFirst = document.getElementById('tx-page-first');
+    const btnPrev = document.getElementById('tx-page-prev');
+    const btnNext = document.getElementById('tx-page-next');
+    const btnLast = document.getElementById('tx-page-last');
+
+    if (btnFirst) btnFirst.disabled = state.txCurrentPage === 1;
+    if (btnPrev) btnPrev.disabled = state.txCurrentPage === 1;
+    if (btnNext) btnNext.disabled = state.txCurrentPage === totalPages || totalPages === 0;
+    if (btnLast) btnLast.disabled = state.txCurrentPage === totalPages || totalPages === 0;
+
     ChartManager.updateDashboardCharts(state.transactions, selectedYYYYMM);
   }
 
@@ -2582,6 +2583,21 @@ const AppController = (function () {
     if (userDropdown) userDropdown.style.display = 'none';
   });
 
+  document.getElementById('nav-settings-btn')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    // Esconde o painel de perfil caso esteja aberto
+    document.getElementById('profile-view').style.display = 'none';
+    // Garante que o container principal está visível
+    document.getElementById('main-dashboard-content').style.display = 'block';
+
+    // Abre a nova tela de configurações
+    AppController.switchTab('settings');
+
+    // Fecha o menu dropdown após clicar
+    const userDropdown = document.getElementById('user-dropdown');
+    if (userDropdown) userDropdown.style.display = 'none';
+  });
+
   // Voltar para o Dashboard (Adicione o id="nav-dashboard-btn" no botão "Dashboard" do seu menu superior)
   document.getElementById('nav-dashboard-btn')?.addEventListener('click', (e) => {
     e.preventDefault();
@@ -2727,9 +2743,42 @@ const AppController = (function () {
 
   function loadTheme() {
     const savedTheme = localStorage.getItem('nexo_theme') || 'light';
+
+    // Atualiza os selects visuais
     const selector = document.getElementById('theme-selector');
+    const selectorSettings = document.getElementById('theme-selector-settings');
+
     if (selector) selector.value = savedTheme;
+    if (selectorSettings) selectorSettings.value = savedTheme;
+
     changeTheme(savedTheme);
+  }
+
+  // Salvar Preferências (Tema, Idioma e Moeda)
+  // Salvar Preferências (Tema, Idioma e Moeda)
+  // Salvar Preferências (Tema, Idioma e Moeda)
+  function savePreferences() {
+    const themeSelector = document.getElementById('theme-selector-settings');
+    const langSelector = document.getElementById('lang-selector-settings');
+    const currencySelector = document.getElementById('currency-selector-settings');
+
+    // 1. Aplica o Tema escolhido
+    if (themeSelector) {
+      changeTheme(themeSelector.value);
+    }
+
+    // 2. Guarda o Idioma (fica gravado no navegador)
+    if (langSelector) {
+      localStorage.setItem('nexo_lang', langSelector.value);
+    }
+
+    // 3. Guarda a Moeda (fica gravado no navegador)
+    if (currencySelector) {
+      localStorage.setItem('nexo_currency', currencySelector.value);
+    }
+
+    // 4. Mostra a mensagem de sucesso
+    AppController.showToast("Preferências guardadas com sucesso!", 'success');
   }
 
   // --- CARREGAR PERFIL DO USUÁRIO ---
@@ -3118,67 +3167,51 @@ const AppController = (function () {
     const container = document.getElementById('transactions-summary-container');
     if (!container) return;
 
-    // PROTEÇÃO 1: Procura a lista de transações com nomes em Inglês ou Português
-    const todasTransacoes = state.transactions || state.transacoes || state.lancamentos || [];
+    const selectedYYYYMM = getSelectedYYYYMM();
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
 
-    // PROTEÇÃO 2: Filtragem inteligente da Data
-    const currentTxs = todasTransacoes.filter(t => {
+    // 1. Filtra as transações normais do mês selecionado
+    const monthlyTransactions = (state.transactions || []).filter(t => {
       if (!t.Data) return false;
-
-      let txMes, txAno;
-      if (t.Data.includes('-')) {
-        // Ex: "2026-09-04"
-        const partes = t.Data.split('-');
-        txAno = Number(partes[0]);
-        txMes = Number(partes[1]);
-      } else if (t.Data.includes('/')) {
-        // Ex: "04/09/2026"
-        const partes = t.Data.split('/');
-        txAno = Number(partes[2]);
-        txMes = Number(partes[1]);
-      }
-
-      const mesState = Number(state.currentMonth);
-      const anoState = Number(state.currentYear);
-
-      // Compara os meses (cobre lógicas de mês indexado em 0 ou 1)
-      const isMesIgual = (txMes === mesState) || (txMes === mesState + 1) || (txMes === mesState - 1);
-      const isAnoIgual = (txAno === anoState);
-
-      return isMesIgual && isAnoIgual;
+      const tDate = parseLocalDate(t.Data);
+      const tMonth = String(tDate.getMonth() + 1).padStart(2, '0');
+      const tYear = tDate.getFullYear();
+      return `${tYear}-${tMonth}` === selectedYYYYMM;
     });
+
+    // 2. Injeta os lançamentos de cartão de crédito do mês
+    const ccTransactions = (state.creditTransactions || [])
+      .filter(ct => String(ct.MesFatura) === selectedYYYYMM)
+      .map(ct => ({
+        ...ct,
+        Tipo: 'DESPESA',
+        isCreditCard: true,
+        Status: ct.Status || 'Pendente'
+      }));
+
+    const currentTxs = [...monthlyTransactions, ...ccTransactions];
 
     let recPagas = 0, recPendentes = 0;
     let desPagas = 0, desPendentes = 0;
 
+    // 3. Distribuição de valores (Ignorando Transferências como no Dashboard)
     currentTxs.forEach(t => {
-      // PROTEÇÃO 3: Limpeza do Valor (lida com Números do Firebase ou Textos)
-      let v = t.Valor || t.valor || 0;
-      if (typeof v === 'string') {
-        v = v.replace(/[^\d,-]/g, ''); // Remove R$ e letras
-        v = parseFloat(v.replace(',', '.')) || 0; // Troca vírgula por ponto
+      if (isTransferTransaction(t)) return;
+
+      const v = Math.abs(parseFloat(t.Valor) || 0);
+
+      let isPaid = false;
+      if (t.isCreditCard) {
+        isPaid = (t.Status === 'Pago');
       } else {
-        v = parseFloat(v) || 0;
-      }
-      v = Math.abs(v); // Força a ser positivo para a soma
-
-      // PROTEÇÃO 4: Identifica o Tipo ("DESPESA" ou "RECEITA")
-      let tipo = String(t.Tipo || t.tipo || '').toUpperCase();
-      if (!tipo || tipo === 'UNDEFINED') {
-        if (Number(t.Valor) < 0 || String(t.Valor).includes('-')) tipo = 'DESPESA';
-        else tipo = 'RECEITA';
+        const tDate = parseLocalDate(t.Data);
+        isPaid = (tDate <= today);
       }
 
-      // PROTEÇÃO 5: Identifica o Status (Se não existir campo, assume como Pago)
-      let isPaid = true;
-      if ('Pago' in t) isPaid = (String(t.Pago).toLowerCase() === 'true' || t.Pago === true);
-      if ('Status' in t) isPaid = String(t.Status).toLowerCase() === 'pago';
-      if ('Situacao' in t) isPaid = String(t.Situacao).toLowerCase() === 'pago';
-
-      // Distribui os valores
-      if (tipo.includes('REC') || tipo.includes('ENTRADA')) {
+      if (t.Tipo === 'RECEITA') {
         if (isPaid) recPagas += v; else recPendentes += v;
-      } else if (tipo.includes('DESP') || tipo.includes('SAIDA') || tipo.includes('FATURA')) {
+      } else if (t.Tipo === 'DESPESA') {
         if (isPaid) desPagas += v; else desPendentes += v;
       }
     });
@@ -3187,22 +3220,22 @@ const AppController = (function () {
     const totalDes = desPagas + desPendentes;
     const balanco = totalRec - totalDes;
 
-    // Procura o filtro ativo
-    const filter = state.transactionFilter || state.transacoesFilter || 'ALL';
-
-    // PROTEÇÃO 6: Saldo Atual Global (Inglês ou Português)
-    let saldoAtual = 0;
-    const allAccounts = state.accounts || state.contas || [];
-    allAccounts.forEach(conta => {
-      let sv = conta.Saldo || conta.saldo || 0;
-      if (typeof sv === 'string') {
-        if (sv.includes(',')) sv = parseFloat(sv.replace(/\./g, '').replace(',', '.'));
-        else sv = parseFloat(sv);
+    // 4. Saldo Atual Global (A matemática exata do Dashboard)
+    const baseBalance = (state.accounts || []).reduce((acc, currentAcc) => acc + (parseFloat(currentAcc.SaldoInicial) || 0), 0);
+    const globalSummary = (state.transactions || []).reduce((acc, current) => {
+      const tDate = parseLocalDate(current.Data);
+      if (tDate <= today) {
+        const amount = parseFloat(current.Valor) || 0;
+        if (current.Tipo === 'RECEITA') acc.income += amount;
+        else if (current.Tipo === 'DESPESA') acc.expense += amount;
       }
-      saldoAtual += (parseFloat(sv) || 0);
-    });
+      return acc;
+    }, { income: 0, expense: 0 });
 
-    // Função que desenha o cartão HTML
+    const saldoAtual = baseBalance + globalSummary.income - globalSummary.expense;
+    const filter = state.txFilter || 'ALL';
+
+    // 5. Construtor HTML
     const buildCard = (icon, iconBg, title, value) => `
       <div style="background: white; border-radius: 16px; padding: 20px; display: flex; align-items: center; gap: 15px; border: 1px solid #eaeaea; min-width: 240px; flex: 1; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
         <div style="width: 48px; height: 48px; border-radius: 50%; background: ${iconBg}; display: flex; justify-content: center; align-items: center; flex-shrink: 0;">
@@ -3218,29 +3251,112 @@ const AppController = (function () {
     `;
 
     let html = '';
-
-    if (filter === 'INCOME' || filter === 'RECEITA') {
+    if (filter === 'RECEITA') {
       html += buildCard('fa-arrow-up', '#4CAF50', 'Receitas pendentes', recPendentes);
       html += buildCard('fa-arrow-down', '#4CAF50', 'Receitas recebidas', recPagas);
-      html += buildCard('fa-balance-scale', '#4CAF50', 'Total', totalRec);
-    } else if (filter === 'EXPENSE' || filter === 'DESPESA') {
+      html += buildCard('fa-balance-scale', '#4CAF50', 'Total (Receitas)', totalRec);
+    } else if (filter === 'DESPESA') {
       html += buildCard('fa-arrow-up', '#F44336', 'Despesas pendentes', desPendentes);
       html += buildCard('fa-arrow-down', '#F44336', 'Despesas pagas', desPagas);
-      html += buildCard('fa-balance-scale', '#F44336', 'Total', totalDes);
+      html += buildCard('fa-balance-scale', '#F44336', 'Total (Despesas)', totalDes);
     } else {
       html += buildCard('fa-wallet', 'var(--primary-color)', 'Saldo Atual', saldoAtual);
-      html += buildCard('fa-arrow-up', '#4CAF50', 'Receitas', totalRec);
-      html += buildCard('fa-arrow-down', '#F44336', 'Despesas', totalDes);
-      html += buildCard('fa-coins', balanco >= 0 ? '#4CAF50' : '#F44336', 'Balanço mensal', Math.abs(balanco));
+      html += buildCard('fa-arrow-up', '#4CAF50', 'Receitas do Mês', totalRec);
+      html += buildCard('fa-arrow-down', '#F44336', 'Despesas do Mês', totalDes);
+      html += buildCard('fa-coins', balanco >= 0 ? '#4CAF50' : '#F44336', 'Balanço Mensal', Math.abs(balanco));
     }
 
     container.innerHTML = html;
   }
 
+  function switchSettingsTab(tabName) {
+    const tabs = ['pref', 'alerts', 'dash', 'sec'];
+
+    tabs.forEach(t => {
+      const btn = document.getElementById(`tab-set-${t}`);
+      const content = document.getElementById(`set-content-${t}`);
+
+      if (t === tabName) {
+        if (btn) {
+          btn.style.background = 'var(--primary-color)';
+          btn.style.color = 'white';
+        }
+        if (content) content.classList.remove('hidden');
+      } else {
+        if (btn) {
+          btn.style.background = 'transparent';
+          btn.style.color = '#666';
+        }
+        if (content) content.classList.add('hidden');
+      }
+    });
+  }
+
+  // Lógica de Seleção de Dispositivos
+  function toggleAllDevices(isChecked) {
+    const checkboxes = document.querySelectorAll('.device-checkbox');
+    checkboxes.forEach(cb => cb.checked = isChecked);
+    checkDeviceSelection();
+  }
+
+  function checkDeviceSelection() {
+    const checkboxes = document.querySelectorAll('.device-checkbox');
+    const selectAll = document.getElementById('select-all-devices');
+    const btn = document.getElementById('btn-disconnect-devices');
+
+    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+    const anyChecked = Array.from(checkboxes).some(cb => cb.checked);
+
+    if (selectAll) selectAll.checked = allChecked;
+
+    if (anyChecked) {
+      btn.style.background = 'var(--primary-color)';
+      btn.style.color = 'white';
+      btn.style.cursor = 'pointer';
+      btn.disabled = false;
+    } else {
+      btn.style.background = '#e0e0e0';
+      btn.style.color = '#999';
+      btn.style.cursor = 'not-allowed';
+      btn.disabled = true;
+    }
+  }
+
+  function disconnectSelectedDevices() {
+    // Aqui no futuro entrará a lógica real de Backend
+    AppController.showToast("Os dispositivos selecionados foram desconectados com sucesso.", 'success');
+
+    // Simula a remoção visual da tela
+    const checkboxes = document.querySelectorAll('.device-checkbox');
+    checkboxes.forEach(cb => {
+      if (cb.checked) {
+        cb.closest('div[style*="display: flex"]').style.display = 'none';
+        cb.checked = false;
+      }
+    });
+    checkDeviceSelection();
+  }
+
+  // Controlos de Paginação
+  function changeTxPage(action) {
+    if (action === 'first') state.txCurrentPage = 1;
+    else if (action === 'prev') state.txCurrentPage--;
+    else if (action === 'next') state.txCurrentPage++;
+    else if (action === 'last') state.txCurrentPage = 999999; // A renderTransactions vai corrigir para a última página real
+
+    renderTransactions();
+  }
+
+  function changeTxItemsPerPage(val) {
+    state.txItemsPerPage = parseInt(val);
+    state.txCurrentPage = 1; // Volta à página 1 sempre que muda a quantidade
+    renderTransactions();
+  }
+
   return {
     init, switchTab, setTransactionFilter, renderCreditCardsPage, renderFixedCostsPage, renderGoalsPage, renderAccountsPage, renderPlanningView, openMonthPicker, closeMonthPicker, changePickerYear, selectCurrentMonth, openModal, closeModal, submitTransaction, editTransaction, deleteTransaction, openAccountModal, closeAccountModal, submitAccount, openTransferModal, closeTransferModal, submitTransfer,
     openGoalTypeModal, openGoalForm, closeGoalModal, submitGoal, editGoal, deleteGoal, openGoalDepositModal, closeGoalDepositModal, submitGoalDeposit,
-    openGoalDetails, closeGoalDetails, editGoalFromDetails, deleteGoalDeposit, editGoalDeposit, toggleGoalOptions, openCurrentGoalDepositModal, deleteCurrentGoal, switchGoalsTab, markGoalAsCompleted, toggleGoalsSortDropdown, setGoalsSortOrder, openFixedCostModal, closeFixedCostModal, submitFixedCost, editFixedCost, deleteFixedCost, markFixedCostPaid, unmarkFixedCostPaid, openFCPayModal, closeFCPayModal, openCCModal, closeCCModal, submitCC, openCCTransModal, closeCCTransModal, submitCCTrans, openCCInvoiceModal, closeCCInvoiceModal, deleteCreditTransaction, toggleFabMenu, closeFabMenu, openNewTransaction, openNewCCTransaction, openNewTransfer, startPlanningWizard, cancelPlanningWizard, copyPreviousPlanning, maskCurrency, calculateWizardBudget, prevWizardStep, nextWizardStep, calculateWizardCategoryTotals, renderWizardCategories, selectCardPreference, finishPlanningWizard, closeFixedCostPayModal, submitFixedCostPay, logout, switchProfileTab, maskCPF, maskPhone, maskCEP, changeTheme, loadUserProfile, openPayInvoiceModal, closePayInvoiceModal, submitPayInvoice, showToast, openCurrentGoalWithdrawModal, updateTransactionSummary
+    openGoalDetails, closeGoalDetails, editGoalFromDetails, deleteGoalDeposit, editGoalDeposit, toggleGoalOptions, openCurrentGoalDepositModal, deleteCurrentGoal, switchGoalsTab, markGoalAsCompleted, toggleGoalsSortDropdown, setGoalsSortOrder, openFixedCostModal, closeFixedCostModal, submitFixedCost, editFixedCost, deleteFixedCost, markFixedCostPaid, unmarkFixedCostPaid, openFCPayModal, closeFCPayModal, openCCModal, closeCCModal, submitCC, openCCTransModal, closeCCTransModal, submitCCTrans, openCCInvoiceModal, closeCCInvoiceModal, deleteCreditTransaction, toggleFabMenu, closeFabMenu, openNewTransaction, openNewCCTransaction, openNewTransfer, startPlanningWizard, cancelPlanningWizard, copyPreviousPlanning, maskCurrency, calculateWizardBudget, prevWizardStep, nextWizardStep, calculateWizardCategoryTotals, renderWizardCategories, selectCardPreference, finishPlanningWizard, closeFixedCostPayModal, submitFixedCostPay, logout, switchProfileTab, maskCPF, maskPhone, maskCEP, changeTheme, loadUserProfile, openPayInvoiceModal, closePayInvoiceModal, submitPayInvoice, showToast, openCurrentGoalWithdrawModal, updateTransactionSummary, switchSettingsTab, toggleAllDevices, checkDeviceSelection, disconnectSelectedDevices, savePreferences, changeTxPage, changeTxItemsPerPage
   };
 })();
 
