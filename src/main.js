@@ -682,12 +682,12 @@ const AppController = (function () {
 
     let runningBalance = baseBalance;
     const endOfDayBalances = {};
+
     allSortedChronologically.forEach(t => {
-      if (!isTransferTransaction(t)) {
-        const amount = parseFloat(t.Valor) || 0;
-        if (t.Tipo === 'RECEITA') runningBalance += amount;
-        else if (t.Tipo === 'DESPESA') runningBalance -= amount;
-      }
+      const amount = parseFloat(t.Valor) || 0;
+      if (t.Tipo === 'RECEITA') runningBalance += amount;
+      else if (t.Tipo === 'DESPESA') runningBalance -= amount;
+
       endOfDayBalances[formatDateBR(t.Data)] = runningBalance;
     });
 
