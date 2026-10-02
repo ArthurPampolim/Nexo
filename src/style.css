@@ -2293,3 +2293,20 @@
     opacity: 0.3;
     cursor: not-allowed;
   }
+
+  /* ========================================= */
+  /* CABEÇALHOS ORDENÁVEIS (SORT)              */
+  /* ========================================= */
+  .sortable-th {
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s, color 0.2s;
+  }
+
+  .sortable-th:hover {
+    background-color: #e2e8f0;
+  }
+
+  body.dark-mode .sortable-th:hover {
+    background-color: #1e293b !important;
+  }

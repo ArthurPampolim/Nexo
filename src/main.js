@@ -16,6 +16,9 @@ const AppController = (function () {
     txFilter: 'ALL'
   };
 
+  state.txSortCol = 'Data';
+  state.txSortDir = 'desc';
+
   state.currentGoalId = null;
   state.currentGoalDeposits = [];
   state.goalsSortOrder = 'DATA'; // Começa organizando pela data de conclusão
@@ -39,6 +42,10 @@ const AppController = (function () {
   }
 
   function switchTab(tabName) {
+    if (state.currentTab === 'transactions' && tabName !== 'transactions') {
+      state.txSortCol = 'Data';
+      state.txSortDir = 'desc';
+    }
     state.currentTab = tabName;
     ['dashboard', 'transactions', 'credit-cards', 'fixed-costs', 'goals', 'accounts', 'planning', 'settings'].forEach(t => {
       const btn = document.getElementById(`tab-btn-${t}`);
@@ -596,7 +603,6 @@ const AppController = (function () {
   function renderTransactions() {
     updateTransactionSummary();
     const selectedYYYYMM = getSelectedYYYYMM();
-
     const today = new Date();
     today.setHours(23, 59, 59, 999);
 
@@ -610,18 +616,13 @@ const AppController = (function () {
     });
 
     // --- INJETAR LANÇAMENTOS DO CARTÃO ---
-
     const ccTransactions = state.creditTransactions
       .filter(ct => String(ct.MesFatura) === selectedYYYYMM)
       .map(ct => {
         const cardObj = state.creditCards.find(c => String(c.ID) === String(ct.IdCartao || ct.CartaoID));
-
-
         const yearStr = ct.MesFatura.split('-')[0];
-
         const monthStr = ct.MesFatura.split('-')[1];
         const lastDayOfMonth = new Date(parseInt(yearStr), parseInt(monthStr), 0).getDate();
-
         let dueDay = cardObj && cardObj.DiaVencimento ? parseInt(cardObj.DiaVencimento) : 1;
         dueDay = Math.min(dueDay, lastDayOfMonth);
         const syntheticDate = `${ct.MesFatura}-${String(dueDay).padStart(2, '0')}`;
@@ -636,7 +637,7 @@ const AppController = (function () {
 
     monthlyTransactions.push(...ccTransactions);
 
-    // 2. Aplicação do filtro de abas
+    // 2. Aplicação do filtro de abas (Receitas, Despesas, Transferências)
     const displayTransactions = monthlyTransactions.filter(t => {
       const isTransf = isTransferTransaction(t);
       if (state.txFilter === 'DESPESA') return t.Tipo === 'DESPESA' && !isTransf;
@@ -645,11 +646,31 @@ const AppController = (function () {
       return true;
     });
 
-    // 3. Ordenação decrescente (Mais recente no topo)
+    // 3. ORDENAÇÃO DINÂMICA (A MÁGICA DOS CABEÇALHOS)
     displayTransactions.sort((a, b) => {
-      const dateA = parseLocalDate(a.Data).getTime();
-      const dateB = parseLocalDate(b.Data).getTime();
-      if (dateB !== dateA) return dateB - dateA;
+      let valA, valB;
+
+      if (state.txSortCol === 'Data') {
+        valA = parseLocalDate(a.Data).getTime();
+        valB = parseLocalDate(b.Data).getTime();
+      } else if (state.txSortCol === 'Descricao') {
+        valA = String(a.Descricao || a.Categoria || '').toLowerCase();
+        valB = String(b.Descricao || b.Categoria || '').toLowerCase();
+      } else if (state.txSortCol === 'Categoria') {
+        valA = String(a.Categoria || '').toLowerCase();
+        valB = String(b.Categoria || '').toLowerCase();
+      } else if (state.txSortCol === 'Conta') {
+        valA = String(a.Conta || '').toLowerCase();
+        valB = String(b.Conta || '').toLowerCase();
+      } else if (state.txSortCol === 'Valor') {
+        valA = parseFloat(a.Valor) || 0;
+        valB = parseFloat(b.Valor) || 0;
+      }
+
+      if (valA < valB) return state.txSortDir === 'asc' ? -1 : 1;
+      if (valA > valB) return state.txSortDir === 'asc' ? 1 : -1;
+
+      // Desempate (ID) para itens exatamente iguais
       return String(b.ID || '').localeCompare(String(a.ID || ''));
     });
 
@@ -670,9 +691,7 @@ const AppController = (function () {
       endOfDayBalances[formatDateBR(t.Data)] = runningBalance;
     });
 
-    // =========================================================
     // 5. MÁGICA DA PAGINAÇÃO
-    // =========================================================
     state.txItemsPerPage = state.txItemsPerPage || 50;
     state.txCurrentPage = state.txCurrentPage || 1;
 
@@ -718,6 +737,22 @@ const AppController = (function () {
 
     renderAccountBalances(state.transactions);
     elements.transactionsContainer.innerHTML = '';
+
+    // =========================================================
+    // ATUALIZAR ÍCONES DE ORDENAÇÃO NOS CABEÇALHOS
+    // =========================================================
+    ['Data', 'Descricao', 'Categoria', 'Conta', 'Valor'].forEach(col => {
+      const iconSpan = document.getElementById(`sort-icon-${col}`);
+      if (iconSpan) {
+        if (state.txSortCol === col) {
+          iconSpan.innerHTML = state.txSortDir === 'asc'
+            ? '<i class="fas fa-arrow-up" style="font-size: 10px; margin-left: 6px; color: #888;"></i>'
+            : '<i class="fas fa-arrow-down" style="font-size: 10px; margin-left: 6px; color: #888;"></i>';
+        } else {
+          iconSpan.innerHTML = '';
+        }
+      }
+    });
 
     // =========================================================
     // SE NÃO HOUVER TRANSAÇÕES
@@ -808,21 +843,24 @@ const AppController = (function () {
 
       elements.transactionsContainer.appendChild(tr);
 
-      // PÍLULA DE SALDO DO DIA (Atenção ao Indice Absoluto!)
-      const absoluteIndex = startIndex + index;
-      const nextTx = displayTransactions[absoluteIndex + 1];
-      const nextDateStr = nextTx ? formatDateBR(nextTx.Data) : null;
+      // PÍLULA DE SALDO DO DIA 
+      // (Só injeta a pílula de saldos se estivermos a ordenar de forma cronológica por Data!)
+      if (state.txSortCol === 'Data') {
+        const absoluteIndex = startIndex + index;
+        const nextTx = displayTransactions[absoluteIndex + 1];
+        const nextDateStr = nextTx ? formatDateBR(nextTx.Data) : null;
 
-      if (currentDateStr !== nextDateStr) {
-        const balanceOfDay = endOfDayBalances[currentDateStr] || 0;
-        const balanceRow = document.createElement('tr');
-        balanceRow.innerHTML = `
-            <td colspan="8" style="padding: 20px; text-align: center; border-bottom: 1px solid var(--border-color); background-color: var(--bg-color);">
-              <span style="background: var(--bg-light); color: var(--text-main); padding: 8px 16px; border-radius: 20px; font-size: 13.5px; border: 1px solid var(--border-color);">
-                Saldo do Final do Dia <strong>${currencyFormatter.format(balanceOfDay)}</strong>
-              </span>
-            </td>`;
-        elements.transactionsContainer.appendChild(balanceRow);
+        if (currentDateStr !== nextDateStr) {
+          const balanceOfDay = endOfDayBalances[currentDateStr] || 0;
+          const balanceRow = document.createElement('tr');
+          balanceRow.innerHTML = `
+              <td colspan="8" style="padding: 20px; text-align: center; border-bottom: 1px solid var(--border-color); background-color: var(--bg-color);">
+                <span style="background: var(--bg-light); color: var(--text-main); padding: 8px 16px; border-radius: 20px; font-size: 13.5px; border: 1px solid var(--border-color);">
+                  Saldo do Final do Dia <strong>${currencyFormatter.format(balanceOfDay)}</strong>
+                </span>
+              </td>`;
+          elements.transactionsContainer.appendChild(balanceRow);
+        }
       }
     });
 
@@ -3394,10 +3432,23 @@ const AppController = (function () {
     renderTransactions();
   }
 
+  function setTransactionSort(col) {
+    if (state.txSortCol === col) {
+      // Se clicou na mesma coluna, inverte a ordem (asc <-> desc)
+      state.txSortDir = state.txSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      // Se clicou numa coluna nova, muda para ela. Valor e Data começam decrescentes por padrão.
+      state.txSortCol = col;
+      state.txSortDir = (col === 'Data' || col === 'Valor') ? 'desc' : 'asc';
+    }
+    state.txCurrentPage = 1; // Volta à página 1 quando muda a ordem
+    renderTransactions();
+  }
+
   return {
     init, switchTab, setTransactionFilter, renderCreditCardsPage, renderFixedCostsPage, renderGoalsPage, renderAccountsPage, renderPlanningView, openMonthPicker, closeMonthPicker, changePickerYear, selectCurrentMonth, openModal, closeModal, submitTransaction, editTransaction, deleteTransaction, openAccountModal, closeAccountModal, submitAccount, openTransferModal, closeTransferModal, submitTransfer,
     openGoalTypeModal, openGoalForm, closeGoalModal, submitGoal, editGoal, deleteGoal, openGoalDepositModal, closeGoalDepositModal, submitGoalDeposit,
-    openGoalDetails, closeGoalDetails, editGoalFromDetails, deleteGoalDeposit, editGoalDeposit, toggleGoalOptions, openCurrentGoalDepositModal, deleteCurrentGoal, switchGoalsTab, markGoalAsCompleted, toggleGoalsSortDropdown, setGoalsSortOrder, openFixedCostModal, closeFixedCostModal, submitFixedCost, editFixedCost, deleteFixedCost, markFixedCostPaid, unmarkFixedCostPaid, openFCPayModal, closeFCPayModal, openCCModal, closeCCModal, submitCC, openCCTransModal, closeCCTransModal, submitCCTrans, openCCInvoiceModal, closeCCInvoiceModal, deleteCreditTransaction, toggleFabMenu, closeFabMenu, openNewTransaction, openNewCCTransaction, openNewTransfer, startPlanningWizard, cancelPlanningWizard, copyPreviousPlanning, maskCurrency, calculateWizardBudget, prevWizardStep, nextWizardStep, calculateWizardCategoryTotals, renderWizardCategories, selectCardPreference, finishPlanningWizard, closeFixedCostPayModal, submitFixedCostPay, logout, switchProfileTab, maskCPF, maskPhone, maskCEP, changeTheme, loadUserProfile, openPayInvoiceModal, closePayInvoiceModal, submitPayInvoice, showToast, openCurrentGoalWithdrawModal, updateTransactionSummary, switchSettingsTab, toggleAllDevices, checkDeviceSelection, disconnectSelectedDevices, savePreferences, changeTxPage, changeTxItemsPerPage
+    openGoalDetails, closeGoalDetails, editGoalFromDetails, deleteGoalDeposit, editGoalDeposit, toggleGoalOptions, openCurrentGoalDepositModal, deleteCurrentGoal, switchGoalsTab, markGoalAsCompleted, toggleGoalsSortDropdown, setGoalsSortOrder, openFixedCostModal, closeFixedCostModal, submitFixedCost, editFixedCost, deleteFixedCost, markFixedCostPaid, unmarkFixedCostPaid, openFCPayModal, closeFCPayModal, openCCModal, closeCCModal, submitCC, openCCTransModal, closeCCTransModal, submitCCTrans, openCCInvoiceModal, closeCCInvoiceModal, deleteCreditTransaction, toggleFabMenu, closeFabMenu, openNewTransaction, openNewCCTransaction, openNewTransfer, startPlanningWizard, cancelPlanningWizard, copyPreviousPlanning, maskCurrency, calculateWizardBudget, prevWizardStep, nextWizardStep, calculateWizardCategoryTotals, renderWizardCategories, selectCardPreference, finishPlanningWizard, closeFixedCostPayModal, submitFixedCostPay, logout, switchProfileTab, maskCPF, maskPhone, maskCEP, changeTheme, loadUserProfile, openPayInvoiceModal, closePayInvoiceModal, submitPayInvoice, showToast, openCurrentGoalWithdrawModal, updateTransactionSummary, switchSettingsTab, toggleAllDevices, checkDeviceSelection, disconnectSelectedDevices, savePreferences, changeTxPage, changeTxItemsPerPage, setTransactionSort
   };
 })();
 

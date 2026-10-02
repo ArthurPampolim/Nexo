@@ -321,11 +321,18 @@
                     <th class="tx-th" style="width: 40px; text-align: center;"><input type="checkbox"
                         class="tx-checkbox" disabled></th>
                     <th class="tx-th" style="width: 60px; text-align: center;">Situação</th>
-                    <th class="tx-th">Data <i class="fas fa-arrow-down" style="font-size: 10px; color: #888;"></i></th>
-                    <th class="tx-th">Descrição</th>
-                    <th class="tx-th">Categoria</th>
-                    <th class="tx-th">Conta</th>
-                    <th class="tx-th" style="text-align: right;">Valor</th>
+                    <th class="tx-th sortable-th" onclick="AppController.setTransactionSort('Data')">Data <span
+                        id="sort-icon-Data"></span></th>
+                    <th class="tx-th sortable-th" onclick="AppController.setTransactionSort('Descricao')">Descrição
+                      <span id="sort-icon-Descricao"></span>
+                    </th>
+                    <th class="tx-th sortable-th" onclick="AppController.setTransactionSort('Categoria')">Categoria
+                      <span id="sort-icon-Categoria"></span>
+                    </th>
+                    <th class="tx-th sortable-th" onclick="AppController.setTransactionSort('Conta')">Conta <span
+                        id="sort-icon-Conta"></span></th>
+                    <th class="tx-th sortable-th" style="text-align: right;"
+                      onclick="AppController.setTransactionSort('Valor')">Valor <span id="sort-icon-Valor"></span></th>
                     <th class="tx-th" style="text-align: center;">Ações</th>
                   </tr>
                 </thead>
