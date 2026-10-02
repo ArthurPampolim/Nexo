@@ -616,7 +616,7 @@ const AppController = (function () {
       .map(ct => {
         const cardObj = state.creditCards.find(c => String(c.ID) === String(ct.IdCartao || ct.CartaoID));
 
-        
+
         const yearStr = ct.MesFatura.split('-')[0];
 
         const monthStr = ct.MesFatura.split('-')[1];
@@ -2145,7 +2145,7 @@ const AppController = (function () {
     const dashSavingsPctEl = document.getElementById('dash-savings-pct');
     if (dashSavingsPctEl) dashSavingsPctEl.innerText = `${savingsPct.toFixed(2)}%`;
 
-    // --- Cruza dados do planejamento com transações reais do mês ---
+    // --- Cruza dados do planejamento com TODAS as transações reais do mês ---
     const monthlyTransactions = state.transactions.filter(t => {
       if (!t.Data) return false;
       const tDate = parseLocalDate(t.Data);
@@ -2154,18 +2154,49 @@ const AppController = (function () {
       return `${tYear}-${tMonth}` === selectedYYYYMM;
     });
 
+    // Injeta os lançamentos de cartão de crédito no planejamento
+    const ccTransactions = state.creditTransactions
+      .filter(ct => String(ct.MesFatura) === selectedYYYYMM)
+      .map(ct => {
+        const cardObj = state.creditCards.find(c => String(c.ID) === String(ct.IdCartao || ct.CartaoID));
+        const yearStr = ct.MesFatura.split('-')[0];
+        const monthStr = ct.MesFatura.split('-')[1];
+        const lastDayOfMonth = new Date(parseInt(yearStr), parseInt(monthStr), 0).getDate();
+        let dueDay = cardObj && cardObj.DiaVencimento ? parseInt(cardObj.DiaVencimento) : 1;
+        dueDay = Math.min(dueDay, lastDayOfMonth);
+        const syntheticDate = `${ct.MesFatura}-${String(dueDay).padStart(2, '0')}`;
+
+        return {
+          ...ct,
+          Tipo: 'DESPESA',
+          Data: syntheticDate,
+          isCreditCard: true,
+          Status: ct.Status || 'Pendente'
+        };
+      });
+
+    const allMonthlyTx = [...monthlyTransactions, ...ccTransactions];
     const today = new Date();
     today.setHours(23, 59, 59, 999);
 
-    // Gastos reais por categoria (pagos = efetivados, previstos = futuros)
+    // Gastos reais por categoria (pagos = efetivados, previstos = futuros/faturas pendentes)
     const paidByCategory = {};
     const pendingByCategory = {};
-    monthlyTransactions.forEach(t => {
+
+    allMonthlyTx.forEach(t => {
       if (t.Tipo !== 'DESPESA' || isTransferTransaction(t)) return;
       const cat = t.Categoria || 'Outros';
       const val = parseFloat(t.Valor) || 0;
-      const tDate = parseLocalDate(t.Data);
-      if (tDate <= today) {
+
+      let isPaid = false;
+      if (t.isCreditCard) {
+        isPaid = (t.Status === 'Pago');
+      } else {
+        const tDate = parseLocalDate(t.Data);
+        isPaid = (tDate <= today);
+      }
+
+      if (isPaid) {
         paidByCategory[cat] = (paidByCategory[cat] || 0) + val;
       } else {
         pendingByCategory[cat] = (pendingByCategory[cat] || 0) + val;
@@ -2232,6 +2263,16 @@ const AppController = (function () {
       dashBarEl.style.width = `${barPct}%`;
       dashBarEl.style.background = barPct > 90 ? '#F44336' : 'var(--primary-color)';
     }
+
+    // --- Cálculo e atualização das percentagens de Pagos e Previstos ---
+    const pctPaid = totalPlanned > 0 ? (totalPaid / totalPlanned) * 100 : 0;
+    const pctPending = totalPlanned > 0 ? (totalPending / totalPlanned) * 100 : 0;
+
+    const dashPctPaidEl = document.getElementById('dash-pct-paid');
+    if (dashPctPaidEl) dashPctPaidEl.innerText = `${pctPaid.toFixed(1)}%`;
+
+    const dashPctPendingEl = document.getElementById('dash-pct-pending');
+    if (dashPctPendingEl) dashPctPendingEl.innerText = `${pctPending.toFixed(1)}%`;
   }
 
   // Função auxiliar global para estilos de categoria (reutilizada no planning dashboard)
