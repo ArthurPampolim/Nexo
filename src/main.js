@@ -1372,15 +1372,30 @@ const AppController = (function () {
     let totalPending = 0;
 
     const safeCosts = costs || [];
-    safeCosts.forEach(cost => {
-      const val = parseFloat(cost.Valor) || 0;
-      totalCost += val;
+
+    // Mapeia os custos verificando se há exceções para o mês atual
+    const computedCosts = safeCosts.map(cost => {
+      let val = parseFloat(cost.Valor) || 0;
+      let nome = cost.Nome;
+      let dia = cost.DiaVencimento;
+
+      // Se houver uma exceção salva para o mês selecionado, ela sobrepõe os valores padrão
+      if (cost.Excecoes && cost.Excecoes[selectedYYYYMM]) {
+        const ex = cost.Excecoes[selectedYYYYMM];
+        val = ex.Valor !== undefined ? parseFloat(ex.Valor) : val;
+        if (isNaN(val)) val = parseFloat(cost.Valor) || 0;
+        nome = ex.Nome || nome;
+        dia = ex.DiaVencimento || dia;
+      }
 
       const paidList = cost.MesesPagos ? String(cost.MesesPagos).split(',').map(s => s.trim()).filter(Boolean) : [];
       const isPaid = paidList.includes(selectedYYYYMM);
 
+      totalCost += val;
       if (isPaid) totalPaid += val;
       else totalPending += val;
+
+      return { ...cost, Valor: val, Nome: nome, DiaVencimento: dia, _isPaid: isPaid };
     });
 
     if (totalElem) totalElem.innerText = currencyFormatter.format(totalCost);
@@ -1390,27 +1405,19 @@ const AppController = (function () {
 
     if (dashContainer) {
       dashContainer.innerHTML = '';
-      if (safeCosts.length === 0) {
+      if (computedCosts.length === 0) {
         dashContainer.innerHTML = '<li style="color:#888; padding:15px;">Nenhum custo fixo.</li>';
       } else {
-        safeCosts.forEach(cost => {
-          const paidList = cost.MesesPagos ? String(cost.MesesPagos).split(',').map(s => s.trim()).filter(Boolean) : [];
-          const isPaid = paidList.includes(selectedYYYYMM);
-          dashContainer.appendChild(createFixedCostListItem(cost, isPaid));
-        });
+        computedCosts.forEach(c => dashContainer.appendChild(createFixedCostListItem(c, c._isPaid)));
       }
     }
 
     if (pageContainer) {
       pageContainer.innerHTML = '';
-      if (safeCosts.length === 0) {
+      if (computedCosts.length === 0) {
         pageContainer.innerHTML = '<li style="color:#888; padding:15px;">Nenhum custo fixo cadastrado.</li>';
       } else {
-        safeCosts.forEach(cost => {
-          const paidList = cost.MesesPagos ? String(cost.MesesPagos).split(',').map(s => s.trim()).filter(Boolean) : [];
-          const isPaid = paidList.includes(selectedYYYYMM);
-          pageContainer.appendChild(createFixedCostListItem(cost, isPaid));
-        });
+        computedCosts.forEach(c => pageContainer.appendChild(createFixedCostListItem(c, c._isPaid)));
       }
     }
   }
@@ -1418,45 +1425,108 @@ const AppController = (function () {
   function renderFixedCostsPage() {
     renderFixedCosts(state.fixedCosts);
   }
+
   function openFixedCostModal() {
     state.editingId = null;
     state.editingType = null;
+    state.editingScope = 'ALL';
     elements.fixedCostForm.reset();
     elements.submitFixedCostBtn.innerText = 'Salvar Custo Fixo';
     elements.fixedCostModal.classList.remove('hidden');
   }
   function editFixedCost(id) {
-    const fc = state.fixedCosts.find(x => String(x.ID) === String(id)); if (!fc) return;
-    state.editingId = id; state.editingType = 'FIXED_COST';
-    document.querySelector(`#fixed-cost-form input[name="nome"]`).value = fc.Nome;
-    document.querySelector(`#fixed-cost-form input[name="valor"]`).value = fc.Valor;
-    document.querySelector(`#fixed-cost-form input[name="diaVencimento"]`).value = fc.DiaVencimento;
-    elements.submitFixedCostBtn.innerText = 'Atualizar Custo';
-    elements.fixedCostModal.classList.remove('hidden');
+    // Em vez de abrir o formulário, abre a pergunta
+    state.pendingEditId = id;
+    document.getElementById('fc-edit-scope-modal').classList.remove('hidden');
   }
+
+  function closeFCEditScopeModal() {
+    document.getElementById('fc-edit-scope-modal').classList.add('hidden');
+    state.pendingEditId = null;
+  }
+
+  function proceedEditFixedCost(scope) {
+    const id = state.pendingEditId; // 1º GUARDAMOS O ID ENQUANTO ELE EXISTE
+    closeFCEditScopeModal();        // 2º AGORA SIM, FECHAMOS A PERGUNTA
+
+    const fc = state.fixedCosts.find(x => String(x.ID) === String(id));
+    if (!fc) return;
+
+    state.editingId = id;
+    state.editingType = 'FIXED_COST';
+    state.editingScope = scope; // 'MONTH_ONLY' ou 'ALL'
+
+    const currentMonth = getSelectedYYYYMM();
+    let defaultName = fc.Nome;
+    let defaultValue = fc.Valor;
+    let defaultDay = fc.DiaVencimento;
+
+    // Se for apenas neste mês, pré-preenche com a exceção existente (se houver)
+    if (scope === 'MONTH_ONLY' && fc.Excecoes && fc.Excecoes[currentMonth]) {
+      defaultName = fc.Excecoes[currentMonth].Nome || defaultName;
+      defaultValue = fc.Excecoes[currentMonth].Valor !== undefined ? fc.Excecoes[currentMonth].Valor : defaultValue;
+      defaultDay = fc.Excecoes[currentMonth].DiaVencimento || defaultDay;
+    }
+
+    document.querySelector(`#fixed-cost-form input[name="nome"]`).value = defaultName;
+    document.querySelector(`#fixed-cost-form input[name="valor"]`).value = defaultValue;
+    document.querySelector(`#fixed-cost-form input[name="diaVencimento"]`).value = defaultDay;
+
+    const btnSubmit = document.getElementById('submit-fc-btn');
+    if (btnSubmit) {
+      btnSubmit.innerText = scope === 'MONTH_ONLY' ? 'Salvar Exceção' : 'Atualizar Custo';
+    }
+
+    document.getElementById('fixed-cost-modal').classList.remove('hidden');
+  }
+
   function closeFixedCostModal() {
-    elements.fixedCostModal.classList.add('hidden'); elements.fixedCostForm.reset();
-    state.editingId = null; state.editingType = null;
+    elements.fixedCostModal.classList.add('hidden');
+    elements.fixedCostForm.reset();
+    state.editingId = null;
+    state.editingType = null;
     elements.submitFixedCostBtn.innerText = 'Salvar Custo Fixo';
   }
+
   async function submitFixedCost(event) {
     event.preventDefault();
     elements.submitFixedCostBtn.disabled = true;
     elements.submitFixedCostBtn.innerHTML = 'Salvando...';
 
     const formDados = Object.fromEntries(new FormData(elements.fixedCostForm).entries());
-    const payloadFormatado = {
-      Nome: formDados.nome,
-      Valor: parseFloat(formDados.valor) || 0,
-      DiaVencimento: parseInt(formDados.diaVencimento) || 1
-    };
+    const currentMonth = getSelectedYYYYMM();
 
     try {
       if (state.editingId && state.editingType === 'FIXED_COST') {
-        await updateDoc(doc(db, "Custos Fixos", state.editingId), payloadFormatado);
+        const fc = state.fixedCosts.find(x => String(x.ID) === String(state.editingId));
+
+        if (state.editingScope === 'MONTH_ONLY') {
+          // Salva apenas como exceção do mês atual na base de dados
+          const excecoes = fc.Excecoes || {};
+          excecoes[currentMonth] = {
+            Nome: formDados.nome,
+            Valor: parseFloat(formDados.valor) || 0,
+            DiaVencimento: parseInt(formDados.diaVencimento) || 1
+          };
+          await updateDoc(doc(db, "Custos Fixos", state.editingId), { Excecoes: excecoes });
+        } else {
+          // Atualiza globalmente (Este mês e seguintes / ALL)
+          const payloadFormatado = {
+            Nome: formDados.nome,
+            Valor: parseFloat(formDados.valor) || 0,
+            DiaVencimento: parseInt(formDados.diaVencimento) || 1
+          };
+          await updateDoc(doc(db, "Custos Fixos", state.editingId), payloadFormatado);
+        }
       } else {
-        payloadFormatado.Status = 'Pendente';
-        payloadFormatado.MesesPagos = '';
+        // Criação de um NOVO custo
+        const payloadFormatado = {
+          Nome: formDados.nome,
+          Valor: parseFloat(formDados.valor) || 0,
+          DiaVencimento: parseInt(formDados.diaVencimento) || 1,
+          Status: 'Pendente',
+          MesesPagos: ''
+        };
         await addDoc(collection(db, "Custos Fixos"), payloadFormatado);
       }
       closeFixedCostModal();
@@ -1483,56 +1553,59 @@ const AppController = (function () {
     const btn = document.getElementById('submit-fc-pay-btn');
 
     try {
-      // 1. Altera o visual do botão para "Processando..."
       if (btn) {
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
       }
 
-      // 2. Busca o formulário no HTML
       const formElement = document.getElementById('fc-pay-form');
       if (!formElement) throw new Error("A tag <form> perdeu o id 'fc-pay-form'.");
 
-      // 3. Extrai as informações que você preencheu na tela
       const formData = new FormData(formElement);
       const costId = formData.get('id');
       const contaNome = formData.get('conta');
       const categoriaNome = formData.get('categoria');
 
-      // 4. Valida se tudo foi preenchido
       if (!costId) throw new Error("ID do custo fixo não encontrado.");
       if (!contaNome) throw new Error("Selecione uma conta bancária.");
-      if (!categoriaNome) throw new Error("Selecione a categoria da despesa."); // <-- AVISA SE ESQUECER DE PREENCHER
+      if (!categoriaNome) throw new Error("Selecione a categoria da despesa.");
 
-      // 5. Encontra o Custo Fixo original no sistema
       const currentTargetMonth = getSelectedYYYYMM();
       const cost = state.fixedCosts.find(c => String(c.ID) === String(costId));
       if (!cost) throw new Error("Custo não encontrado na base de dados.");
 
-      // 6. Atualiza o Custo Fixo no Firebase (Marca como 'Pago' no mês atual)
       let paidList = cost.MesesPagos ? String(cost.MesesPagos).split(',').map(s => s.trim()).filter(Boolean) : [];
       if (!paidList.includes(currentTargetMonth)) {
         paidList.push(currentTargetMonth);
       }
       await updateDoc(doc(db, "Custos Fixos", costId), { MesesPagos: paidList.join(','), Status: 'Pago' });
 
-      // 7. Calcula o dia exato para o lançamento
-      const amount = parseFloat(cost.Valor) || 0;
+      // Cálculos com as exceções na hora do pagamento
+      let amount = parseFloat(cost.Valor) || 0;
+      let nome = cost.Nome;
+      let dia = cost.DiaVencimento || 1;
+
+      if (cost.Excecoes && cost.Excecoes[currentTargetMonth]) {
+        const ex = cost.Excecoes[currentTargetMonth];
+        amount = ex.Valor !== undefined ? parseFloat(ex.Valor) : amount;
+        if (isNaN(amount)) amount = parseFloat(cost.Valor) || 0;
+        nome = ex.Nome || nome;
+        dia = ex.DiaVencimento || dia;
+      }
+
       const [yearStr, monthStr] = currentTargetMonth.split('-');
       const lastDayOfMonth = new Date(parseInt(yearStr, 10), parseInt(monthStr, 10), 0).getDate();
-      const dueDayStr = String(Math.min(parseInt(cost.DiaVencimento || 1, 10), lastDayOfMonth)).padStart(2, '0');
+      const dueDayStr = String(Math.min(parseInt(dia, 10), lastDayOfMonth)).padStart(2, '0');
 
-      // 8. Lança a despesa automática no seu Extrato (Firebase)
       await addDoc(collection(db, "Transacoes"), {
         Tipo: 'DESPESA',
-        Categoria: categoriaNome, // <-- AQUI ELE SALVA A CATEGORIA QUE VOCÊ ESCOLHEU
+        Categoria: categoriaNome,
         Valor: amount,
-        Descricao: `Pagamento autom.: ${cost.Nome}`,
+        Descricao: `Pagamento autom.: ${nome}`,
         Conta: contaNome,
         Data: `${currentTargetMonth}-${dueDayStr}`
       });
 
-      // 9. Atualiza a tela
       closeFixedCostPayModal();
       loadFixedCosts();
       loadTransactions();
@@ -1541,10 +1614,9 @@ const AppController = (function () {
       console.error("Erro no pagamento:", error);
       alert(error.message);
     } finally {
-      // 10. Devolve o botão ao normal, dando erro ou sucesso
       if (btn) {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-check"></i> Confirmar Pagamento';
+        btn.innerHTML = '<i class="fas fa-check-circle" style="margin-right: 6px;"></i>Confirmar Pagamento';
       }
     }
   }
@@ -1563,9 +1635,20 @@ const AppController = (function () {
   }
 
   function openFCPayModal(fc) {
+    const currentMonth = getSelectedYYYYMM();
+    let val = parseFloat(fc.Valor) || 0;
+    let nome = fc.Nome;
+
+    if (fc.Excecoes && fc.Excecoes[currentMonth]) {
+      const ex = fc.Excecoes[currentMonth];
+      val = ex.Valor !== undefined ? parseFloat(ex.Valor) : val;
+      if (isNaN(val)) val = parseFloat(fc.Valor) || 0;
+      nome = ex.Nome || nome;
+    }
+
     document.getElementById('fc-pay-id').value = fc.ID;
-    document.getElementById('fc-pay-name').innerText = fc.Nome;
-    document.getElementById('fc-pay-value').innerText = currencyFormatter.format(parseFloat(fc.Valor) || 0);
+    document.getElementById('fc-pay-name').innerText = nome;
+    document.getElementById('fc-pay-value').innerText = currencyFormatter.format(val);
 
     const select = document.getElementById('fc-pay-account');
     select.innerHTML = '<option value="" disabled selected>Selecione a conta...</option>';
@@ -1714,14 +1797,18 @@ const AppController = (function () {
     if (!cost) return;
 
     try {
-      // 1. Remove a marcação de pago
       let paidList = cost.MesesPagos ? String(cost.MesesPagos).split(',').map(s => s.trim()).filter(Boolean) : [];
       paidList = paidList.filter(m => m !== currentTargetMonth);
       await updateDoc(doc(db, "Custos Fixos", id), { MesesPagos: paidList.join(','), Status: paidList.length > 0 ? 'Pago' : 'Pendente' });
 
-      // 2. Busca e remove a transação automática correspondente (se existir)
+      // Identifica o nome correto (em caso de exceção) para buscar a transação e apagá-la
+      let nomeParaBusca = cost.Nome;
+      if (cost.Excecoes && cost.Excecoes[currentTargetMonth]) {
+        nomeParaBusca = cost.Excecoes[currentTargetMonth].Nome || nomeParaBusca;
+      }
+
       const autoTx = state.transactions.find(t => {
-        if (t.Tipo !== 'DESPESA' || !(t.Descricao && t.Descricao.includes(cost.Nome))) return false;
+        if (t.Tipo !== 'DESPESA' || !(t.Descricao && t.Descricao.includes(nomeParaBusca))) return false;
         const tMonth = t.Data ? String(t.Data).slice(0, 7) : '';
         return tMonth === currentTargetMonth;
       });
@@ -3448,7 +3535,7 @@ const AppController = (function () {
   return {
     init, switchTab, setTransactionFilter, renderCreditCardsPage, renderFixedCostsPage, renderGoalsPage, renderAccountsPage, renderPlanningView, openMonthPicker, closeMonthPicker, changePickerYear, selectCurrentMonth, openModal, closeModal, submitTransaction, editTransaction, deleteTransaction, openAccountModal, closeAccountModal, submitAccount, openTransferModal, closeTransferModal, submitTransfer,
     openGoalTypeModal, openGoalForm, closeGoalModal, submitGoal, editGoal, deleteGoal, openGoalDepositModal, closeGoalDepositModal, submitGoalDeposit,
-    openGoalDetails, closeGoalDetails, editGoalFromDetails, deleteGoalDeposit, editGoalDeposit, toggleGoalOptions, openCurrentGoalDepositModal, deleteCurrentGoal, switchGoalsTab, markGoalAsCompleted, toggleGoalsSortDropdown, setGoalsSortOrder, openFixedCostModal, closeFixedCostModal, submitFixedCost, editFixedCost, deleteFixedCost, markFixedCostPaid, unmarkFixedCostPaid, openFCPayModal, closeFCPayModal, openCCModal, closeCCModal, submitCC, openCCTransModal, closeCCTransModal, submitCCTrans, openCCInvoiceModal, closeCCInvoiceModal, deleteCreditTransaction, toggleFabMenu, closeFabMenu, openNewTransaction, openNewCCTransaction, openNewTransfer, startPlanningWizard, cancelPlanningWizard, copyPreviousPlanning, maskCurrency, calculateWizardBudget, prevWizardStep, nextWizardStep, calculateWizardCategoryTotals, renderWizardCategories, selectCardPreference, finishPlanningWizard, closeFixedCostPayModal, submitFixedCostPay, logout, switchProfileTab, maskCPF, maskPhone, maskCEP, changeTheme, loadUserProfile, openPayInvoiceModal, closePayInvoiceModal, submitPayInvoice, showToast, openCurrentGoalWithdrawModal, updateTransactionSummary, switchSettingsTab, toggleAllDevices, checkDeviceSelection, disconnectSelectedDevices, savePreferences, changeTxPage, changeTxItemsPerPage, setTransactionSort
+    openGoalDetails, closeGoalDetails, editGoalFromDetails, deleteGoalDeposit, editGoalDeposit, toggleGoalOptions, openCurrentGoalDepositModal, deleteCurrentGoal, switchGoalsTab, markGoalAsCompleted, toggleGoalsSortDropdown, setGoalsSortOrder, openFixedCostModal, closeFixedCostModal, submitFixedCost, editFixedCost, deleteFixedCost, markFixedCostPaid, unmarkFixedCostPaid, openFCPayModal, closeFCPayModal, openCCModal, closeCCModal, submitCC, openCCTransModal, closeCCTransModal, submitCCTrans, openCCInvoiceModal, closeCCInvoiceModal, deleteCreditTransaction, toggleFabMenu, closeFabMenu, openNewTransaction, openNewCCTransaction, openNewTransfer, startPlanningWizard, cancelPlanningWizard, copyPreviousPlanning, maskCurrency, calculateWizardBudget, prevWizardStep, nextWizardStep, calculateWizardCategoryTotals, renderWizardCategories, selectCardPreference, finishPlanningWizard, closeFixedCostPayModal, submitFixedCostPay, logout, switchProfileTab, maskCPF, maskPhone, maskCEP, changeTheme, loadUserProfile, openPayInvoiceModal, closePayInvoiceModal, submitPayInvoice, showToast, openCurrentGoalWithdrawModal, updateTransactionSummary, switchSettingsTab, toggleAllDevices, checkDeviceSelection, disconnectSelectedDevices, savePreferences, changeTxPage, changeTxItemsPerPage, setTransactionSort, proceedEditFixedCost, closeFCEditScopeModal
   };
 })();
 
