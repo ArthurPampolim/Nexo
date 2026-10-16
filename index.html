@@ -1216,6 +1216,10 @@
               class="fas fa-times"></i></button>
         </div>
         <form id="transfer-form" onsubmit="AppController.submitTransfer(event)">
+          <div class="form-group">
+            <label>Data</label>
+            <input type="date" id="transfer-data" name="dataTransacao" required>
+          </div>
           <div class="form-group"><label>Conta Origem</label><select id="transfer-origem" name="origem" required>
               <option disabled selected>Carregando...</option>
             </select></div>

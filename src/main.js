@@ -562,7 +562,7 @@ const AppController = (function () {
 
     const formDados = Object.fromEntries(new FormData(document.getElementById('transfer-form')).entries());
     const valorTransf = parseFloat(formDados.valor) || 0;
-    const localISO = new Date(new Date().getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+    const localISO = formDados.dataTransacao;
 
     try {
       if (formDados.tipoTransferencia === 'OBJETIVO') {
@@ -948,16 +948,26 @@ const AppController = (function () {
     closeFabMenu();
     openTransferModal();
 
+    // 1. Pega a data atual no formato YYYY-MM-DD
+    const localISO = new Date(new Date().getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+
+    // 2. Pré-preenche o campo (compatibilidade com flatpickr e input normal)
+    const dateElement = document.getElementById('transfer-data');
+    if (dateElement && dateElement._flatpickr) {
+      dateElement._flatpickr.setDate(localISO);
+    } else if (dateElement) {
+      dateElement.value = localISO;
+    }
+
     const valueInput = document.querySelector('#transfer-form input[name="valor"]');
     if (valueInput) { valueInput.style.color = '#2196F3'; valueInput.style.borderBottomColor = '#2196F3'; }
 
-    const dateElement = document.getElementById('transfer-data');
     const dateInput = dateElement && dateElement._flatpickr ? dateElement._flatpickr.altInput : null;
     if (dateInput) {
       dateInput.style.color = '#2196F3';
       dateInput.style.fontWeight = '600';
     }
-  }
+  } 
   function editTransaction(id) {
     const t = state.transactions.find(x => String(x.ID) === String(id));
     if (!t) return;
