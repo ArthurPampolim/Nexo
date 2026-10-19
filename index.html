@@ -1268,7 +1268,7 @@
             </select></div>
           <div class="form-group"><label>Data da Compra</label><input type="date" id="cct-data" name="dataTransacao"
               required></div>
-          <div class="form-group"><label>Valor Total (R$)</label><input type="number" name="valor" step="0.01" required>
+          <div class="form-group"><label>Valor Total (R$)</label><input type="tel" name="valor" required oninput="AppController.maskCurrency(this)">
           </div>
           <div class="form-group">
             <label>Parcelamento</label>
@@ -1348,7 +1348,7 @@
           <div class="form-group"><label>Conta</label><select id="conta" name="conta" required>
               <option disabled selected>Carregando...</option>
             </select></div>
-          <div class="form-group"><label>Valor</label><input type="number" name="valor" step="0.01" required></div>
+          <div class="form-group"><label>Valor</label><input type="tel" name="valor" required oninput="AppController.maskCurrency(this)"></div>
           <div class="form-group">
             <label>Categoria</label>
             <select name="categoria" required>
@@ -1531,7 +1531,7 @@
         </div>
         <form id="fixed-cost-form" onsubmit="AppController.submitFixedCost(event)">
           <div class="form-group"><label>Nome</label><input type="text" name="nome" required></div>
-          <div class="form-group"><label>Valor</label><input type="number" name="valor" step="0.01" required></div>
+          <div class="form-group"><label>Valor</label><input type="tel" name="valor" required oninput="AppController.maskCurrency(this)"></div>
           <div class="form-group"><label>Dia Vencimento</label><input type="number" name="diaVencimento" min="1"
               max="31" required></div>
           <button type="submit" id="submit-fc-btn" class="btn-primary">Salvar Custo</button>

@@ -16,6 +16,14 @@ const AppController = (function () {
     txFilter: 'ALL'
   };
 
+  function parseCurrencyMask(str) {
+    if (typeof str === 'number') return str;
+    if (!str) return 0;
+
+    const rawVal = str.replace(/\D/g, '');
+    return (parseFloat(rawVal) / 100) || 0;
+  }
+
   state.txSortCol = 'Data';
   state.txSortDir = 'desc';
 
@@ -561,7 +569,7 @@ const AppController = (function () {
     btn.innerText = 'Transferindo...';
 
     const formDados = Object.fromEntries(new FormData(document.getElementById('transfer-form')).entries());
-    const valorTransf = parseFloat(formDados.valor) || 0;
+    const valorTransf = parseCurrencyMask(formDados.valor);
     const localISO = formDados.dataTransacao;
 
     try {
@@ -967,7 +975,7 @@ const AppController = (function () {
       dateInput.style.color = '#2196F3';
       dateInput.style.fontWeight = '600';
     }
-  } 
+  }
   function editTransaction(id) {
     const t = state.transactions.find(x => String(x.ID) === String(id));
     if (!t) return;
@@ -1014,7 +1022,7 @@ const AppController = (function () {
       Tipo: formDados.tipo,
       Data: formDados.dataTransacao,
       Conta: formDados.conta,
-      Valor: parseFloat(formDados.valor) || 0,
+      Valor: parseCurrencyMask(formDados.valor),
       Categoria: formDados.categoria,
       Descricao: formDados.descricao || ''
     };
@@ -1515,7 +1523,7 @@ const AppController = (function () {
           const excecoes = fc.Excecoes || {};
           excecoes[currentMonth] = {
             Nome: formDados.nome,
-            Valor: parseFloat(formDados.valor) || 0,
+            Valor: parseCurrencyMask(formDados.valor) || 0,
             DiaVencimento: parseInt(formDados.diaVencimento) || 1
           };
           await updateDoc(doc(db, "Custos Fixos", state.editingId), { Excecoes: excecoes });
@@ -1883,7 +1891,7 @@ const AppController = (function () {
     try {
       await addDoc(collection(db, "Cartoes"), {
         Nome: formDados.nome,
-        Limite: parseFloat(formDados.limite) || 0,
+        Limite: parseCurrencyMask(formDados.limite),
         DiaFechamento: parseInt(formDados.diaFechamento) || 1,
         DiaVencimento: parseInt(formDados.diaVencimento) || 1
       });
@@ -1914,7 +1922,7 @@ const AppController = (function () {
 
     const formDados = Object.fromEntries(new FormData(elements.ccTransForm).entries());
     const cardId = formDados.idCartao;
-    const valorTotal = parseFloat(formDados.valor) || 0;
+    const valorTotal = parseCurrencyMask(formDados.valor);
     const parcelas = parseInt(formDados.parcelas) || 1;
 
     try {
@@ -2489,10 +2497,19 @@ const AppController = (function () {
 
   function maskCurrency(input) {
     let value = input.value.replace(/\D/g, "");
-    value = (value / 100).toFixed(2) + "";
-    value = value.replace(".", ",");
-    value = value.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1.");
-    input.value = "R$ " + value;
+
+    if (value === "") {
+      input.value = "";
+      return;
+    }
+
+    const numericValue = parseInt(value, 10) / 100;
+
+    input.value = new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      minimumFractionDigits: 2
+    }).format(numericValue)
   }
 
   // Máscaras de Formatação
@@ -3545,7 +3562,7 @@ const AppController = (function () {
   return {
     init, switchTab, setTransactionFilter, renderCreditCardsPage, renderFixedCostsPage, renderGoalsPage, renderAccountsPage, renderPlanningView, openMonthPicker, closeMonthPicker, changePickerYear, selectCurrentMonth, openModal, closeModal, submitTransaction, editTransaction, deleteTransaction, openAccountModal, closeAccountModal, submitAccount, openTransferModal, closeTransferModal, submitTransfer,
     openGoalTypeModal, openGoalForm, closeGoalModal, submitGoal, editGoal, deleteGoal, openGoalDepositModal, closeGoalDepositModal, submitGoalDeposit,
-    openGoalDetails, closeGoalDetails, editGoalFromDetails, deleteGoalDeposit, editGoalDeposit, toggleGoalOptions, openCurrentGoalDepositModal, deleteCurrentGoal, switchGoalsTab, markGoalAsCompleted, toggleGoalsSortDropdown, setGoalsSortOrder, openFixedCostModal, closeFixedCostModal, submitFixedCost, editFixedCost, deleteFixedCost, markFixedCostPaid, unmarkFixedCostPaid, openFCPayModal, closeFCPayModal, openCCModal, closeCCModal, submitCC, openCCTransModal, closeCCTransModal, submitCCTrans, openCCInvoiceModal, closeCCInvoiceModal, deleteCreditTransaction, toggleFabMenu, closeFabMenu, openNewTransaction, openNewCCTransaction, openNewTransfer, startPlanningWizard, cancelPlanningWizard, copyPreviousPlanning, maskCurrency, calculateWizardBudget, prevWizardStep, nextWizardStep, calculateWizardCategoryTotals, renderWizardCategories, selectCardPreference, finishPlanningWizard, closeFixedCostPayModal, submitFixedCostPay, logout, switchProfileTab, maskCPF, maskPhone, maskCEP, changeTheme, loadUserProfile, openPayInvoiceModal, closePayInvoiceModal, submitPayInvoice, showToast, openCurrentGoalWithdrawModal, updateTransactionSummary, switchSettingsTab, toggleAllDevices, checkDeviceSelection, disconnectSelectedDevices, savePreferences, changeTxPage, changeTxItemsPerPage, setTransactionSort, proceedEditFixedCost, closeFCEditScopeModal
+    openGoalDetails, closeGoalDetails, editGoalFromDetails, deleteGoalDeposit, editGoalDeposit, toggleGoalOptions, openCurrentGoalDepositModal, deleteCurrentGoal, switchGoalsTab, markGoalAsCompleted, toggleGoalsSortDropdown, setGoalsSortOrder, openFixedCostModal, closeFixedCostModal, submitFixedCost, editFixedCost, deleteFixedCost, markFixedCostPaid, unmarkFixedCostPaid, openFCPayModal, closeFCPayModal, openCCModal, closeCCModal, submitCC, openCCTransModal, closeCCTransModal, submitCCTrans, openCCInvoiceModal, closeCCInvoiceModal, deleteCreditTransaction, toggleFabMenu, closeFabMenu, openNewTransaction, openNewCCTransaction, openNewTransfer, startPlanningWizard, cancelPlanningWizard, copyPreviousPlanning, maskCurrency, calculateWizardBudget, prevWizardStep, nextWizardStep, calculateWizardCategoryTotals, renderWizardCategories, selectCardPreference, finishPlanningWizard, closeFixedCostPayModal, submitFixedCostPay, logout, switchProfileTab, maskCPF, maskPhone, maskCEP, changeTheme, loadUserProfile, openPayInvoiceModal, closePayInvoiceModal, submitPayInvoice, showToast, openCurrentGoalWithdrawModal, updateTransactionSummary, switchSettingsTab, toggleAllDevices, checkDeviceSelection, disconnectSelectedDevices, savePreferences, changeTxPage, changeTxItemsPerPage, setTransactionSort, proceedEditFixedCost, closeFCEditScopeModal, parseCurrencyMask
   };
 })();
 
