@@ -8,7 +8,12 @@
   <title>Nexo</title>
   <link rel="icon" type="image/png" href="src/assets/Logotipo_Nexo_1.png" />
 
-  <!-- 2. O seu arquivo CSS local -->
+  <!-- 2. Tipografia Profissional (Plus Jakarta Sans + JetBrains Mono) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- 3. O seu arquivo CSS local -->
   <link rel="stylesheet" href="./src/style.css" />
 
   <!-- 3. Bibliotecas Externas (Ícones, Gráficos, Calendário e Selects) -->
@@ -26,26 +31,28 @@
 
 <body>
   <div id="login-screen"
-    style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #f3f4f6; z-index: 9999; display: flex; align-items: center; justify-content: center;">
+    style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg-color); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 16px;">
     <div
-      style="background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center;">
+      style="background: var(--card-bg); padding: 40px 32px; border-radius: 4px; box-shadow: 0 10px 25px rgba(13, 37, 63, 0.08); width: 100%; max-width: 380px; text-align: center; border: 1px solid var(--border-color);">
 
       <!-- TELA DE LOGIN (Padrão) -->
       <div id="login-view">
-        <img src="./src/assets/Logotipo_Nexo_2.png" alt="Nexo" style="height: 32px; width: auto;" />
+        <div style="margin-bottom: 24px;">
+          <img src="./src/assets/Logotipo_Nexo_2.png" alt="Nexo" style="height: 36px; width: auto;" />
+        </div>
         <form id="login-form">
           <input type="email" id="login-email" placeholder="E-mail" required
-            style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px;" />
+            style="width: 100%; padding: 10px 12px; margin-bottom: 12px; border: 1px solid var(--border-strong); border-radius: 2px; font-family: var(--font-sans); font-size: 13.5px; background: var(--card-bg); color: var(--text-main);" />
           <input type="password" id="login-password" placeholder="Senha" required
-            style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px;" />
-          <button type="submit" id="login-btn" class="btn-primary" style="width: 100%;">Entrar</button>
+            style="width: 100%; padding: 10px 12px; margin-bottom: 16px; border: 1px solid var(--border-strong); border-radius: 2px; font-family: var(--font-sans); font-size: 13.5px; background: var(--card-bg); color: var(--text-main);" />
+          <button type="submit" id="login-btn" class="btn-primary" style="width: 100%; margin-top: 4px;">Entrar</button>
         </form>
-        <div style="margin-top: 15px; display: flex; justify-content: space-between; font-size: 14px;">
+        <div style="margin-top: 18px; display: flex; justify-content: space-between; font-size: 12.5px; font-weight: 500;">
           <a href="#" id="forgot-pass-btn" style="color: var(--primary-color); text-decoration: none;">Esqueci a
             senha</a>
-          <a href="#" id="show-register-btn" style="color: var(--primary-color); text-decoration: none;">Criar conta</a>
+          <a href="#" id="show-register-btn" style="color: var(--primary-color); text-decoration: none; font-weight: 600;">Criar conta</a>
         </div>
-        <p id="login-error" style="color: red; margin-top: 15px; display: none; font-size: 14px;"></p>
+        <p id="login-error" style="color: var(--danger-color); margin-top: 15px; display: none; font-size: 13px;"></p>
       </div>
     </div>
   </div>
@@ -450,8 +457,8 @@
         <div style="max-width: 1200px; margin: 0 auto; padding: 0 15px 50px;">
           <!-- Cartões de Resumo do Mês para Custos Fixos -->
           <div class="summary-cards" style="padding: 0; margin-bottom: 25px;">
-            <div class="summary-card" style="border-left: 4px solid #6200ea;">
-              <div class="card-icon" style="background-color: #6200ea;"><i class="fas fa-file-invoice-dollar"></i></div>
+            <div class="summary-card" style="border-left: 4px solid var(--primary-color);">
+              <div class="card-icon" style="background-color: var(--primary-color);"><i class="fas fa-file-invoice-dollar"></i></div>
               <div class="card-info">
                 <div class="card-label">Total Custos Fixos (<span id="fc-page-period-title">--</span>)</div>
                 <h3 class="card-value" id="fc-page-total-cost">R$ 0,00</h3>
@@ -891,7 +898,7 @@
                   <div style="color:#666; font-size:14px; margin-bottom: 5px;">Balanço planejado</div>
                   <div id="dash-balance" style="font-size:24px; font-weight:600;">R$ 0,00</div>
                 </div>
-                <div class="wiz-cat-icon" style="background:#6200ea;"><i class="fas fa-balance-scale"></i></div>
+                <div class="wiz-cat-icon" style="background:var(--primary-color);"><i class="fas fa-balance-scale"></i></div>
               </div>
               <div class="wiz-cat-card" style="padding: 25px;">
                 <div>
@@ -1419,7 +1426,7 @@
         </div>
         <form id="goal-form" onsubmit="AppController.submitGoal(event)">
           <input type="hidden" id="goal-icon-val" name="icone" value="fa-bullseye">
-          <input type="hidden" id="goal-color-val" name="cor" value="#6200ea">
+          <input type="hidden" id="goal-color-val" name="cor" value="#0d253f">
 
           <div class="form-group goal-floating-input">
             <label>Valor do objetivo</label>
@@ -1427,7 +1434,7 @@
               <i class="fas fa-trophy" style="color: #999; margin-right: 10px; font-size: 18px;"></i>
               <input type="text" name="valorAlvo" required placeholder="R$ 0,00"
                 oninput="AppController.maskCurrency(this)"
-                style="border: none; padding: 0; font-size: 24px; color: #6200ea;">
+                style="border: none; padding: 0; font-size: 24px; color: var(--primary-color);">
             </div>
           </div>
 
@@ -1436,7 +1443,7 @@
             <div style="display: flex; align-items: center; border-bottom: 2px solid #ddd; padding-bottom: 5px;">
               <i class="fas fa-plus" style="color: #999; margin-right: 10px; font-size: 18px;"></i>
               <input type="text" name="valorAtual" placeholder="R$ 0,00" oninput="AppController.maskCurrency(this)"
-                style="border: none; padding: 0; font-size: 24px; color: #6200ea;">
+                style="border: none; padding: 0; font-size: 24px; color: var(--primary-color);">
             </div>
           </div>
 

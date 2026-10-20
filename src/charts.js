@@ -14,8 +14,9 @@ export const ChartManager = {
     updateDashboardCharts: function (allTransactions, selectedYYYYMM) {
         if (typeof Chart !== 'undefined') {
             const isDark = document.body.classList.contains('dark-mode');
-            Chart.defaults.color = isDark ? '#cbd5e1' : '#64748b';
-            Chart.defaults.borderColor = isDark ? '#334155' : '#e2e8f0';
+            Chart.defaults.color = isDark ? '#94a3b8' : '#64748b';
+            Chart.defaults.borderColor = isDark ? '#1e293b' : '#e2e8f0';
+            Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
         }
         this.renderExpensesChart(allTransactions, selectedYYYYMM);
         this.renderMonthlyBalanceChart(allTransactions, selectedYYYYMM);
@@ -50,7 +51,7 @@ export const ChartManager = {
                 datasets: [{
                     data: dataValues.length > 0 ? dataValues : [1],
                     backgroundColor: labels.length > 0 ?
-                        ['#0d253f', '#174665', '#00c985', '#2196F3', '#FF9800', '#E91E63', '#9C27B0', '#00BCD4'] :
+                        ['#0d253f', '#174665', '#00c985', '#0284c7', '#d97706', '#e11d48', '#0891b2', '#475569'] :
                         ['#e2e8f0'],
                     borderWidth: 0
                 }]
@@ -93,8 +94,8 @@ export const ChartManager = {
                 labels: ['Receitas', 'Despesas'],
                 datasets: [{
                     data: [receitas, despesas],
-                    backgroundColor: ['#00c985', '#F44336'], // Verde Esmeralda e Vermelho
-                    borderRadius: 6,
+                    backgroundColor: ['#00c985', '#e11d48'], // Verde Esmeralda e Rubi
+                    borderRadius: 2,
                     barPercentage: 0.6
                 }]
             },
@@ -165,7 +166,7 @@ export const ChartManager = {
                     {
                         label: 'Despesas',
                         data: histDespesas,
-                        borderColor: '#F44336',
+                        borderColor: '#e11d48',
                         backgroundColor: 'transparent',
                         borderWidth: 3,
                         tension: 0.4

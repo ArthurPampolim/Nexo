@@ -1229,7 +1229,7 @@ const AppController = (function () {
     document.querySelector(`#goal-form input[name="valorAlvo"]`).value = currencyFormatter.format(g.ValorAlvo);
     document.querySelector(`#goal-form input[name="valorAtual"]`).value = currencyFormatter.format(g.ValorAtual || 0);
     document.getElementById('goal-icon-val').value = g.Icone || 'fa-bullseye';
-    document.getElementById('goal-color-val').value = g.Cor || '#6200ea';
+    document.getElementById('goal-color-val').value = g.Cor || '#0d253f';
 
     const dateStr = g.DataLimite ? String(g.DataLimite).split('T')[0] : '';
     const dateInput = document.querySelector(`#goal-form input[name="dataLimite"]`);
@@ -3101,7 +3101,7 @@ const AppController = (function () {
     } else if (monthly < 0) {
       box.innerHTML = `<i class="fas fa-info-circle" style="color: #2196F3; font-size: 20px; margin-top: 2px;"></i><div style="font-size: 13px; color: #555;">Edite o objetivo e defina uma <strong>Data Limite</strong> para calcular sua meta mensal.</div>`;
     } else {
-      box.innerHTML = `<i class="fas fa-chess-board" style="color: ${g.Cor || '#6200ea'}; font-size: 20px; margin-top: 2px;"></i><div style="font-size: 13px; color: #555;">Para atingir seu objetivo a tempo, você precisa poupar a cada mês <strong style="color: #111;">${currencyFormatter.format(monthly)}</strong></div>`;
+      box.innerHTML = `<i class="fas fa-chess-board" style="color: ${g.Cor || '#0d253f'}; font-size: 20px; margin-top: 2px;"></i><div style="font-size: 13px; color: #555;">Para atingir seu objetivo a tempo, você precisa poupar a cada mês <strong style="color: #111;">${currencyFormatter.format(monthly)}</strong></div>`;
     }
 
     renderGoalChart(pct, g.Cor || '#00BCD4');
