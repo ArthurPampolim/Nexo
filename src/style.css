@@ -159,15 +159,24 @@ body {
 }
 
 .nav-left {
-  flex: 1;
+  flex: 0 0 auto;
 }
 
 .nav-center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
   justify-content: center;
+  align-items: center;
+  z-index: 2;
+  pointer-events: auto;
 }
 
 .nav-right {
-  flex: 1;
+  flex: 0 0 auto;
+  margin-left: auto;
   justify-content: flex-end;
   gap: 12px;
 }
@@ -1852,8 +1861,9 @@ body.dark-mode .progress-ring::before {
     padding: 12px 16px;
   }
 
-  .nav-center {
-    display: none;
+  .month-picker-btn {
+    padding: 6px 14px;
+    font-size: 12.5px;
   }
 
   .dashboard-grid {
@@ -1884,5 +1894,17 @@ body.dark-mode .progress-ring::before {
   .fab-container {
     bottom: 20px;
     right: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  #user-menu-trigger span {
+    display: none;
+  }
+
+  .month-picker-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+    gap: 6px;
   }
 }
