@@ -95,7 +95,7 @@ export const ChartManager = {
                 datasets: [{
                     data: [receitas, despesas],
                     backgroundColor: ['#00c985', '#e11d48'], // Verde Esmeralda e Rubi
-                    borderRadius: 2,
+                    borderRadius: 6,
                     barPercentage: 0.6
                 }]
             },

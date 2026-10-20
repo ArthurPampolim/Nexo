@@ -1,6 +1,6 @@
 /* ==========================================================================
-   NEXO — PRECISE LEDGER DESIGN SYSTEM
-   Geometria Técnica (2-4px), Tipografia Tabular, Alto Contraste e Navy/Esmeralda
+   NEXO — HUMANIST LEDGER DESIGN SYSTEM
+   A Síntese entre o Rigor Contábil Institucional e a Ergonomia Suave & Amigável
    ========================================================================== */
 
 :root {
@@ -13,7 +13,7 @@
   --accent-hover: #00b376;
   --accent-subtle: rgba(0, 201, 133, 0.12);
 
-  /* Superfícies & Neutros (Escala Slate / Ardósia) */
+  /* Superfícies & Neutros (Escala Slate / Ardósia Suave) */
   --bg-color: #f1f5f9;           /* Slate 100 */
   --bg-subtle: #f8fafc;          /* Slate 50 */
   --bg-light: #f8fafc;
@@ -35,24 +35,23 @@
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
 
-  /* Geometria Ledger Reta (2-4px) */
-  --radius-none: 0px;
-  --radius-xs: 2px;
-  --radius-sm: 3px;
-  --radius-md: 4px;
-  --radius-lg: 6px;
-  --radius-full: 9999px;
+  /* Geometria Humanist Ledger (Suave & Amigável: 8px - 14px) */
+  --radius-xs: 4px;
+  --radius-sm: 8px;              /* Botões, Inputs, Abas */
+  --radius-md: 12px;             /* Cartões de resumo, Gráficos, Contas */
+  --radius-lg: 16px;             /* Modais e Paineis */
+  --radius-pill: 9999px;         /* Pílulas de filtro, Badges, FAB */
 
-  /* Elevação e Sombras Naturais com matiz Slate/Navy */
-  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.05);
-  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
-  --shadow-md: 0 4px 12px rgba(13, 37, 63, 0.06), 0 2px 4px rgba(13, 37, 63, 0.03);
-  --shadow-lg: 0 10px 25px rgba(13, 37, 63, 0.09), 0 4px 10px rgba(13, 37, 63, 0.04);
-  --shadow-focus: 0 0 0 2px rgba(0, 201, 133, 0.35);
+  /* Elevação e Sombras Macias com Matiz Navy/Slate */
+  --shadow-xs: 0 1px 2px rgba(13, 37, 63, 0.04);
+  --shadow-sm: 0 2px 6px rgba(13, 37, 63, 0.05), 0 1px 2px rgba(13, 37, 63, 0.03);
+  --shadow-md: 0 6px 18px rgba(13, 37, 63, 0.06), 0 2px 6px rgba(13, 37, 63, 0.03);
+  --shadow-lg: 0 12px 32px rgba(13, 37, 63, 0.08), 0 4px 12px rgba(13, 37, 63, 0.04);
+  --shadow-focus: 0 0 0 3px rgba(0, 201, 133, 0.3);
 
-  /* Transições Precisas */
-  --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-normal: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Transições Suaves */
+  --transition-fast: 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-normal: 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Base & Reset */
@@ -79,7 +78,7 @@ body {
   width: 100%;
 }
 
-/* Tipografia Tabular para Valores e Balanços */
+/* Tipografia Tabular para Rigor Contábil nos Números */
 .card-value,
 .item-value,
 .acc-balance,
@@ -145,7 +144,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 32px;
+  padding: 16px 32px;
   background-color: var(--card-bg);
   border-bottom: 1px solid var(--border-color);
   position: relative;
@@ -173,15 +172,15 @@ body {
   gap: 12px;
 }
 
-/* Month Selector Button */
+/* Botão Seletor de Mês (Cápsula Suave) */
 .month-picker-btn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   background: var(--card-bg);
   border: 1px solid var(--border-color);
-  padding: 7px 16px;
-  border-radius: var(--radius-xs);
+  padding: 8px 18px;
+  border-radius: var(--radius-pill);
   font-size: 13.5px;
   font-weight: 600;
   color: var(--text-main);
@@ -191,9 +190,10 @@ body {
 }
 
 .month-picker-btn:hover {
-  border-color: var(--primary-color);
+  border-color: var(--accent-color);
   color: var(--primary-color);
   box-shadow: var(--shadow-sm);
+  background: var(--bg-subtle);
 }
 
 .month-picker-btn:active {
@@ -209,8 +209,8 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 10px;
-  border-radius: var(--radius-xs);
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   transition: background var(--transition-fast);
 }
@@ -221,10 +221,10 @@ body {
 
 #user-menu-trigger .avatar,
 #user-menu-trigger div[style*="border-radius: 50%"] {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-xs) !important;
-  border: 1px solid var(--primary-color) !important;
+  width: 34px;
+  height: 34px;
+  border-radius: 50% !important;
+  border: 2px solid var(--primary-color) !important;
   background: var(--secondary-light);
   color: var(--primary-color);
   display: flex;
@@ -243,13 +243,13 @@ body {
 
 #user-dropdown {
   position: absolute;
-  top: 42px;
+  top: 46px;
   right: 0;
   background: var(--card-bg);
-  border-radius: var(--radius-sm) !important;
+  border-radius: var(--radius-md) !important;
   box-shadow: var(--shadow-lg) !important;
   width: 210px;
-  padding: 6px 0 !important;
+  padding: 8px 0 !important;
   z-index: 1000;
   border: 1px solid var(--border-color) !important;
   animation: ledgerFadeInUp 0.15s ease-out;
@@ -287,9 +287,9 @@ body {
    MODAL DE SELEÇÃO DE MÊS (MONTH PICKER)
    ========================================================================== */
 .month-picker-card {
-  max-width: 340px !important;
-  padding: 20px !important;
-  border-radius: var(--radius-sm) !important;
+  max-width: 350px !important;
+  padding: 24px !important;
+  border-radius: var(--radius-lg) !important;
   border: 1px solid var(--border-color);
   box-shadow: var(--shadow-lg);
 }
@@ -298,12 +298,12 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 }
 
 .picker-year-title {
   margin: 0;
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--text-main);
   letter-spacing: -0.01em;
@@ -312,9 +312,9 @@ body {
 .nav-arrow-btn {
   background: var(--bg-subtle);
   border: 1px solid var(--border-color);
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-xs);
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -332,18 +332,18 @@ body {
 .month-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-bottom: 20px;
+  gap: 10px;
+  margin-bottom: 22px;
 }
 
 .month-cell {
   padding: 10px 4px;
   text-align: center;
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-sm);
   background: var(--bg-subtle);
   border: 1px solid var(--border-color);
   font-weight: 600;
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--text-secondary);
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -359,7 +359,7 @@ body {
   background: var(--primary-color);
   color: #ffffff;
   border-color: var(--primary-color);
-  box-shadow: var(--shadow-xs);
+  box-shadow: var(--shadow-sm);
 }
 
 .month-picker-actions {
@@ -367,7 +367,7 @@ body {
   justify-content: space-between;
   gap: 10px;
   border-top: 1px solid var(--border-color);
-  padding-top: 14px;
+  padding-top: 16px;
 }
 
 .btn-picker-secondary {
@@ -375,10 +375,10 @@ body {
   border: none;
   color: var(--primary-color);
   font-weight: 700;
-  font-size: 12.5px;
+  font-size: 13px;
   cursor: pointer;
-  padding: 6px 12px;
-  border-radius: var(--radius-xs);
+  padding: 7px 14px;
+  border-radius: var(--radius-sm);
   transition: background var(--transition-fast);
 }
 
@@ -391,10 +391,10 @@ body {
   border: none;
   color: var(--text-muted);
   font-weight: 600;
-  font-size: 12.5px;
+  font-size: 13px;
   cursor: pointer;
-  padding: 6px 12px;
-  border-radius: var(--radius-xs);
+  padding: 7px 14px;
+  border-radius: var(--radius-sm);
 }
 
 .btn-picker-cancel:hover {
@@ -403,14 +403,14 @@ body {
 }
 
 /* ==========================================================================
-   BARRA DE ABAS DA APLICAÇÃO (LEDGER TABS)
+   BARRA DE ABAS DA APLICAÇÃO (ERGONOMIC TABS)
    ========================================================================== */
 .app-tab-nav {
   max-width: 1200px;
-  margin: 16px auto 0 auto;
+  margin: 18px auto 0 auto;
   padding: 0 16px;
   display: flex;
-  gap: 4px;
+  gap: 6px;
   border-bottom: 1px solid var(--border-color);
   overflow-x: auto;
   scrollbar-width: none;
@@ -423,7 +423,7 @@ body {
 .app-tab-btn {
   background: none;
   border: none;
-  padding: 10px 18px;
+  padding: 11px 20px;
   font-size: 13.5px;
   font-weight: 600;
   color: var(--text-muted);
@@ -434,7 +434,7 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  border-radius: var(--radius-xs) var(--radius-xs) 0 0;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
   white-space: nowrap;
 }
 
@@ -456,14 +456,14 @@ body {
 .dashboard-title-container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 20px 16px 12px 16px;
+  padding: 22px 16px 14px 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
 .dashboard-title-container h2 {
-  font-size: 20px;
+  font-size: 22px;
   color: var(--text-main);
   margin: 0;
   font-weight: 700;
@@ -480,8 +480,8 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 10px;
-  border-radius: var(--radius-xs);
+  padding: 7px 12px;
+  border-radius: var(--radius-sm);
   transition: background var(--transition-fast);
 }
 
@@ -495,22 +495,22 @@ body {
 .summary-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 16px;
+  gap: 18px;
   max-width: 1200px;
-  margin: 12px auto 24px auto;
+  margin: 12px auto 26px auto;
   padding: 0 16px;
 }
 
 .summary-card {
   background: var(--card-bg);
-  border-radius: var(--radius-sm);
-  padding: 18px 20px;
+  border-radius: var(--radius-md);
+  padding: 20px 22px;
   display: flex;
   align-items: center;
   gap: 16px;
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-color);
-  border-left: 3px solid var(--primary-color);
+  border-left: 4px solid var(--primary-color);
   transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
   cursor: pointer;
 }
@@ -526,14 +526,14 @@ body {
 }
 
 .card-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: var(--radius-xs);
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
   display: flex;
   justify-content: center;
   align-items: center;
   color: #ffffff;
-  font-size: 16px;
+  font-size: 17px;
   flex-shrink: 0;
 }
 
@@ -560,7 +560,7 @@ body {
 }
 
 .card-label {
-  font-size: 11px;
+  font-size: 11.5px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-muted);
@@ -580,54 +580,54 @@ body {
    CARROSSEL DE CONTAS BANCÁRIAS
    ========================================================================== */
 .accounts-section {
-  margin-bottom: 24px;
+  margin-bottom: 26px;
 }
 
 .accounts-carousel {
   display: flex;
-  gap: 12px;
+  gap: 14px;
   overflow-x: auto;
-  padding: 4px 16px 12px 16px;
+  padding: 4px 16px 14px 16px;
   max-width: 1200px;
   margin: 0 auto;
   scrollbar-width: thin;
 }
 
 .accounts-carousel::-webkit-scrollbar {
-  height: 5px;
+  height: 6px;
 }
 
 .accounts-carousel::-webkit-scrollbar-thumb {
   background-color: var(--border-strong);
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-pill);
 }
 
 .account-mini-card {
   background: var(--card-bg);
-  border-radius: var(--radius-sm);
-  padding: 14px 18px;
-  min-width: 220px;
-  box-shadow: var(--shadow-xs);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  min-width: 230px;
+  box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-color);
-  border-left: 3px solid var(--primary-color);
+  border-left: 4px solid var(--primary-color);
   flex-shrink: 0;
   transition: transform var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .account-mini-card:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-md);
 }
 
 .account-mini-card .acc-name {
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 600;
   color: var(--text-secondary);
   margin-bottom: 6px;
 }
 
 .account-mini-card .acc-balance {
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--text-main);
 }
@@ -638,7 +638,7 @@ body {
 .dashboard-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  gap: 22px;
   max-width: 1200px;
   margin: 16px auto 50px auto;
   padding: 0 16px;
@@ -646,20 +646,20 @@ body {
 
 .chart-card {
   background: var(--card-bg);
-  padding: 22px;
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-xs);
+  padding: 24px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-color);
   transition: box-shadow var(--transition-fast);
 }
 
 .chart-card:hover {
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-md);
 }
 
 .chart-card h3 {
   color: var(--primary-color);
-  font-size: 14px;
+  font-size: 14.5px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -675,26 +675,27 @@ body {
    ========================================================================== */
 .transaction-list {
   background: var(--card-bg);
-  border-radius: var(--radius-sm);
-  padding: 20px;
-  box-shadow: var(--shadow-xs);
+  border-radius: var(--radius-md);
+  padding: 22px;
+  box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-color);
 }
 
+/* Pílulas de Filtro (Cápsulas Suaves & Amigáveis) */
 .tx-filter-pills {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: wrap;
   margin-top: 8px;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 
 .tx-filter-btn {
   background: var(--bg-subtle);
   border: 1px solid var(--border-color);
   color: var(--text-secondary);
-  padding: 6px 14px;
-  border-radius: var(--radius-xs);
+  padding: 6px 16px;
+  border-radius: var(--radius-pill);
   font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
@@ -735,7 +736,7 @@ body {
 }
 
 .tx-th {
-  padding: 11px 14px;
+  padding: 12px 14px;
   background: var(--bg-subtle);
   color: var(--text-muted);
   font-size: 11px;
@@ -747,7 +748,7 @@ body {
 }
 
 .tx-td {
-  padding: 12px 14px;
+  padding: 13px 14px;
   border-bottom: 1px solid var(--border-color);
   color: var(--text-main);
   font-size: 13px;
@@ -767,8 +768,8 @@ body {
 }
 
 .tx-checkbox {
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
   cursor: pointer;
   accent-color: var(--accent-color);
 }
@@ -777,8 +778,8 @@ body {
   display: inline-flex;
   justify-content: center;
   align-items: center;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: var(--radius-xs);
   color: #ffffff;
   font-size: 10px;
@@ -803,9 +804,9 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 24px;
-  height: 24px;
-  border-radius: var(--radius-xs);
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm);
   color: #ffffff;
   font-size: 11px;
 }
@@ -841,7 +842,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 16px;
+  padding: 11px 18px;
   background: var(--bg-subtle);
   border: 1px solid var(--border-color);
   border-radius: 0 0 var(--radius-sm) var(--radius-sm);
@@ -853,7 +854,7 @@ body {
   background: var(--card-bg);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-xs);
-  padding: 3px 6px;
+  padding: 4px 8px;
   color: var(--text-main);
   font-size: 12.5px;
   cursor: pointer;
@@ -873,7 +874,7 @@ body {
   color: var(--text-secondary);
   cursor: pointer;
   font-size: 11px;
-  padding: 5px 8px;
+  padding: 6px 10px;
   transition: all var(--transition-fast);
 }
 
@@ -924,7 +925,7 @@ body {
   width: 100%;
   height: 100%;
   background: rgba(13, 37, 63, 0.45);
-  backdrop-filter: blur(2px);
+  backdrop-filter: blur(3px);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -933,8 +934,8 @@ body {
 
 .modal-content {
   background: var(--card-bg);
-  padding: 24px;
-  border-radius: var(--radius-md);
+  padding: 26px;
+  border-radius: var(--radius-lg);
   width: 90%;
   max-width: 440px;
   max-height: 90vh;
@@ -952,14 +953,14 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 18px;
-  padding-bottom: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 14px;
   border-bottom: 1px solid var(--border-color);
 }
 
 .modal-header h2 {
   margin: 0;
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--text-main);
 }
@@ -980,12 +981,12 @@ body {
 }
 
 .form-group {
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 4px;
+  margin-bottom: 5px;
   font-weight: 600;
   font-size: 12.5px;
   color: var(--text-secondary);
@@ -994,9 +995,9 @@ body {
 .form-group input,
 .form-group select {
   width: 100%;
-  padding: 9px 12px;
+  padding: 10px 14px;
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-sm);
   font-size: 13.5px;
   font-family: var(--font-sans);
   background: var(--card-bg);
@@ -1013,11 +1014,11 @@ body {
 
 .btn-primary {
   width: 100%;
-  padding: 11px 16px;
+  padding: 12px 18px;
   background: var(--primary-color);
   color: #ffffff;
   border: 1px solid var(--primary-color);
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-sm);
   font-size: 13.5px;
   font-weight: 700;
   cursor: pointer;
@@ -1050,9 +1051,9 @@ body {
 .radio-label {
   flex: 1;
   text-align: center;
-  padding: 8px;
+  padding: 9px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font-weight: 600;
   font-size: 12.5px;
@@ -1143,7 +1144,7 @@ body {
 }
 
 /* ==========================================================================
-   BOTÃO DE AÇÃO FLUTUANTE (FAB) & MENU
+   BOTÃO DE AÇÃO FLUTUANTE (FAB) & MENU (PÍLULA MODERNA)
    ========================================================================== */
 .fab-container {
   position: fixed;
@@ -1159,9 +1160,9 @@ body {
   background-color: var(--primary-color);
   color: #ffffff;
   border: 1px solid var(--primary-color);
-  border-radius: var(--radius-xs);
-  padding: 0 20px;
-  height: 48px;
+  border-radius: var(--radius-pill);
+  padding: 0 22px;
+  height: 50px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -1186,13 +1187,13 @@ body {
 
 .fab-menu {
   background: var(--card-bg);
-  border-radius: var(--radius-sm);
-  padding: 6px 0;
+  border-radius: var(--radius-md);
+  padding: 8px 0;
   box-shadow: var(--shadow-lg);
-  margin-bottom: 12px;
+  margin-bottom: 14px;
   display: flex;
   flex-direction: column;
-  min-width: 210px;
+  min-width: 220px;
   border: 1px solid var(--border-color);
   transform-origin: bottom right;
   transition: all 0.15s ease-out;
@@ -1207,7 +1208,7 @@ body {
 .fab-menu-item {
   background: none;
   border: none;
-  padding: 10px 16px;
+  padding: 11px 18px;
   width: 100%;
   text-align: left;
   font-size: 13.5px;
@@ -1238,9 +1239,9 @@ body {
   background: var(--card-bg);
   border: 1px solid var(--primary-color);
   color: var(--primary-color);
-  border-radius: var(--radius-sm);
-  padding: 24px 20px;
-  width: 220px;
+  border-radius: var(--radius-md);
+  padding: 26px 22px;
+  width: 230px;
   cursor: pointer;
   font-size: 13px;
   font-weight: 700;
@@ -1253,7 +1254,7 @@ body {
   background: var(--primary-color);
   color: #ffffff;
   transform: translateY(-2px);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-md);
 }
 
 .plan-main-btn.secondary {
@@ -1269,8 +1270,8 @@ body {
 
 .wizard-card {
   background: var(--card-bg);
-  border-radius: var(--radius-sm);
-  padding: 32px;
+  border-radius: var(--radius-md);
+  padding: 34px;
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-color);
 }
@@ -1298,8 +1299,8 @@ body {
 .wizard-result-box {
   background: var(--bg-subtle);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-xs);
-  padding: 20px;
+  border-radius: var(--radius-sm);
+  padding: 22px;
   margin-top: 20px;
 }
 
@@ -1307,9 +1308,9 @@ body {
   background: var(--border-color);
   color: var(--text-secondary);
   border: none;
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-xs);
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
   font-size: 15px;
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -1323,8 +1324,8 @@ body {
 .wiz-cat-card {
   background: var(--card-bg);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-xs);
-  padding: 16px;
+  border-radius: var(--radius-sm);
+  padding: 18px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1337,14 +1338,14 @@ body {
 }
 
 .wiz-cat-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: var(--radius-xs);
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
   display: flex;
   justify-content: center;
   align-items: center;
   color: #ffffff;
-  font-size: 15px;
+  font-size: 16px;
 }
 
 .wiz-cat-input {
@@ -1362,16 +1363,16 @@ body {
 
 .wizard-summary-card {
   background: var(--card-bg);
-  border-radius: var(--radius-sm);
-  padding: 22px;
+  border-radius: var(--radius-md);
+  padding: 24px;
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-color);
 }
 
 /* Gráfico Circular de Progresso */
 .progress-ring {
-  width: 60px;
-  height: 60px;
+  width: 62px;
+  height: 62px;
   border-radius: 50%;
   background: conic-gradient(var(--accent-color) 0%, var(--border-color) 0%);
   display: flex;
@@ -1382,8 +1383,8 @@ body {
 
 .progress-ring::before {
   content: "";
-  width: 46px;
-  height: 46px;
+  width: 48px;
+  height: 48px;
   background: var(--card-bg);
   border-radius: 50%;
 }
@@ -1393,9 +1394,9 @@ body {
   justify-content: space-between;
   align-items: center;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-xs);
-  padding: 20px;
-  margin-bottom: 12px;
+  border-radius: var(--radius-sm);
+  padding: 22px;
+  margin-bottom: 14px;
   cursor: pointer;
   transition: all var(--transition-fast);
 }
@@ -1420,13 +1421,13 @@ body {
 .new-goal-card {
   background: var(--card-bg);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  padding: 20px;
+  border-radius: var(--radius-md);
+  padding: 22px;
   width: 330px;
-  box-shadow: var(--shadow-xs);
+  box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
   transition: transform var(--transition-fast), box-shadow var(--transition-fast);
 }
 
@@ -1443,14 +1444,14 @@ body {
 }
 
 .ng-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: var(--radius-xs);
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-sm);
   display: flex;
   justify-content: center;
   align-items: center;
   color: #ffffff;
-  font-size: 15px;
+  font-size: 16px;
   flex-shrink: 0;
 }
 
@@ -1458,7 +1459,7 @@ body {
   font-size: 15px;
   font-weight: 700;
   color: var(--text-main);
-  margin-left: 10px;
+  margin-left: 12px;
   flex-grow: 1;
   white-space: nowrap;
   overflow: hidden;
@@ -1467,8 +1468,8 @@ body {
 
 .ng-progress-track {
   background: var(--border-color);
-  height: 6px;
-  border-radius: var(--radius-xs);
+  height: 8px;
+  border-radius: var(--radius-pill);
   width: 100%;
   overflow: hidden;
   margin-bottom: 6px;
@@ -1477,7 +1478,7 @@ body {
 .ng-progress-fill {
   height: 100%;
   background: var(--accent-color);
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-pill);
   transition: width 0.4s ease-out;
 }
 
@@ -1497,17 +1498,17 @@ body {
 .toast {
   background: var(--primary-color);
   color: #ffffff;
-  padding: 12px 18px;
-  border-radius: var(--radius-xs);
+  padding: 13px 20px;
+  border-radius: var(--radius-sm);
   box-shadow: var(--shadow-lg);
   font-size: 13.5px;
   font-weight: 600;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   min-width: 260px;
   max-width: 380px;
-  border-left: 3px solid var(--accent-color);
+  border-left: 4px solid var(--accent-color);
   animation: slideInToast 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
@@ -1541,8 +1542,8 @@ body {
 .nexo-toggle {
   position: relative;
   display: inline-block;
-  width: 40px;
-  height: 22px;
+  width: 42px;
+  height: 24px;
   flex-shrink: 0;
 }
 
@@ -1561,19 +1562,19 @@ body {
   bottom: 0;
   background-color: var(--border-strong);
   transition: 0.2s;
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-pill);
 }
 
 .nexo-toggle-slider:before {
   position: absolute;
   content: "";
-  height: 16px;
-  width: 16px;
+  height: 18px;
+  width: 18px;
   left: 3px;
   bottom: 3px;
   background-color: white;
   transition: 0.2s;
-  border-radius: var(--radius-xs);
+  border-radius: 50%;
 }
 
 .nexo-toggle input:checked + .nexo-toggle-slider {
@@ -1663,7 +1664,7 @@ body.dark-mode .wizard-summary-card,
 body.dark-mode .new-goal-card {
   background-color: var(--card-bg);
   border-color: var(--border-color);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
 }
 
 body.dark-mode .tx-th {
@@ -1872,7 +1873,7 @@ body.dark-mode .progress-ring::before {
   }
 
   .app-tab-btn {
-    padding: 8px 12px;
+    padding: 9px 14px;
     font-size: 12.5px;
   }
 
