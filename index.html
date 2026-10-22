@@ -11,7 +11,9 @@
   <!-- 2. Tipografia Profissional (Plus Jakarta Sans + JetBrains Mono) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
 
   <!-- 3. O seu arquivo CSS local -->
   <link rel="stylesheet" href="./src/style.css" />
@@ -27,35 +29,124 @@
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
 <body>
-  <div id="login-screen"
-    style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg-color); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 16px;">
-    <div
-      style="background: var(--card-bg); padding: 40px 32px; border-radius: 4px; box-shadow: 0 10px 25px rgba(13, 37, 63, 0.08); width: 100%; max-width: 380px; text-align: center; border: 1px solid var(--border-color);">
+  <!-- TELA DE LOGIN (NOVA VERSÃO CUSTOMIZADA) -->
+  <div id="login-screen" class="login-wrapper">
+    <!-- Lado Esquerdo: Área de Arte/Ilustração -->
+    <aside class="login-art" aria-hidden="true">
+      <svg viewBox="0 0 560 420" fill="none" class="login-svg-art">
+        <rect x="70" y="60" width="420" height="270" rx="16" fill="var(--surface)" stroke="var(--border-color)" />
+        <rect x="70" y="60" width="420" height="38" rx="16" fill="var(--primary-color)" />
+        <rect x="70" y="80" width="420" height="18" fill="var(--primary-color)" />
+        <circle cx="94" cy="79" r="5" fill="#fff" opacity=".8" />
+        <circle cx="112" cy="79" r="5" fill="#fff" opacity=".6" />
+        <circle cx="130" cy="79" r="5" fill="#fff" opacity=".4" />
 
-      <!-- TELA DE LOGIN (Padrão) -->
-      <div id="login-view">
-        <div style="margin-bottom: 24px;">
-          <img src="./src/assets/Logotipo_Nexo_2.png" alt="Nexo" style="height: 36px; width: auto;" />
+        <!-- Cards flutuantes com animação -->
+        <g class="animated-card-1">
+          <rect x="96" y="124" width="110" height="80" rx="10" fill="var(--bg-color)" />
+          <path d="M110 190 L135 160 L160 176 L190 140" stroke="var(--primary-color)" stroke-width="4"
+            stroke-linecap="round" stroke-linejoin="round" />
+        </g>
+
+        <g class="animated-card-2">
+          <rect x="220" y="124" width="110" height="80" rx="10" fill="var(--bg-color)" />
+          <rect x="236" y="164" width="14" height="28" rx="3" fill="var(--primary-color)" opacity=".5" />
+          <rect x="258" y="150" width="14" height="42" rx="3" fill="var(--primary-color)" opacity=".75" />
+          <rect x="280" y="136" width="14" height="56" rx="3" fill="var(--primary-color)" />
+        </g>
+
+        <rect x="344" y="124" width="122" height="80" rx="10" fill="var(--bg-color)" />
+        <circle cx="405" cy="164" r="26" stroke="var(--primary-color)" stroke-width="10" opacity=".25" />
+        <path d="M405 138 A26 26 0 0 1 431 164" stroke="var(--primary-color)" stroke-width="10" stroke-linecap="round"
+          class="animated-chart" />
+
+        <rect x="96" y="226" width="250" height="10" rx="5" fill="var(--border-color)" />
+        <rect x="96" y="248" width="190" height="10" rx="5" fill="var(--border-color)" />
+        <rect x="96" y="270" width="220" height="10" rx="5" fill="var(--border-color)" />
+
+        <circle cx="450" cy="300" r="46" fill="var(--primary-color)" opacity=".15" />
+        <circle cx="450" cy="300" r="26" fill="var(--primary-color)" />
+        <path d="M440 300 l7 7 13-14" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+        <circle cx="60" cy="350" r="14" fill="var(--primary-color)" opacity=".3" class="animated-dot" />
+      </svg>
+    </aside>
+
+    <!-- Lado Direito: Formulário -->
+    <main class="login-form-side">
+      <div id="login-view" class="login-box">
+        <div class="login-brand">
+          <svg viewBox="0 0 34 34" fill="none">
+            <path d="M3 5l12 24L27 5h-6l-6 13L9 5z" fill="var(--primary-color)" />
+          </svg>
+          Nexo
         </div>
+        <h1 class="login-h1">Bem-vindo ao Nexo! 👋</h1>
+        <p class="login-sub">Faça login na sua conta e assuma o controle das suas finanças.</p>
+
         <form id="login-form">
-          <input type="email" id="login-email" placeholder="E-mail" required
-            style="width: 100%; padding: 10px 12px; margin-bottom: 12px; border: 1px solid var(--border-strong); border-radius: 2px; font-family: var(--font-sans); font-size: 13.5px; background: var(--card-bg); color: var(--text-main);" />
-          <input type="password" id="login-password" placeholder="Senha" required
-            style="width: 100%; padding: 10px 12px; margin-bottom: 16px; border: 1px solid var(--border-strong); border-radius: 2px; font-family: var(--font-sans); font-size: 13.5px; background: var(--card-bg); color: var(--text-main);" />
-          <button type="submit" id="login-btn" class="btn-primary" style="width: 100%; margin-top: 4px;">Entrar</button>
+          <div class="login-field">
+            <label for="login-email">Email</label>
+            <input id="login-email" type="email" placeholder="voce@exemplo.com" required autocomplete="email">
+          </div>
+          <div class="login-field">
+            <div class="login-row-label">
+              <label for="login-password">Senha</label>
+              <a href="#" id="forgot-pass-btn">Esqueceu a senha?</a>
+            </div>
+            <input id="login-password" type="password" placeholder="••••••••••••" required
+              autocomplete="current-password">
+            <button class="login-eye" type="button" id="toggle-password-btn" aria-label="Mostrar senha">
+              <i class="far fa-eye" id="eye-icon"></i>
+            </button>
+          </div>
+
+          <div class="login-row">
+            <label><input type="checkbox"> Lembrar de mim</label>
+          </div>
+
+          <p id="login-error"
+            style="color: #F44336; margin-bottom: 15px; display: none; font-size: 14px; text-align: center;"></p>
+
+          <button id="login-btn" class="login-btn" type="submit">Entrar</button>
         </form>
-        <div style="margin-top: 18px; display: flex; justify-content: space-between; font-size: 12.5px; font-weight: 500;">
-          <a href="#" id="forgot-pass-btn" style="color: var(--primary-color); text-decoration: none;">Esqueci a
-            senha</a>
-          <a href="#" id="show-register-btn" style="color: var(--primary-color); text-decoration: none; font-weight: 600;">Criar conta</a>
+
+        <p class="login-center">Novo na nossa plataforma? <a href="#" id="show-register-btn">Criar uma conta</a></p>
+
+        <div class="login-divider">ou</div>
+        <div class="login-social">
+          <button aria-label="Facebook"><i class="fab fa-facebook-f" style="color: #1877F2;"></i></button>
+          <button aria-label="Twitter"><i class="fab fa-twitter" style="color: #1DA1F2;"></i></button>
+          <button aria-label="GitHub"><i class="fab fa-github" style="color: #333;"></i></button>
+          <button aria-label="Google"><i class="fab fa-google" style="color: #EA4335;"></i></button>
         </div>
-        <p id="login-error" style="color: var(--danger-color); margin-top: 15px; display: none; font-size: 13px;"></p>
       </div>
-    </div>
+    </main>
   </div>
+
+  <script>
+    // Script rápido para mostrar/ocultar senha
+    const togglePasswordBtn = document.getElementById('toggle-password-btn');
+    const passwordInput = document.getElementById('login-password');
+    const eyeIcon = document.getElementById('eye-icon');
+
+    togglePasswordBtn.addEventListener('click', function () {
+      const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+      passwordInput.setAttribute('type', type);
+
+      if (type === 'text') {
+        eyeIcon.classList.remove('fa-eye');
+        eyeIcon.classList.add('fa-eye-slash');
+      } else {
+        eyeIcon.classList.remove('fa-eye-slash');
+        eyeIcon.classList.add('fa-eye');
+      }
+    });
+  </script>
   <!-- Fim Tela de Login -->
   <div id="app-container" style="display: none;">
 
@@ -458,7 +549,8 @@
           <!-- Cartões de Resumo do Mês para Custos Fixos -->
           <div class="summary-cards" style="padding: 0; margin-bottom: 25px;">
             <div class="summary-card" style="border-left: 4px solid var(--primary-color);">
-              <div class="card-icon" style="background-color: var(--primary-color);"><i class="fas fa-file-invoice-dollar"></i></div>
+              <div class="card-icon" style="background-color: var(--primary-color);"><i
+                  class="fas fa-file-invoice-dollar"></i></div>
               <div class="card-info">
                 <div class="card-label">Total Custos Fixos (<span id="fc-page-period-title">--</span>)</div>
                 <h3 class="card-value" id="fc-page-total-cost">R$ 0,00</h3>
@@ -898,7 +990,8 @@
                   <div style="color:#666; font-size:14px; margin-bottom: 5px;">Balanço planejado</div>
                   <div id="dash-balance" style="font-size:24px; font-weight:600;">R$ 0,00</div>
                 </div>
-                <div class="wiz-cat-icon" style="background:var(--primary-color);"><i class="fas fa-balance-scale"></i></div>
+                <div class="wiz-cat-icon" style="background:var(--primary-color);"><i class="fas fa-balance-scale"></i>
+                </div>
               </div>
               <div class="wiz-cat-card" style="padding: 25px;">
                 <div>
@@ -1275,7 +1368,8 @@
             </select></div>
           <div class="form-group"><label>Data da Compra</label><input type="date" id="cct-data" name="dataTransacao"
               required></div>
-          <div class="form-group"><label>Valor Total (R$)</label><input type="tel" name="valor" required oninput="AppController.maskCurrency(this)">
+          <div class="form-group"><label>Valor Total (R$)</label><input type="tel" name="valor" required
+              oninput="AppController.maskCurrency(this)">
           </div>
           <div class="form-group">
             <label>Parcelamento</label>
@@ -1355,7 +1449,8 @@
           <div class="form-group"><label>Conta</label><select id="conta" name="conta" required>
               <option disabled selected>Carregando...</option>
             </select></div>
-          <div class="form-group"><label>Valor</label><input type="tel" name="valor" required oninput="AppController.maskCurrency(this)"></div>
+          <div class="form-group"><label>Valor</label><input type="tel" name="valor" required
+              oninput="AppController.maskCurrency(this)"></div>
           <div class="form-group">
             <label>Categoria</label>
             <select name="categoria" required>
@@ -1538,7 +1633,8 @@
         </div>
         <form id="fixed-cost-form" onsubmit="AppController.submitFixedCost(event)">
           <div class="form-group"><label>Nome</label><input type="text" name="nome" required></div>
-          <div class="form-group"><label>Valor</label><input type="tel" name="valor" required oninput="AppController.maskCurrency(this)"></div>
+          <div class="form-group"><label>Valor</label><input type="tel" name="valor" required
+              oninput="AppController.maskCurrency(this)"></div>
           <div class="form-group"><label>Dia Vencimento</label><input type="number" name="diaVencimento" min="1"
               max="31" required></div>
           <button type="submit" id="submit-fc-btn" class="btn-primary">Salvar Custo</button>

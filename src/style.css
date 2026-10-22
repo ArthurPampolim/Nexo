@@ -5,31 +5,45 @@
 
 :root {
   /* Cores Institucionais Nexo */
-  --primary-color: #0d253f;       /* Navy Profundo Nexo */
+  --primary-color: #0d253f;
+  /* Navy Profundo Nexo */
   --primary-hover: #08192b;
-  --secondary-color: #174665;     /* Azul Petróleo */
+  --secondary-color: #174665;
+  /* Azul Petróleo */
   --secondary-light: #e0eef7;
-  --accent-color: #00c985;        /* Verde Esmeralda Nexo */
+  --accent-color: #00c985;
+  /* Verde Esmeralda Nexo */
   --accent-hover: #00b376;
   --accent-subtle: rgba(0, 201, 133, 0.12);
 
   /* Superfícies & Neutros (Escala Slate / Ardósia Suave) */
-  --bg-color: #f1f5f9;           /* Slate 100 */
-  --bg-subtle: #f8fafc;          /* Slate 50 */
+  --bg-color: #f1f5f9;
+  /* Slate 100 */
+  --bg-subtle: #f8fafc;
+  /* Slate 50 */
   --bg-light: #f8fafc;
   --card-bg: #ffffff;
-  --border-color: #e2e8f0;        /* Slate 200 */
-  --border-strong: #cbd5e1;       /* Slate 300 */
-  --text-main: #0f172a;          /* Slate 900 */
-  --text-secondary: #475569;     /* Slate 600 */
-  --text-muted: #64748b;         /* Slate 500 */
+  --border-color: #e2e8f0;
+  /* Slate 200 */
+  --border-strong: #cbd5e1;
+  /* Slate 300 */
+  --text-main: #0f172a;
+  /* Slate 900 */
+  --text-secondary: #475569;
+  /* Slate 600 */
+  --text-muted: #64748b;
+  /* Slate 500 */
   --text-dark: #0f172a;
 
   /* Estados Financeiros */
-  --success-color: #059669;      /* Esmeralda / Receitas */
-  --danger-color: #e11d48;       /* Ruby / Despesas */
-  --warning-color: #d97706;      /* Âmbar / Pendentes */
-  --info-color: #0284c7;         /* Sky / Transferências e Saldos */
+  --success-color: #059669;
+  /* Esmeralda / Receitas */
+  --danger-color: #e11d48;
+  /* Ruby / Despesas */
+  --warning-color: #d97706;
+  /* Âmbar / Pendentes */
+  --info-color: #0284c7;
+  /* Sky / Transferências e Saldos */
 
   /* Tipografia */
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -37,10 +51,14 @@
 
   /* Geometria Humanist Ledger (Suave & Amigável: 8px - 14px) */
   --radius-xs: 4px;
-  --radius-sm: 8px;              /* Botões, Inputs, Abas */
-  --radius-md: 12px;             /* Cartões de resumo, Gráficos, Contas */
-  --radius-lg: 16px;             /* Modais e Paineis */
-  --radius-pill: 9999px;         /* Pílulas de filtro, Badges, FAB */
+  --radius-sm: 8px;
+  /* Botões, Inputs, Abas */
+  --radius-md: 12px;
+  /* Cartões de resumo, Gráficos, Contas */
+  --radius-lg: 16px;
+  /* Modais e Paineis */
+  --radius-pill: 9999px;
+  /* Pílulas de filtro, Badges, FAB */
 
   /* Elevação e Sombras Macias com Matiz Navy/Slate */
   --shadow-xs: 0 1px 2px rgba(13, 37, 63, 0.04);
@@ -112,6 +130,7 @@ body {
     opacity: 0;
     transform: translateY(6px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -127,6 +146,7 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
@@ -1541,6 +1561,7 @@ body {
     transform: translateX(100%);
     opacity: 0;
   }
+
   to {
     transform: translateX(0);
     opacity: 1;
@@ -1586,11 +1607,11 @@ body {
   border-radius: 50%;
 }
 
-.nexo-toggle input:checked + .nexo-toggle-slider {
+.nexo-toggle input:checked+.nexo-toggle-slider {
   background-color: var(--accent-color);
 }
 
-.nexo-toggle input:checked + .nexo-toggle-slider:before {
+.nexo-toggle input:checked+.nexo-toggle-slider:before {
   transform: translateX(18px);
 }
 
@@ -1598,13 +1619,18 @@ body {
    MODO ESCURO (DARK MODE) — ALTO CONTRASTE & TÉCNICO
    ========================================================================== */
 body.dark-mode {
-  --bg-color: #090d16;          /* Obsidian profundo */
-  --bg-subtle: #121826;         /* Slate escuro */
+  --bg-color: #090d16;
+  /* Obsidian profundo */
+  --bg-subtle: #121826;
+  /* Slate escuro */
   --bg-light: #121826;
-  --card-bg: #0f172a;           /* Cartão elevado */
-  --border-color: #1e293b;       /* Divisores discretos */
+  --card-bg: #0f172a;
+  /* Cartão elevado */
+  --border-color: #1e293b;
+  /* Divisores discretos */
   --border-strong: #334155;
-  --text-main: #f8fafc;         /* Alto contraste */
+  --text-main: #f8fafc;
+  /* Alto contraste */
   --text-secondary: #cbd5e1;
   --text-muted: #94a3b8;
   --text-dark: #f8fafc;
@@ -1906,5 +1932,315 @@ body.dark-mode .progress-ring::before {
     padding: 6px 10px;
     font-size: 12px;
     gap: 6px;
+  }
+}
+
+/* ========================================= */
+/* NOVA TELA DE LOGIN (NEXO)                 */
+/* ========================================= */
+
+.login-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  display: grid;
+  grid-template-columns: minmax(0, 480px) 1fr;
+  min-height: 100vh;
+  background-color: var(--bg-color);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Lado do Formulário (Esquerda) */
+.login-form-side {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  background: var(--surface-color);
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.04);
+  z-index: 10;
+}
+
+.login-box {
+  width: 100%;
+  max-width: 400px;
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 35px;
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: -0.5px;
+}
+
+.login-brand svg {
+  width: 32px;
+  height: 32px;
+}
+
+.login-h1 {
+  font-size: 24px;
+  margin: 0 0 8px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.login-sub {
+  margin: 0 0 30px;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.login-box label {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 6px;
+  color: var(--text-main);
+  font-weight: 500;
+}
+
+.login-row-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.login-field {
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.login-field input[type=email],
+.login-field input[type=password],
+.login-field input[type=text] {
+  width: 100%;
+  padding: 12px 14px;
+  font: inherit;
+  color: var(--text-main);
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.login-field input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(115, 103, 240, 0.15);
+}
+
+.login-eye {
+  position: absolute;
+  right: 12px;
+  top: 36px;
+  background: none;
+  border: 0;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  font-size: 16px;
+}
+
+.login-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 4px 0 25px;
+  font-size: 14px;
+}
+
+.login-row label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  cursor: pointer;
+  font-weight: normal;
+}
+
+.login-row input[type="checkbox"] {
+  accent-color: var(--primary-color);
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+.login-box a {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.login-box a:hover {
+  text-decoration: underline;
+}
+
+.login-btn {
+  width: 100%;
+  padding: 12px 16px;
+  font: inherit;
+  font-weight: 600;
+  color: #fff;
+  background: var(--primary-color);
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(115, 103, 240, 0.3);
+  transition: all 0.2s;
+  font-size: 15px;
+}
+
+.login-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(115, 103, 240, 0.4);
+}
+
+.login-center {
+  text-align: center;
+  margin: 25px 0 0;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 25px 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border-color);
+}
+
+.login-social {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+.login-social button {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  font-size: 18px;
+}
+
+.login-social button:hover {
+  background: var(--bg-light);
+  transform: translateY(-2px);
+}
+
+body.dark-mode .login-social button:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Lado da Arte (Direita) */
+.login-art {
+  background: var(--bg-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+}
+
+.login-svg-art {
+  max-width: 600px;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.05));
+}
+
+body.dark-mode .login-svg-art {
+  filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.2));
+}
+
+/* Animações Flutuantes */
+@keyframes floatUp {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+@keyframes floatDown {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(12px);
+  }
+}
+
+@keyframes pulseOpacity {
+
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.6;
+    transform: scale(1.1);
+  }
+}
+
+.animated-card-1 {
+  animation: floatUp 6s ease-in-out infinite;
+}
+
+.animated-card-2 {
+  animation: floatDown 5s ease-in-out infinite;
+}
+
+.animated-dot {
+  animation: pulseOpacity 3s ease-in-out infinite;
+}
+
+/* Responsividade */
+@media (max-width: 900px) {
+  .login-wrapper {
+    grid-template-columns: 1fr;
+  }
+
+  .login-art {
+    display: none;
+  }
+
+  .login-form-side {
+    box-shadow: none;
   }
 }
