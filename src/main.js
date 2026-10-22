@@ -893,9 +893,18 @@ const AppController = (function () {
     state.editingId = null;
     state.editingType = null;
     elements.form.reset();
+    
+    const selects = elements.form.querySelectorAll('select:not(.no-choices)');
+    selects.forEach(s => {
+      if (s.choicesInstance) {
+        s.choicesInstance.destroy();
+        s.choicesInstance = new Choices(s, { searchEnabled: false, itemSelectText: '', shouldSort: false});
+      }
+    });
+
     elements.submitBtn.innerText = 'Salvar Transação';
     elements.modal.classList.remove('hidden');
-    const localISO = new Date(new Date().getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+    const localISO = new Date(new Date ().getTime() - (newDate().getTimezoneOffset() * 60000)).toISOString().split('T')[0];
 
     const dateInput = document.getElementById('dataTransacao');
     if (dateInput && dateInput._flatpickr) dateInput._flatpickr.setDate(localISO);
@@ -1907,6 +1916,17 @@ const AppController = (function () {
   function openCCTransModal() {
     if (state.creditCards.length === 0) { alert("Cadastre um Cartão primeiro."); return; }
     closeCCInvoiceModal();
+    
+    elements.ccTransForm.reset();
+
+    const selects = elements.ccTransForm.querySelectorAll('select:not(.no-choices)')
+    select.forEach(s => {
+      if (s.choicesInstance) {
+        s.choicesInstance.destroy();
+        s.choicesInstance = new Choices(s, { searchEnabled: false, itemSelectText: '', shouldSort: false});        
+      }
+    });
+
     elements.ccTransModal.classList.remove('hidden');
     const localISO = new Date(new Date().getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().split('T')[0];
 
