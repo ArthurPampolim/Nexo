@@ -1,5 +1,5 @@
 import { db } from './firebase';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, setDoc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, setDoc, getDoc, query, where } from 'firebase/firestore';
 import { auth } from './firebase.js';
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail, updatePassword } from "firebase/auth";
 import { ChartManager } from './charts.js';
@@ -8,6 +8,59 @@ import { ChartManager } from './charts.js';
 const AppController = (function () {
   // VARIÁVEL PARA O GRÁFICO
   let expensesChartInstance = null;
+
+  // UTILITÁRIO ANTI-XSS
+  function escapeHTML(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function getCurrentUserId() {
+    return auth.currentUser ? auth.currentUser.uid : null;
+  }
+
+  async function fetchUserScopedDocs(collectionName) {
+    const uid = getCurrentUserId();
+    const colRef = collection(db, collectionName);
+
+    if (uid) {
+      try {
+        const q = query(colRef, where("userId", "==", uid));
+        const snap = await getDocs(q);
+        const userDocs = snap.docs.map(d => ({ ID: d.id, ...d.data() }));
+        if (userDocs.length > 0) {
+          return userDocs;
+        }
+      } catch (err) {
+        console.warn(`Query por userId em ${collectionName} falhou:`, err);
+      }
+
+      // Fallback para documentos legados sem userId
+      try {
+        const allSnap = await getDocs(colRef);
+        return allSnap.docs
+          .map(d => ({ ID: d.id, ...d.data() }))
+          .filter(d => !d.userId || d.userId === uid);
+      } catch (err) {
+        console.warn(`Fallback de leitura para ${collectionName}:`, err);
+        return [];
+      }
+    }
+
+    try {
+      const snap = await getDocs(colRef);
+      return snap.docs.map(d => ({ ID: d.id, ...d.data() }));
+    } catch (e) {
+      console.warn(`Erro ao ler coleção ${collectionName}:`, e);
+      return [];
+    }
+  }
+
   // 1. ESTADO
   const state = {
     accounts: [], creditCards: [], creditTransactions: [],
@@ -68,6 +121,7 @@ const AppController = (function () {
       }
     });
 
+    if (tabName === 'dashboard') renderDashboardInsights();
     if (tabName === 'credit-cards') renderCreditCardsPage();
     if (tabName === 'fixed-costs') renderFixedCostsPage();
     if (tabName === 'goals') renderGoalsPage();
@@ -236,18 +290,23 @@ const AppController = (function () {
       loadUserProfile();
     } else {
       // Mostra o Login e ESCONDE o Sistema
-      document.getElementById('login-screen').style.display = 'flex';
+      document.getElementById('login-screen').style.display = 'grid';
       document.getElementById('app-container').style.display = 'none';
+      document.getElementById('login-view').style.display = 'block';
+      const regView = document.getElementById('register-view');
+      if (regView) regView.style.display = 'none';
+      const forgotView = document.getElementById('forgot-pass-view');
+      if (forgotView) forgotView.style.display = 'none';
     }
   });
 
   // Evento do formulário de Login
-  // Sistema de Bloqueio Client-Side
+  // Sistema de Bloqueio Client-Side & Detecção de Rate-Limit
   function verificarBloqueio() {
     const bloqueioAte = localStorage.getItem('nexo_lockout');
     if (bloqueioAte && Date.now() < parseInt(bloqueioAte)) {
       const minutosRestantes = Math.ceil((parseInt(bloqueioAte) - Date.now()) / 60000);
-      return `Sistema bloqueado. Tente novamente em ${minutosRestantes} minuto(s).`;
+      return `Sistema temporariamente bloqueado. Tente novamente em ${minutosRestantes} minuto(s).`;
     }
     return null;
   }
@@ -264,37 +323,9 @@ const AppController = (function () {
 
       const bloqueioTempo = Date.now() + (tempoPenalidade * 60000);
       localStorage.setItem('nexo_lockout', bloqueioTempo);
-      return `Muitas falhas. Bloqueado por ${tempoPenalidade} minuto(s).`;
+      return `Muitas falhas consecutivas. Bloqueado por ${tempoPenalidade} minuto(s).`;
     }
-    return `Senha incorreta. Tentativa ${tentativas} de 3 antes do bloqueio.`;
-  }
-
-  // Ação do Botão Entrar
-  // Sistema de Bloqueio Client-Side
-  function verificarBloqueio() {
-    const bloqueioAte = localStorage.getItem('nexo_lockout');
-    if (bloqueioAte && Date.now() < parseInt(bloqueioAte)) {
-      const minutosRestantes = Math.ceil((parseInt(bloqueioAte) - Date.now()) / 60000);
-      return `Sistema bloqueado. Tente novamente em ${minutosRestantes} minuto(s).`;
-    }
-    return null;
-  }
-
-  function registrarFalhaLogin() {
-    let tentativas = parseInt(localStorage.getItem('nexo_tentativas') || '0');
-    tentativas++;
-    localStorage.setItem('nexo_tentativas', tentativas);
-
-    if (tentativas >= 3) {
-      let tempoPenalidade = 1; // 3 tentativas = 1 min
-      if (tentativas === 4) tempoPenalidade = 5; // 4 tentativas = 5 min
-      if (tentativas >= 5) tempoPenalidade = 10; // 5+ tentativas = 10 min
-
-      const bloqueioTempo = Date.now() + (tempoPenalidade * 60000);
-      localStorage.setItem('nexo_lockout', bloqueioTempo);
-      return `Muitas falhas. Bloqueado por ${tempoPenalidade} minuto(s).`;
-    }
-    return `Senha incorreta. Tentativa ${tentativas} de 3 antes do bloqueio.`;
+    return `Credenciais incorretas. Tentativa ${tentativas} de 3 antes do bloqueio temporário.`;
   }
 
   // Ação do Botão Entrar
@@ -326,14 +357,16 @@ const AppController = (function () {
       btn.innerText = 'Entrar';
       document.getElementById('login-form').reset();
     } catch (error) {
-      console.error("Erro real do Firebase:", error);
+      console.error("Erro de autenticação:", error);
 
-      // Verifica se o erro é realmente de senha/email incorreto
-      if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+      if (error.code === 'auth/too-many-requests') {
+        const bloqueioTempo = Date.now() + (15 * 60000);
+        localStorage.setItem('nexo_lockout', bloqueioTempo);
+        errorMsg.innerText = "Acesso temporariamente suspenso pela segurança por excesso de tentativas. Tente novamente mais tarde ou redefina sua senha.";
+      } else if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
         errorMsg.innerText = registrarFalhaLogin();
       } else {
-        // Se for erro de API, configuração ou internet, mostra o erro real
-        errorMsg.innerText = "Erro de conexão: " + error.code;
+        errorMsg.innerText = "Falha no login: " + error.code;
       }
 
       errorMsg.style.display = 'block';
@@ -341,6 +374,28 @@ const AppController = (function () {
       btn.innerText = 'Entrar';
     }
   });
+
+  // Toggle de Visibilidade da Senha (SVG nativo)
+  const eyeOpenSvg = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/>';
+  const eyeSlashSvg = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+
+  function setupPasswordToggle(btnId, inputId, iconId) {
+    const btn = document.getElementById(btnId);
+    const input = document.getElementById(inputId);
+    const icon = document.getElementById(iconId);
+    if (!btn || !input || !icon) return;
+
+    btn.addEventListener('click', () => {
+      const isPassword = input.getAttribute('type') === 'password';
+      input.setAttribute('type', isPassword ? 'text' : 'password');
+      btn.setAttribute('aria-label', isPassword ? 'Ocultar senha' : 'Mostrar senha');
+      icon.innerHTML = isPassword ? eyeSlashSvg : eyeOpenSvg;
+    });
+  }
+
+  setupPasswordToggle('toggle-password-btn', 'login-password', 'eye-icon');
+  setupPasswordToggle('toggle-reg-password-btn', 'reg-password', 'reg-eye-icon');
+  setupPasswordToggle('toggle-reg-confirm-password-btn', 'reg-confirm-password', 'reg-confirm-eye-icon');
 
   // Ação de Criar Conta
   document.getElementById('create-account-btn')?.addEventListener('click', async (e) => {
@@ -473,13 +528,7 @@ const AppController = (function () {
   // --- CONTAS BANCÁRIAS E TRANSFERÊNCIAS ---
   async function loadAccounts() {
     try {
-      // Puxa todos os documentos da coleção "Contas"
-      const querySnapshot = await getDocs(collection(db, "Contas"));
-
-      // Transforma a resposta bruta do Firebase em um Array limpo
-      const data = querySnapshot.docs.map(doc => ({ ID: doc.id, ...doc.data() }));
-
-      // Alimenta o estado da sua aplicação exatamente como antes
+      const data = await fetchUserScopedDocs("Contas");
       state.accounts = data;
       populateAccountsDropdown();
       loadTransactions();
@@ -490,8 +539,13 @@ const AppController = (function () {
   function populateAccountsDropdown() {
     if (!elements.accountSelect) return;
     elements.accountSelect.innerHTML = '<option value="" disabled selected>Selecione uma conta...</option>';
-    state.accounts.forEach(acc => { const opt = document.createElement('option'); opt.value = acc.Nome; opt.text = acc.Nome; elements.accountSelect.appendChild(opt); });
-    upgradeSelects()
+    state.accounts.forEach(acc => {
+      const opt = document.createElement('option');
+      opt.value = acc.Nome;
+      opt.text = acc.Nome;
+      elements.accountSelect.appendChild(opt);
+    });
+    upgradeSelects();
   }
   function renderAccountBalances(transactions) {
     const container = document.getElementById('accounts-container'); if (!container) return;
@@ -515,7 +569,7 @@ const AppController = (function () {
     state.accounts.forEach(acc => {
       const card = document.createElement('div'); card.className = 'account-mini-card';
       const bal = balances[acc.Nome]; const bClass = bal < 0 ? 'text-red' : 'text-green';
-      card.innerHTML = `<div class="acc-name"><i class="fas fa-wallet" style="margin-right: 8px; color: #aaa;"></i>${acc.Nome}</div><div class="acc-balance ${bClass}">${currencyFormatter.format(bal)}</div>`;
+      card.innerHTML = `<div class="acc-name"><i class="fas fa-wallet" style="margin-right: 8px; color: #aaa;"></i>${escapeHTML(acc.Nome)}</div><div class="acc-balance ${bClass}">${currencyFormatter.format(bal)}</div>`;
       container.appendChild(card);
     });
   }
@@ -530,6 +584,7 @@ const AppController = (function () {
 
     try {
       await addDoc(collection(db, "Contas"), {
+        userId: getCurrentUserId(),
         Nome: formDados.nome,
         SaldoInicial: parseFloat(formDados.saldoInicial) || 0,
         Status: 'Ativo'
@@ -551,8 +606,9 @@ const AppController = (function () {
       orig.innerHTML = '<option value="" disabled selected>Selecione a origem...</option>';
       dest.innerHTML = '<option value="" disabled selected>Selecione o destino...</option>';
       state.accounts.forEach(acc => {
-        orig.innerHTML += `<option value="${acc.Nome}">${acc.Nome}</option>`;
-        dest.innerHTML += `<option value="${acc.Nome}">${acc.Nome}</option>`;
+        const safeName = escapeHTML(acc.Nome);
+        orig.innerHTML += `<option value="${safeName}">${safeName}</option>`;
+        dest.innerHTML += `<option value="${safeName}">${safeName}</option>`;
       });
       upgradeSelects();
     }
@@ -571,6 +627,7 @@ const AppController = (function () {
     const formDados = Object.fromEntries(new FormData(document.getElementById('transfer-form')).entries());
     const valorTransf = parseCurrencyMask(formDados.valor);
     const localISO = formDados.dataTransacao;
+    const uid = getCurrentUserId();
 
     try {
       if (formDados.tipoTransferencia === 'OBJETIVO') {
@@ -579,11 +636,11 @@ const AppController = (function () {
         if (valorTransf > (parseFloat(goal.ValorAtual) || 0)) throw new Error("Saldo insuficiente no objetivo.");
 
         await updateDoc(doc(db, "Objetivos", goal.ID), { ValorAtual: (parseFloat(goal.ValorAtual) || 0) - valorTransf });
-        await addDoc(collection(db, "Transacoes"), { Tipo: 'RECEITA', Categoria: 'Investimentos', Valor: valorTransf, Descricao: `Resgate de Objetivo: ${goal.Nome}`, Conta: formDados.destino, Data: localISO });
+        await addDoc(collection(db, "Transacoes"), { userId: uid, Tipo: 'RECEITA', Categoria: 'Investimentos', Valor: valorTransf, Descricao: `Resgate de Objetivo: ${goal.Nome}`, Conta: formDados.destino, Data: localISO });
       } else {
         if (formDados.origem === formDados.destino) throw new Error("Origem e destino devem ser diferentes.");
-        await addDoc(collection(db, "Transacoes"), { Tipo: 'DESPESA', Categoria: 'Transferência', Valor: valorTransf, Descricao: `Transf. para ${formDados.destino}`, Conta: formDados.origem, Data: localISO });
-        await addDoc(collection(db, "Transacoes"), { Tipo: 'RECEITA', Categoria: 'Transferência', Valor: valorTransf, Descricao: `Transf. de ${formDados.origem}`, Conta: formDados.destino, Data: localISO });
+        await addDoc(collection(db, "Transacoes"), { userId: uid, Tipo: 'DESPESA', Categoria: 'Transferência', Valor: valorTransf, Descricao: `Transf. para ${formDados.destino}`, Conta: formDados.origem, Data: localISO });
+        await addDoc(collection(db, "Transacoes"), { userId: uid, Tipo: 'RECEITA', Categoria: 'Transferência', Valor: valorTransf, Descricao: `Transf. de ${formDados.origem}`, Conta: formDados.destino, Data: localISO });
       }
 
       closeTransferModal();
@@ -600,8 +657,7 @@ const AppController = (function () {
   // --- TRANSAÇÕES GERAIS ---
   async function loadTransactions() {
     try {
-      const querySnapshot = await getDocs(collection(db, "Transacoes"));
-      state.transactions = querySnapshot.docs.map(doc => ({ ID: doc.id, ...doc.data() }));
+      state.transactions = await fetchUserScopedDocs("Transacoes");
       renderTransactions();
     } catch (error) {
       console.error("Erro ao carregar transações:", error);
@@ -776,6 +832,7 @@ const AppController = (function () {
       });
 
       ChartManager.updateDashboardCharts(state.transactions, selectedYYYYMM);
+      renderDashboardInsights(selectedYYYYMM);
       return;
     }
 
@@ -800,6 +857,12 @@ const AppController = (function () {
     paginatedTransactions.forEach((t, index) => {
       const tr = document.createElement('tr');
       tr.className = 'tx-tr';
+      tr.style.cursor = 'pointer';
+      tr.title = 'Clique para ver detalhes e editar no painel lateral';
+      tr.onclick = (e) => {
+        if (e.target.closest('button') || e.target.closest('input')) return;
+        AppController.openTxDrawer(t.ID, t.isCreditCard);
+      };
 
       const isTransf = isTransferTransaction(t);
       const isExp = t.Tipo === 'DESPESA';
@@ -829,23 +892,24 @@ const AppController = (function () {
       if (isTransf && t.Descricao) mainDesc = t.Descricao;
 
       const currentDateStr = formatDateBR(t.Data);
+      const safeId = escapeHTML(t.ID);
       const actionButtons = t.isCreditCard
-        ? `<span style="font-size: 11px; color: #888; background: #f1f5f9; padding: 4px 8px; border-radius: 12px; font-weight: 600;"><i class="fas fa-credit-card"></i> Fatura</span>`
-        : `<button class="btn-text" style="color: #64748b;" onclick="AppController.editTransaction('${t.ID}')" title="Editar"><i class="fas fa-pen"></i></button>
-           <button class="btn-delete" onclick="AppController.deleteTransaction('${t.ID}')" title="Excluir"><i class="fas fa-trash"></i></button>`;
+        ? `<button class="btn-text" style="color: #64748b;" onclick="event.stopPropagation(); AppController.openTxDrawer('${safeId}', true)" title="Ver Detalhes da Fatura"><i class="fas fa-eye"></i></button>`
+        : `<button class="btn-text" style="color: #64748b;" onclick="event.stopPropagation(); AppController.openTxDrawer('${safeId}', false)" title="Ver Detalhes e Editar"><i class="fas fa-pen"></i></button>
+           <button class="btn-delete" onclick="event.stopPropagation(); AppController.deleteTransaction('${safeId}')" title="Excluir"><i class="fas fa-trash"></i></button>`;
 
       tr.innerHTML = `
           <td class="tx-td" style="text-align: center;"><input type="checkbox" class="tx-checkbox" ${!isPending ? 'checked' : ''} disabled></td>
           <td class="tx-td" style="text-align: center;">${statusHtml}</td>
-          <td class="tx-td" style="${isPending ? 'opacity:0.6;' : ''}">${currentDateStr}</td>
-          <td class="tx-td" style="${isPending ? 'opacity:0.6;' : ''}; font-weight: 500;">${mainDesc}</td>
+          <td class="tx-td" style="${isPending ? 'opacity:0.6;' : ''}">${escapeHTML(currentDateStr)}</td>
+          <td class="tx-td" style="${isPending ? 'opacity:0.6;' : ''}; font-weight: 500;">${escapeHTML(mainDesc)}</td>
           <td class="tx-td" style="${isPending ? 'opacity:0.6;' : ''}">
             <div class="cat-badge-container">
               <div class="cat-icon-circle" style="background-color: ${catStyle.color};"><i class="fas ${catStyle.icon}"></i></div>
-              <span>${t.Categoria || 'Outros'}</span>
+              <span>${escapeHTML(t.Categoria || 'Outros')}</span>
             </div>
           </td>
-          <td class="tx-td" style="${isPending ? 'opacity:0.6;' : ''}">${t.Conta || '--'}</td>
+          <td class="tx-td" style="${isPending ? 'opacity:0.6;' : ''}">${escapeHTML(t.Conta || '--')}</td>
           <td class="tx-td ${valClass}" style="text-align: right; ${isPending ? 'opacity:0.6;' : ''}">${sign} ${currencyFormatter.format(t.Valor)}</td>
           <td class="tx-td" style="text-align: center;"><div class="action-btn-group" style="${t.isCreditCard ? 'opacity: 1;' : ''}">${actionButtons}</div></td>`;
 
@@ -887,6 +951,7 @@ const AppController = (function () {
     if (btnLast) btnLast.disabled = state.txCurrentPage === totalPages || totalPages === 0;
 
     ChartManager.updateDashboardCharts(state.transactions, selectedYYYYMM);
+    renderDashboardInsights(selectedYYYYMM);
   }
 
   function openModal() {
@@ -1028,6 +1093,7 @@ const AppController = (function () {
 
     const formDados = Object.fromEntries(new FormData(elements.form).entries());
     const payloadFormatado = {
+      userId: getCurrentUserId(),
       Tipo: formDados.tipo,
       Data: formDados.dataTransacao,
       Conta: formDados.conta,
@@ -1061,11 +1127,365 @@ const AppController = (function () {
     }
   }
 
+  // --- DRAWER & BOTTOM SHEET DE TRANSAÇÕES (HUMANIST LEDGER) ---
+  function openTxDrawer(id, isCC) {
+    let t = state.transactions.find(x => String(x.ID) === String(id));
+    let isCreditCard = Boolean(isCC);
+
+    if (!t) {
+      t = state.creditTransactions.find(x => String(x.ID) === String(id));
+      if (t) isCreditCard = true;
+    }
+    if (!t) return;
+
+    state.drawerTx = t;
+    state.drawerIsCC = isCreditCard;
+
+    const overlay = document.getElementById('tx-drawer-overlay');
+    const drawer = document.getElementById('tx-drawer');
+    const idInput = document.getElementById('tx-drawer-id');
+    const isCcInput = document.getElementById('tx-drawer-is-cc');
+    const descInput = document.getElementById('tx-drawer-desc');
+    const valInput = document.getElementById('tx-drawer-val');
+    const dateInput = document.getElementById('tx-drawer-date');
+    const catSelect = document.getElementById('tx-drawer-cat');
+    const accSelect = document.getElementById('tx-drawer-account');
+    const typeBadge = document.getElementById('tx-drawer-type-badge');
+    const heroVal = document.getElementById('tx-drawer-hero-val');
+    const heroPills = document.getElementById('tx-drawer-hero-pills');
+    const statusDisplay = document.getElementById('tx-drawer-status-display');
+    const deleteBtn = document.getElementById('tx-drawer-delete-btn');
+
+    if (!drawer || !overlay) return;
+
+    idInput.value = t.ID || '';
+    isCcInput.value = isCreditCard ? 'true' : 'false';
+    descInput.value = t.Descricao || '';
+    valInput.value = currencyFormatter.format(parseFloat(t.Valor) || 0);
+
+    if (t.Data) {
+      const d = parseLocalDate(t.Data);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      dateInput.value = `${yyyy}-${mm}-${dd}`;
+    } else {
+      dateInput.value = '';
+    }
+
+    if (catSelect) catSelect.value = t.Categoria || 'Outros';
+
+    // Popular contas
+    if (accSelect) {
+      accSelect.innerHTML = '';
+      if (isCreditCard) {
+        const cardObj = state.creditCards.find(c => String(c.ID) === String(t.IdCartao || t.CartaoID));
+        const cardName = cardObj ? cardObj.Nome : (t.Conta || 'Cartão de Crédito');
+        const opt = document.createElement('option');
+        opt.value = cardName;
+        opt.innerText = `💳 ${cardName} (Fatura)`;
+        opt.selected = true;
+        accSelect.appendChild(opt);
+        accSelect.disabled = true;
+      } else {
+        accSelect.disabled = false;
+        state.accounts.forEach(acc => {
+          const opt = document.createElement('option');
+          opt.value = acc.Nome;
+          opt.innerText = `🏦 ${acc.Nome}`;
+          if (acc.Nome === t.Conta) opt.selected = true;
+          accSelect.appendChild(opt);
+        });
+        if (!state.accounts.some(acc => acc.Nome === t.Conta)) {
+          const opt = document.createElement('option');
+          opt.value = t.Conta || 'Outra';
+          opt.innerText = t.Conta || 'Outra';
+          opt.selected = true;
+          accSelect.appendChild(opt);
+        }
+      }
+    }
+
+    // Hero do Valor e Badges
+    const isExp = t.Tipo === 'DESPESA';
+    const isTransf = isTransferTransaction(t);
+    let colorClass = isTransf ? 'text-blue' : (isExp ? 'text-red' : 'text-green');
+    let signPrefix = isTransf ? '⇄ ' : (isExp ? '- ' : '+ ');
+
+    if (heroVal) {
+      heroVal.innerText = `${signPrefix}${currencyFormatter.format(parseFloat(t.Valor) || 0)}`;
+      heroVal.className = `tx-drawer-amount ${colorClass}`;
+    }
+
+    if (typeBadge) {
+      let badgeText = isCreditCard ? 'CARTÃO' : (isTransf ? 'TRANSFERÊNCIA' : (isExp ? 'DESPESA' : 'RECEITA'));
+      let badgeClass = isCreditCard ? 'badge-cartao' : (isTransf ? 'badge-transferencia' : (isExp ? 'badge-despesa' : 'badge-receita'));
+      typeBadge.innerText = badgeText;
+      typeBadge.className = `tx-drawer-badge ${badgeClass}`;
+    }
+
+    const tDate = parseLocalDate(t.Data);
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    const isPending = isCreditCard ? (t.Status !== 'Pago') : (!isTransf && tDate > today);
+
+    if (heroPills) {
+      heroPills.innerHTML = `
+        <span class="goal-pill ${isPending ? 'goal-pill-warning' : 'goal-pill-success'}">
+          <i class="fas ${isPending ? 'fa-hourglass-half' : 'fa-check'}"></i>
+          ${isPending ? 'Agendado / Pendente' : 'Efetivado'}
+        </span>
+        <span class="goal-pill goal-pill-neutral">
+          <i class="fas fa-calendar-alt"></i> ${formatDateBR(t.Data)}
+        </span>
+      `;
+    }
+
+    if (statusDisplay) {
+      statusDisplay.innerHTML = isPending
+        ? `<i class="fas fa-hourglass-half" style="color: #d97706;"></i> Agendado / A liquidar`
+        : `<i class="fas fa-check-circle" style="color: #059669;"></i> Lançamento Efetivado`;
+    }
+
+    overlay.classList.add('open');
+    drawer.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeTxDrawer() {
+    const overlay = document.getElementById('tx-drawer-overlay');
+    const drawer = document.getElementById('tx-drawer');
+    if (overlay) overlay.classList.remove('open');
+    if (drawer) drawer.classList.remove('open');
+    document.body.style.overflow = '';
+    state.drawerTx = null;
+    state.drawerIsCC = false;
+  }
+
+  async function submitTxDrawer(event) {
+    event.preventDefault();
+    const saveBtn = document.getElementById('tx-drawer-save-btn');
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+    }
+
+    const form = document.getElementById('tx-drawer-form');
+    const formDados = Object.fromEntries(new FormData(form).entries());
+    const id = formDados.id;
+    const isCreditCard = formDados.isCreditCard === 'true';
+
+    try {
+      if (isCreditCard) {
+        const payloadCC = {
+          Descricao: formDados.descricao,
+          Valor: parseCurrencyMask(formDados.valor),
+          Data: formDados.data,
+          Categoria: formDados.categoria
+        };
+        await updateDoc(doc(db, "TransacoesCartao", id), payloadCC);
+        loadCreditTransactions();
+        setTimeout(() => { if (typeof renderInvoiceItems === 'function') renderInvoiceItems(); }, 300);
+      } else {
+        const tOriginal = state.transactions.find(x => String(x.ID) === String(id));
+        const payload = {
+          Tipo: tOriginal ? tOriginal.Tipo : 'DESPESA',
+          Descricao: formDados.descricao || '',
+          Valor: parseCurrencyMask(formDados.valor),
+          Data: formDados.data,
+          Categoria: formDados.categoria,
+          Conta: formDados.conta
+        };
+        await updateDoc(doc(db, "Transacoes", id), payload);
+        loadTransactions();
+      }
+      closeTxDrawer();
+      showToast('Transação atualizada com sucesso!', 'success');
+    } catch (err) {
+      showToast('Erro ao atualizar: ' + err.message, 'error');
+    } finally {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.innerText = 'Salvar Alterações';
+      }
+    }
+  }
+
+  async function deleteTxFromDrawer() {
+    if (!state.drawerTx) return;
+    const id = state.drawerTx.ID;
+    const isCC = state.drawerIsCC;
+
+    if (!confirm('Deseja realmente excluir esta transação?')) return;
+
+    try {
+      if (isCC) {
+        await deleteDoc(doc(db, "TransacoesCartao", id));
+        loadCreditTransactions();
+        setTimeout(() => { if (typeof renderInvoiceItems === 'function') renderInvoiceItems(); }, 300);
+      } else {
+        await deleteDoc(doc(db, "Transacoes", id));
+        loadTransactions();
+      }
+      closeTxDrawer();
+      showToast('Transação excluída com sucesso!', 'success');
+    } catch (err) {
+      showToast('Erro ao excluir: ' + err.message, 'error');
+    }
+  }
+
+  // --- DASHBOARD: INSIGHTS & ALERTAS DINÂMICOS (OPÇÃO B) ---
+  function renderDashboardInsights(selectedYYYYMM) {
+    const container = document.getElementById('dashboard-insights-banner');
+    if (!container) return;
+
+    const period = selectedYYYYMM || getSelectedYYYYMM();
+    const insights = [];
+
+    // 1. INSIGHT DE CARTÃO DE CRÉDITO
+    const ccTransactionsMonth = state.creditTransactions.filter(ct => String(ct.MesFatura) === period);
+    const totalCC = ccTransactionsMonth.reduce((acc, c) => acc + (parseFloat(c.Valor) || 0), 0);
+
+    if (state.creditCards.length > 0) {
+      const today = new Date();
+      const currentDay = today.getDate();
+
+      const cardWithClosestDue = [...state.creditCards].sort((a, b) => {
+        const dueA = parseInt(a.DiaVencimento) || 30;
+        const dueB = parseInt(b.DiaVencimento) || 30;
+        return Math.abs(dueA - currentDay) - Math.abs(dueB - currentDay);
+      })[0];
+
+      const dueDay = parseInt(cardWithClosestDue.DiaVencimento) || 10;
+      const daysUntilDue = dueDay - currentDay;
+
+      if (daysUntilDue >= 0 && daysUntilDue <= 7) {
+        insights.push({
+          tag: 'Fatura a Vencer',
+          title: `Fatura ${cardWithClosestDue.Nome} vence em ${daysUntilDue === 0 ? 'HOJE' : `${daysUntilDue} dia(s)`}`,
+          desc: `Total de ${currencyFormatter.format(totalCC)}. Clique para conferir lançamentos.`,
+          icon: 'fa-credit-card',
+          status: 'alert-warning',
+          tab: 'credit-cards'
+        });
+      } else {
+        insights.push({
+          tag: 'Cartões & Faturas',
+          title: `Faturas sob controle (${currencyFormatter.format(totalCC)})`,
+          desc: `${state.creditCards.length} cartão(ões) cadastrado(s) com faturas organizadas.`,
+          icon: 'fa-shield-halved',
+          status: 'alert-info',
+          tab: 'credit-cards'
+        });
+      }
+    } else {
+      insights.push({
+        tag: 'Cartões',
+        title: 'Nenhum cartão cadastrado',
+        desc: 'Adicione seus cartões para controlar faturas e limites em um só lugar.',
+        icon: 'fa-credit-card',
+        status: 'alert-info',
+        tab: 'credit-cards'
+      });
+    }
+
+    // 2. INSIGHT DE METAS (GOALS)
+    const activeGoals = (state.goals || []).filter(g => g.Status === 'Ativo');
+    if (activeGoals.length > 0) {
+      const topGoal = [...activeGoals].sort((a, b) => (b.Progresso || 0) - (a.Progresso || 0))[0];
+      const remaining = Math.max(0, (topGoal.ValorAlvo || 0) - (topGoal.ValorAtual || 0));
+
+      insights.push({
+        tag: 'Objetivo em Foco',
+        title: `${topGoal.Nome} atingiu ${topGoal.Progresso.toFixed(0)}%`,
+        desc: remaining > 0 ? `Restam ${currencyFormatter.format(remaining)} para a meta ser concluída.` : 'Meta 100% concluída! 🎉',
+        icon: 'fa-bullseye',
+        status: topGoal.Progresso >= 75 ? 'alert-accent' : 'alert-info',
+        tab: 'goals'
+      });
+    } else {
+      insights.push({
+        tag: 'Metas Financeiras',
+        title: 'Defina seu primeiro objetivo',
+        desc: 'Economizar com um propósito claro acelera sua independência.',
+        icon: 'fa-trophy',
+        status: 'alert-info',
+        tab: 'goals'
+      });
+    }
+
+    // 3. INSIGHT DE SAÚDE DE CAIXA NO MÊS
+    const monthlyTransactions = state.transactions.filter(t => {
+      if (!t.Data || isTransferTransaction(t)) return false;
+      const tDate = parseLocalDate(t.Data);
+      const tMonth = String(tDate.getMonth() + 1).padStart(2, '0');
+      const tYear = tDate.getFullYear();
+      return `${tYear}-${tMonth}` === period;
+    });
+
+    const sumInc = monthlyTransactions.filter(t => t.Tipo === 'RECEITA').reduce((acc, t) => acc + (parseFloat(t.Valor) || 0), 0);
+    const sumExp = monthlyTransactions.filter(t => t.Tipo === 'DESPESA').reduce((acc, t) => acc + (parseFloat(t.Valor) || 0), 0) + totalCC;
+
+    if (sumInc > sumExp && sumInc > 0) {
+      const eco = sumInc - sumExp;
+      const rate = ((eco / sumInc) * 100).toFixed(0);
+      insights.push({
+        tag: 'Superávit Mensal',
+        title: `Taxa de economia de ${rate}% no mês`,
+        desc: `Saldo positivo de ${currencyFormatter.format(eco)} em relação às despesas totais.`,
+        icon: 'fa-arrow-trend-up',
+        status: 'alert-success',
+        tab: 'transactions'
+      });
+    } else if (sumExp > sumInc && sumExp > 0) {
+      const def = sumExp - sumInc;
+      insights.push({
+        tag: 'Atenção ao Caixa',
+        title: `Despesas superam receitas em ${currencyFormatter.format(def)}`,
+        desc: 'Acompanhe seus lançamentos para reequilibrar as contas antes do fechamento.',
+        icon: 'fa-arrow-trend-down',
+        status: 'alert-warning',
+        tab: 'transactions'
+      });
+    } else {
+      insights.push({
+        tag: 'Balanço Mensal',
+        title: 'Fluxo em equilíbrio contábil',
+        desc: 'Suas receitas e despesas registradas estão alinhadas no período.',
+        icon: 'fa-scale-balanced',
+        status: 'alert-info',
+        tab: 'transactions'
+      });
+    }
+
+    container.innerHTML = insights.map(item => `
+      <div class="insight-card ${item.status}" onclick="AppController.switchTab('${item.tab}')" title="Clique para abrir detalhes">
+        <div class="insight-icon-box">
+          <i class="fas ${item.icon}"></i>
+        </div>
+        <div class="insight-content">
+          <div class="insight-tag">${item.tag}</div>
+          <div class="insight-title">${item.title}</div>
+          <div class="insight-desc">${item.desc}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // Tecla ESC fecha o Drawer de Transações
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const drawer = document.getElementById('tx-drawer');
+      if (drawer && drawer.classList.contains('open')) {
+        closeTxDrawer();
+      }
+    }
+  });
+
   // --- OBJETIVOS E METAS COM APORTE ---
   async function loadGoals() {
     try {
-      const querySnapshot = await getDocs(collection(db, "Objetivos"));
-      const metasBrutas = querySnapshot.docs.map(doc => ({ ID: doc.id, ...doc.data() }));
+      const metasBrutas = await fetchUserScopedDocs("Objetivos");
 
       state.goals = metasBrutas.map(goal => {
         const target = parseFloat(goal.ValorAlvo) || 0;
@@ -1132,37 +1552,74 @@ const AppController = (function () {
         const cor = goal.Cor || '#00BCD4';
         const icone = goal.Icone || 'fa-bullseye';
         const pct = goal.Progresso || 0;
+        const valorRestante = Math.max(0, (parseFloat(goal.ValorAlvo) || 0) - (parseFloat(goal.ValorAtual) || 0));
+
+        let pillHtml = '';
+        let targetMonthlyHtml = '';
+
+        if (pct >= 100 || valorRestante === 0) {
+          pillHtml = `<span class="goal-pill goal-pill-success"><i class="fas fa-check-circle"></i> Concluído!</span>`;
+          targetMonthlyHtml = `<span class="goal-target-text" style="color: #059669;"><i class="fas fa-trophy"></i> Meta atingida com sucesso</span>`;
+        } else if (!goal.DataLimite) {
+          pillHtml = `<span class="goal-pill goal-pill-neutral"><i class="fas fa-infinity"></i> Sem prazo</span>`;
+          targetMonthlyHtml = `<span class="goal-target-text"><i class="fas fa-clock"></i> Saldo restante: <strong>${currencyFormatter.format(valorRestante)}</strong></span>`;
+        } else {
+          const today = new Date();
+          const targetDate = new Date(goal.DataLimite);
+          const monthsRemaining = (targetDate.getFullYear() - today.getFullYear()) * 12 + (targetDate.getMonth() - today.getMonth());
+
+          if (monthsRemaining < 0 || (monthsRemaining === 0 && targetDate < today)) {
+            pillHtml = `<span class="goal-pill goal-pill-warning"><i class="fas fa-exclamation-triangle"></i> Prazo encerrado</span>`;
+            targetMonthlyHtml = `<span class="goal-target-text" style="color: #d97706;"><i class="fas fa-hourglass-end"></i> Restam <strong>${currencyFormatter.format(valorRestante)}</strong> pendentes</span>`;
+          } else {
+            const divisor = Math.max(1, monthsRemaining);
+            const monthlyTarget = valorRestante / divisor;
+            const pacing = pct >= 50 ? 'No ritmo' : 'Atenção';
+            const pacingClass = pct >= 50 ? 'goal-pill-success' : 'goal-pill-info';
+
+            pillHtml = `<span class="goal-pill ${pacingClass}"><i class="fas fa-bolt"></i> ${pacing}</span>`;
+            targetMonthlyHtml = `<span class="goal-target-text"><i class="fas fa-piggy-bank"></i> Aporte sugerido: <strong>${currencyFormatter.format(monthlyTarget)}/mês</strong> (${divisor}m)</span>`;
+          }
+        }
+
+        const safeGoalId = escapeHTML(goal.ID);
+        const safeGoalNome = escapeHTML(goal.Nome);
+        const safeCor = escapeHTML(cor);
+        const safeIcone = escapeHTML(icone);
 
         const card = document.createElement('div');
         card.className = 'new-goal-card';
         card.innerHTML = `
           <div class="ng-header">
-            <div style="display: flex; align-items: center; width: calc(100% - 25px);">
-              <div class="ng-icon" style="background: ${cor};"><i class="fas ${icone}"></i></div>
-              <div class="ng-title">${goal.Nome}</div>
+            <div style="display: flex; align-items: center; width: calc(100% - 25px); min-width: 0;">
+              <div class="ng-icon" style="background: ${safeCor};"><i class="fas ${safeIcone}"></i></div>
+              <div class="ng-title">${safeGoalNome}</div>
             </div>
-            <i class="fas fa-chevron-right" style="color: #ccc; cursor: pointer; padding: 5px;" onclick="AppController.openGoalDetails('${goal.ID}')"></i>
+            <i class="fas fa-chevron-right" style="color: #ccc; cursor: pointer; padding: 5px;" onclick="AppController.openGoalDetails('${safeGoalId}')" title="Ver detalhes do objetivo"></i>
           </div>
           <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              ${pillHtml}
+              <span style="color: var(--text-muted); font-size: 12px; font-weight: 600; font-family: var(--font-mono);">${pct.toFixed(1)}%</span>
+            </div>
             <div class="ng-progress-track">
               <div class="ng-progress-fill" style="width: ${pct}%; background: ${cor};"></div>
             </div>
-            <div style="display: flex; justify-content: space-between; align-items: baseline;">
-              <span style="color: #111; font-weight: 700; font-size: 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 6px;">
+              <span style="color: var(--text-main); font-weight: 700; font-size: 14px; font-family: var(--font-mono);">
                 ${currencyFormatter.format(goal.ValorAtual)} 
-                <span style="color: #888; font-weight: 400; font-size: 12px;">guardados</span>
+                <span style="color: var(--text-muted); font-weight: 400; font-size: 12px; font-family: var(--font-sans);">guardados</span>
               </span>
-              <span style="color: #888; font-size: 12px; font-weight: 500;">${pct.toFixed(2)}%</span>
+              <span style="color: var(--text-muted); font-size: 12px; font-family: var(--font-mono);">Alvo: ${currencyFormatter.format(goal.ValorAlvo)}</span>
             </div>
           </div>
-          <div style="display: flex; justify-content: space-between; font-size: 13px; color: #666; border-top: 1px solid #f4f6f8; padding-top: 15px;">
-            <div style="display: flex; align-items: center; gap: 6px;">
-              <i class="fas fa-trophy" style="color: #aaa; font-size: 14px;"></i> 
-              <strong style="color: #111;">${currencyFormatter.format(goal.ValorAlvo)}</strong>
+          <div class="ng-footer">
+            <div class="ng-monthly-box">
+              ${targetMonthlyHtml}
             </div>
-            <div style="display: flex; align-items: center; gap: 6px;">
-              <i class="far fa-calendar-check" style="color: #aaa; font-size: 14px;"></i> 
-              <span>${formatDateBR(goal.DataLimite)}</span>
+            <div class="ng-date-row">
+              <span><i class="far fa-calendar-check" style="margin-right: 5px;"></i> Data limite</span>
+              <strong>${goal.DataLimite ? formatDateBR(goal.DataLimite) : 'Sem prazo definido'}</strong>
             </div>
           </div>
         `;
@@ -1206,6 +1663,7 @@ const AppController = (function () {
     const valorAtualNum = formDados.valorAtual ? (parseFloat(formDados.valorAtual.replace(/\D/g, "")) / 100 || 0) : 0;
 
     const payloadFormatado = {
+      userId: getCurrentUserId(),
       Nome: formDados.nome,
       ValorAlvo: valorAlvoNum,
       ValorAtual: valorAtualNum,
@@ -1321,6 +1779,7 @@ const AppController = (function () {
         }
 
         await addDoc(collection(db, "AportesObjetivo"), {
+          userId: getCurrentUserId(),
           IdObjetivo: goalId,
           Valor: depositAmount,
           Data: localISO
@@ -1349,8 +1808,7 @@ const AppController = (function () {
   // --- CUSTOS FIXOS ---
   async function loadFixedCosts() {
     try {
-      const querySnapshot = await getDocs(collection(db, "Custos Fixos"));
-      state.fixedCosts = querySnapshot.docs.map(doc => ({ ID: doc.id, ...doc.data() }));
+      state.fixedCosts = await fetchUserScopedDocs("Custos Fixos");
 
       // Ordena por dia de vencimento
       state.fixedCosts.sort((a, b) => (parseInt(a.DiaVencimento) || 0) - (parseInt(b.DiaVencimento) || 0));
@@ -1361,22 +1819,26 @@ const AppController = (function () {
   }
 
   function createFixedCostListItem(cost, isPaid) {
+    const safeCostId = escapeHTML(cost.ID);
+    const safeCostNome = escapeHTML(cost.Nome);
+    const safeDia = escapeHTML(cost.DiaVencimento);
+
     const li = document.createElement('li'); li.className = 'transaction-item';
     li.innerHTML = `
         <div class="item-details" style="flex: 1; min-width: 0; ${isPaid ? 'opacity:0.5;' : ''}">
-          <strong>${cost.Nome}</strong>${isPaid ? '<span style="color:green; margin-left:5px; font-size:12px; font-weight:600;">(Pago)</span>' : '<span style="color:#ff9800; margin-left:5px; font-size:12px; font-weight:600;">(Pendente)</span>'}<br>
-          <small style="color:#777;">Vence dia: ${cost.DiaVencimento}</small>
+          <strong>${safeCostNome}</strong>${isPaid ? '<span style="color:green; margin-left:5px; font-size:12px; font-weight:600;">(Pago)</span>' : '<span style="color:#ff9800; margin-left:5px; font-size:12px; font-weight:600;">(Pendente)</span>'}<br>
+          <small style="color:#777;">Vence dia: ${safeDia}</small>
         </div>
         <div style="width: 170px; min-width: 170px; display: flex; justify-content: flex-end; margin-right: 15px; flex-shrink: 0;">
           <div class="item-value text-red" style="text-align: right; ${isPaid ? 'opacity:0.5;' : ''}">${currencyFormatter.format(cost.Valor)}</div>
         </div>
         <div style="display:flex; gap:10px; flex-shrink: 0;">
           ${!isPaid
-        ? `<button class="btn-text" style="color:var(--primary-color);" onclick="AppController.markFixedCostPaid('${cost.ID}')" title="Pagar"><i class="fas fa-check-circle"></i> Pagar</button>`
-        : `<button class="btn-text" style="color:#ff9800;" onclick="AppController.unmarkFixedCostPaid('${cost.ID}')" title="Desmarcar Pago"><i class="fas fa-undo"></i> Desmarcar</button>`
+        ? `<button class="btn-text" style="color:var(--primary-color);" onclick="AppController.markFixedCostPaid('${safeCostId}')" title="Pagar"><i class="fas fa-check-circle"></i> Pagar</button>`
+        : `<button class="btn-text" style="color:#ff9800;" onclick="AppController.unmarkFixedCostPaid('${safeCostId}')" title="Desmarcar Pago"><i class="fas fa-undo"></i> Desmarcar</button>`
       }
-          <button class="btn-text" style="color:var(--primary-color);" onclick="AppController.editFixedCost('${cost.ID}')" title="Editar"><i class="fas fa-edit"></i></button>
-          <button class="btn-delete" onclick="AppController.deleteFixedCost('${cost.ID}')" title="Excluir"><i class="fas fa-trash"></i></button>
+          <button class="btn-text" style="color:var(--primary-color);" onclick="AppController.editFixedCost('${safeCostId}')" title="Editar"><i class="fas fa-edit"></i></button>
+          <button class="btn-delete" onclick="AppController.deleteFixedCost('${safeCostId}')" title="Excluir"><i class="fas fa-trash"></i></button>
         </div>`;
     return li;
   }
@@ -1548,6 +2010,7 @@ const AppController = (function () {
       } else {
         // Criação de um NOVO custo
         const payloadFormatado = {
+          userId: getCurrentUserId(),
           Nome: formDados.nome,
           Valor: parseFloat(formDados.valor) || 0,
           DiaVencimento: parseInt(formDados.diaVencimento) || 1,
@@ -1625,6 +2088,7 @@ const AppController = (function () {
       const dueDayStr = String(Math.min(parseInt(dia, 10), lastDayOfMonth)).padStart(2, '0');
 
       await addDoc(collection(db, "Transacoes"), {
+        userId: getCurrentUserId(),
         Tipo: 'DESPESA',
         Categoria: categoriaNome,
         Valor: amount,
@@ -1779,6 +2243,7 @@ const AppController = (function () {
 
       // 1. Desconta o dinheiro da conta sem gerar uma nova "Despesa" no painel
       await addDoc(collection(db, "Transacoes"), {
+        userId: getCurrentUserId(),
         Tipo: 'DESPESA',
         Categoria: 'Transferência', // <-- A MÁGICA ACONTECE AQUI
         Valor: amount,
@@ -1854,8 +2319,7 @@ const AppController = (function () {
   // --- CARTÃO DE CRÉDITO & FATURAS ---
   async function loadCreditData() {
     try {
-      const querySnapshot = await getDocs(collection(db, "Cartoes"));
-      state.creditCards = querySnapshot.docs.map(doc => ({ ID: doc.id, ...doc.data() }));
+      state.creditCards = await fetchUserScopedDocs("Cartoes");
       populateCCDropdown();
       loadCreditTransactions();
     } catch (error) {
@@ -1865,8 +2329,7 @@ const AppController = (function () {
 
   async function loadCreditTransactions() {
     try {
-      const querySnapshot = await getDocs(collection(db, "TransacoesCartao"));
-      state.creditTransactions = querySnapshot.docs.map(doc => ({ ID: doc.id, ...doc.data() }));
+      state.creditTransactions = await fetchUserScopedDocs("TransacoesCartao");
       calculateInvoiceSum();
       renderCreditCardsPage();
     } catch (error) {
@@ -1877,7 +2340,12 @@ const AppController = (function () {
   function populateCCDropdown() {
     if (!elements.cctCartaoSelect) return;
     elements.cctCartaoSelect.innerHTML = '<option value="" disabled selected>Selecione o cartão...</option>';
-    state.creditCards.forEach(card => { const opt = document.createElement('option'); opt.value = card.ID; opt.text = card.Nome; elements.cctCartaoSelect.appendChild(opt); });
+    state.creditCards.forEach(card => {
+      const opt = document.createElement('option');
+      opt.value = card.ID;
+      opt.text = card.Nome;
+      elements.cctCartaoSelect.appendChild(opt);
+    });
     upgradeSelects();
   }
   function calculateInvoiceSum() {
@@ -1899,6 +2367,7 @@ const AppController = (function () {
 
     try {
       await addDoc(collection(db, "Cartoes"), {
+        userId: getCurrentUserId(),
         Nome: formDados.nome,
         Limite: parseCurrencyMask(formDados.limite),
         DiaFechamento: parseInt(formDados.diaFechamento) || 1,
@@ -1919,8 +2388,8 @@ const AppController = (function () {
     
     elements.ccTransForm.reset();
 
-    const selects = elements.ccTransForm.querySelectorAll('select:not(.no-choices)')
-    select.forEach(s => {
+    const selects = elements.ccTransForm.querySelectorAll('select:not(.no-choices)');
+    selects.forEach(s => {
       if (s.choicesInstance) {
         s.choicesInstance.destroy();
         s.choicesInstance = new Choices(s, { searchEnabled: false, itemSelectText: '', shouldSort: false});        
@@ -1970,6 +2439,7 @@ const AppController = (function () {
         const descStr = parcelas > 1 ? `${formDados.descricao || 'Compra'} (${i + 1}/${parcelas})` : formDados.descricao;
 
         await addDoc(collection(db, "TransacoesCartao"), {
+          userId: getCurrentUserId(),
           IdCartao: cardId,
           Data: formDados.dataTransacao,
           Categoria: formDados.categoria,
@@ -2018,12 +2488,18 @@ const AppController = (function () {
     invoiceItems.forEach(item => {
       const cardObj = state.creditCards.find(c => String(c.ID) === String(item.IdCartao || item.CartaoID));
       const cardName = cardObj ? cardObj.Nome : 'Cartão';
+      const safeId = escapeHTML(item.ID);
+      const safeCat = escapeHTML(item.Categoria);
+      const safeDesc = escapeHTML(item.Descricao || '');
+      const safeCardName = escapeHTML(cardName);
+      const safeDate = escapeHTML(formatDateBR(item.Data) || item.Data || '');
+
       const li = document.createElement('li');
       li.className = 'transaction-item';
       li.innerHTML = `
           <div class="item-details" style="flex: 1; min-width: 0;">
-            <strong>${item.Categoria} ${item.Descricao ? ' - ' + item.Descricao : ''}</strong><br>
-            <small style="color: #888;">${cardName} • ${formatDateBR(item.Data) || item.Data || ''}</small>
+            <strong>${safeCat}${safeDesc ? ' - ' + safeDesc : ''}</strong><br>
+            <small style="color: #888;">${safeCardName} • ${safeDate}</small>
           </div>
           <div style="width: 170px; min-width: 170px; display: flex; justify-content: flex-end; margin-right: 15px; flex-shrink: 0;">
             <div class="item-value text-red" style="text-align: right;">
@@ -2031,7 +2507,7 @@ const AppController = (function () {
             </div>
           </div>
           <div style="flex-shrink: 0;">
-            <button class="btn-delete" onclick="AppController.deleteCreditTransaction('${item.ID}')" title="Excluir"><i class="fas fa-trash"></i></button>
+            <button class="btn-delete" onclick="AppController.deleteCreditTransaction('${safeId}')" title="Excluir"><i class="fas fa-trash"></i></button>
           </div>`;
       container.appendChild(li);
     });
@@ -2091,10 +2567,16 @@ const AppController = (function () {
           const hasPending = pendingItems.length > 0;
           const pendingTotal = pendingItems.reduce((sum, item) => sum + (parseFloat(item.Valor) || 0), 0);
 
+          const safeCardId = escapeHTML(card.ID);
+          const safeCardNome = escapeHTML(card.Nome);
+          const safeBandeira = escapeHTML(card.Bandeira || 'Cartão');
+          const safeFechamento = escapeHTML(card.DiaFechamento || '--');
+          const safeVencimento = escapeHTML(card.DiaVencimento || '--');
+
           cardDiv.innerHTML = `
               <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
-                <strong style="font-size:16px; color:#333;"><i class="fas fa-credit-card" style="color:var(--primary-color); margin-right:8px;"></i>${card.Nome}</strong>
-                <span style="font-size:12px; color:#777; background:#f0f0f0; padding:2px 8px; border-radius:10px;">${card.Bandeira || 'Cartão'}</span>
+                <strong style="font-size:16px; color:#333;"><i class="fas fa-credit-card" style="color:var(--primary-color); margin-right:8px;"></i>${safeCardNome}</strong>
+                <span style="font-size:12px; color:#777; background:#f0f0f0; padding:2px 8px; border-radius:10px;">${safeBandeira}</span>
               </div>
               <div style="font-size:13px; color:#666; margin-top:4px;">
                 Limite: <strong>${currencyFormatter.format(limitVal)}</strong>
@@ -2103,14 +2585,14 @@ const AppController = (function () {
                 Saldo Restante: <strong class="${remClass}">${currencyFormatter.format(remainingLimit)}</strong>
               </div>
               <div style="font-size:12px; color:#888; display:flex; gap:15px; margin-top:4px;">
-                <span>Fecha dia: <strong>${card.DiaFechamento || '--'}</strong></span>
-                <span>Vence dia: <strong>${card.DiaVencimento || '--'}</strong></span>
+                <span>Fecha dia: <strong>${safeFechamento}</strong></span>
+                <span>Vence dia: <strong>${safeVencimento}</strong></span>
               </div>
               
               <!-- Botão Dinâmico de Pagamento Individual -->
               <div style="width: 100%; margin-top: 15px; border-top: 1px solid #f0f0f0; padding-top: 15px;">
                 ${hasPending ? `
-                  <button class="btn-primary" onclick="AppController.openPayInvoiceModal('${card.ID}')" style="width: 100%; padding: 8px; font-size: 13px; margin: 0; background: #00796B;">
+                  <button class="btn-primary" onclick="AppController.openPayInvoiceModal('${safeCardId}')" style="width: 100%; padding: 8px; font-size: 13px; margin: 0; background: #00796B;">
                     <i class="fas fa-check-circle" style="margin-right: 5px;"></i> Pagar Fatura (${currencyFormatter.format(pendingTotal)})
                   </button>
                 ` : `
@@ -2133,13 +2615,18 @@ const AppController = (function () {
         invoiceItems.forEach(item => {
           const cardObj = state.creditCards.find(c => String(c.ID) === String(item.IdCartao || item.CartaoID));
           const cardName = cardObj ? cardObj.Nome : 'Cartão';
+          const safeId = escapeHTML(item.ID);
+          const safeCat = escapeHTML(item.Categoria);
+          const safeDesc = escapeHTML(item.Descricao || '');
+          const safeCardName = escapeHTML(cardName);
+          const safeDate = escapeHTML(formatDateBR(item.Data) || item.Data || '');
 
           const li = document.createElement('li');
           li.className = 'transaction-item';
           li.innerHTML = `
               <div class="item-details" style="flex: 1; min-width: 0;">
-                <strong>${item.Categoria} ${item.Descricao ? ' - ' + item.Descricao : ''}</strong><br>
-                <small style="color: #888;">${cardName} • ${formatDateBR(item.Data) || item.Data || ''}</small>
+                <strong>${safeCat}${safeDesc ? ' - ' + safeDesc : ''}</strong><br>
+                <small style="color: #888;">${safeCardName} • ${safeDate}</small>
               </div>
               <div style="width: 170px; min-width: 170px; display: flex; justify-content: flex-end; margin-right: 15px; flex-shrink: 0;">
                 <div class="item-value text-red" style="text-align: right;">
@@ -2147,7 +2634,7 @@ const AppController = (function () {
                 </div>
               </div>
               <div style="flex-shrink: 0;">
-                <button class="btn-delete" onclick="AppController.deleteCreditTransaction('${item.ID}')" title="Excluir"><i class="fas fa-trash"></i></button>
+                <button class="btn-delete" onclick="AppController.deleteCreditTransaction('${safeId}')" title="Excluir"><i class="fas fa-trash"></i></button>
               </div>`;
           itemsContainer.appendChild(li);
         });
@@ -2227,9 +2714,10 @@ const AppController = (function () {
           card.style.gap = '10px';
           card.style.padding = '20px';
 
+          const safeAccNome = escapeHTML(acc.Nome);
           card.innerHTML = `
               <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
-                <strong style="font-size:16px; color:#333;"><i class="fas fa-university" style="color:#2196F3; margin-right:8px;"></i>${acc.Nome}</strong>
+                <strong style="font-size:16px; color:#333;"><i class="fas fa-university" style="color:#2196F3; margin-right:8px;"></i>${safeAccNome}</strong>
                 <span style="font-size:12px; color:#666; background:#e3f2fd; padding:2px 8px; border-radius:10px;">Ativa</span>
               </div>
               <div style="margin-top:5px;">
@@ -2248,8 +2736,7 @@ const AppController = (function () {
   // --- CÁLCULO E RENDERIZAÇÃO DO DASHBOARD DE PLANEJAMENTO ---
   async function loadPlanning() {
     try {
-      const querySnapshot = await getDocs(collection(db, "Planejamento"));
-      state.planning = querySnapshot.docs.map(doc => ({ ID: doc.id, ...doc.data() }));
+      state.planning = await fetchUserScopedDocs("Planejamento");
       renderPlanningDashboard();
     } catch (error) {
       console.error("Erro ao carregar planejamento:", error);
@@ -2484,8 +2971,7 @@ const AppController = (function () {
 
   async function copyPreviousPlanning() {
     try {
-      const querySnapshot = await getDocs(collection(db, "Planejamento"));
-      const allPlans = querySnapshot.docs.map(doc => doc.data());
+      const allPlans = await fetchUserScopedDocs("Planejamento");
       if (allPlans.length === 0) return alert("Nenhum planejamento anterior encontrado.");
 
       const sorted = [...allPlans].sort((a, b) => String(b.MesReferencia).localeCompare(String(a.MesReferencia)));
@@ -2706,21 +3192,23 @@ const AppController = (function () {
     const searchKey = "PLAN-" + monthStr;
 
     try {
-      // 1. Limpa os planejamentos antigos do mesmo mês
-      const querySnapshot = await getDocs(collection(db, "Planejamento"));
+      // 1. Limpa os planejamentos antigos do mesmo mês pertencentes ao usuário
+      const existingPlans = await fetchUserScopedDocs("Planejamento");
       const deletePromises = [];
-      querySnapshot.docs.forEach(docSnap => {
-        if (String(docSnap.data().MesReferencia).trim() === searchKey) {
-          deletePromises.push(deleteDoc(doc(db, "Planejamento", docSnap.id)));
+      existingPlans.forEach(plan => {
+        if (String(plan.MesReferencia).trim() === searchKey) {
+          deletePromises.push(deleteDoc(doc(db, "Planejamento", plan.ID)));
         }
       });
       await Promise.all(deletePromises);
 
-      // 2. Salva as novas metas por categoria
+      // 2. Salva as novas metas por categoria com isolamento de usuário
       const insertPromises = [];
+      const uid = getCurrentUserId();
       for (const [catName, val] of Object.entries(wizardState.categories)) {
         if (parseFloat(val) > 0) {
           insertPromises.push(addDoc(collection(db, "Planejamento"), {
+            userId: uid,
             MesReferencia: searchKey,
             Renda: parseFloat(wizardState.income),
             EconomiaPct: parseFloat(wizardState.savingsPct),
@@ -3145,9 +3633,7 @@ const AppController = (function () {
     listEl.innerHTML = '<div style="color:#888; font-size:14px; margin-top:10px;">Carregando depósitos...</div>';
 
     try {
-      // Como você não tinha uma coleção separada de aportes, o sistema buscará da nova coleção "AportesObjetivo"
-      const snap = await getDocs(collection(db, "AportesObjetivo"));
-      const todosAportes = snap.docs.map(d => ({ ID: d.id, ...d.data() }));
+      const todosAportes = await fetchUserScopedDocs("AportesObjetivo");
 
       state.currentGoalDeposits = todosAportes.filter(a => String(a.IdObjetivo) === String(id));
       state.currentGoalDeposits.sort((a, b) => new Date(b.Data).getTime() - new Date(a.Data).getTime());
@@ -3174,6 +3660,8 @@ const AppController = (function () {
       const color = isWithdraw ? '#F44336' : '#4CAF50';
       const sign = isWithdraw ? '-' : '+';
       const label = isWithdraw ? 'Resgate' : 'Depósito';
+      const safeDepId = escapeHTML(dep.ID);
+      const safeGoalId = escapeHTML(dep.IdObjetivo);
 
       const li = document.createElement('li');
       li.className = 'gd-deposit-item';
@@ -3184,8 +3672,8 @@ const AppController = (function () {
         </div>
         <div style="display: flex; align-items: center; gap: 15px;">
           <strong style="color: ${color}; font-size: 14px;">${sign} ${currencyFormatter.format(displayValue)}</strong>
-          <button class="btn-text" style="color: #bbb; font-size: 13px; padding: 0;" onclick="AppController.deleteGoalDeposit('${dep.ID}', '${dep.IdObjetivo}', ${dep.Valor})" title="Excluir"><i class="fas fa-trash"></i></button>
-          <button class="btn-text" style="color: #bbb; font-size: 13px; padding: 0;" onclick="AppController.editGoalDeposit('${dep.ID}', '${dep.IdObjetivo}', ${dep.Valor})" title="Editar"><i class="fas fa-pen"></i></button>
+          <button class="btn-text" style="color: #bbb; font-size: 13px; padding: 0;" onclick="AppController.deleteGoalDeposit('${safeDepId}', '${safeGoalId}', ${dep.Valor})" title="Excluir"><i class="fas fa-trash"></i></button>
+          <button class="btn-text" style="color: #bbb; font-size: 13px; padding: 0;" onclick="AppController.editGoalDeposit('${safeDepId}', '${safeGoalId}', ${dep.Valor})" title="Editar"><i class="fas fa-pen"></i></button>
         </div>
       `;
       listEl.appendChild(li);
@@ -3363,7 +3851,7 @@ const AppController = (function () {
     if (type === 'error') icon = 'fa-exclamation-circle';
     if (type === 'info') icon = 'fa-info-circle';
 
-    toast.innerHTML = `<i class="fas ${icon}" style="font-size: 18px;"></i> <span>${message}</span>`;
+    toast.innerHTML = `<i class="fas ${icon}" style="font-size: 18px;"></i> <span>${escapeHTML(message)}</span>`;
     container.appendChild(toast);
 
     // Remove o Toast automaticamente após 3.5 segundos
@@ -3582,7 +4070,8 @@ const AppController = (function () {
   return {
     init, switchTab, setTransactionFilter, renderCreditCardsPage, renderFixedCostsPage, renderGoalsPage, renderAccountsPage, renderPlanningView, openMonthPicker, closeMonthPicker, changePickerYear, selectCurrentMonth, openModal, closeModal, submitTransaction, editTransaction, deleteTransaction, openAccountModal, closeAccountModal, submitAccount, openTransferModal, closeTransferModal, submitTransfer,
     openGoalTypeModal, openGoalForm, closeGoalModal, submitGoal, editGoal, deleteGoal, openGoalDepositModal, closeGoalDepositModal, submitGoalDeposit,
-    openGoalDetails, closeGoalDetails, editGoalFromDetails, deleteGoalDeposit, editGoalDeposit, toggleGoalOptions, openCurrentGoalDepositModal, deleteCurrentGoal, switchGoalsTab, markGoalAsCompleted, toggleGoalsSortDropdown, setGoalsSortOrder, openFixedCostModal, closeFixedCostModal, submitFixedCost, editFixedCost, deleteFixedCost, markFixedCostPaid, unmarkFixedCostPaid, openFCPayModal, closeFCPayModal, openCCModal, closeCCModal, submitCC, openCCTransModal, closeCCTransModal, submitCCTrans, openCCInvoiceModal, closeCCInvoiceModal, deleteCreditTransaction, toggleFabMenu, closeFabMenu, openNewTransaction, openNewCCTransaction, openNewTransfer, startPlanningWizard, cancelPlanningWizard, copyPreviousPlanning, maskCurrency, calculateWizardBudget, prevWizardStep, nextWizardStep, calculateWizardCategoryTotals, renderWizardCategories, selectCardPreference, finishPlanningWizard, closeFixedCostPayModal, submitFixedCostPay, logout, switchProfileTab, maskCPF, maskPhone, maskCEP, changeTheme, loadUserProfile, openPayInvoiceModal, closePayInvoiceModal, submitPayInvoice, showToast, openCurrentGoalWithdrawModal, updateTransactionSummary, switchSettingsTab, toggleAllDevices, checkDeviceSelection, disconnectSelectedDevices, savePreferences, changeTxPage, changeTxItemsPerPage, setTransactionSort, proceedEditFixedCost, closeFCEditScopeModal, parseCurrencyMask
+    openGoalDetails, closeGoalDetails, editGoalFromDetails, deleteGoalDeposit, editGoalDeposit, toggleGoalOptions, openCurrentGoalDepositModal, deleteCurrentGoal, switchGoalsTab, markGoalAsCompleted, toggleGoalsSortDropdown, setGoalsSortOrder, openFixedCostModal, closeFixedCostModal, submitFixedCost, editFixedCost, deleteFixedCost, markFixedCostPaid, unmarkFixedCostPaid, openFCPayModal, closeFCPayModal, openCCModal, closeCCModal, submitCC, openCCTransModal, closeCCTransModal, submitCCTrans, openCCInvoiceModal, closeCCInvoiceModal, deleteCreditTransaction, toggleFabMenu, closeFabMenu, openNewTransaction, openNewCCTransaction, openNewTransfer, startPlanningWizard, cancelPlanningWizard, copyPreviousPlanning, maskCurrency, calculateWizardBudget, prevWizardStep, nextWizardStep, calculateWizardCategoryTotals, renderWizardCategories, selectCardPreference, finishPlanningWizard, closeFixedCostPayModal, submitFixedCostPay, logout, switchProfileTab, maskCPF, maskPhone, maskCEP, changeTheme, loadUserProfile, openPayInvoiceModal, closePayInvoiceModal, submitPayInvoice, showToast, openCurrentGoalWithdrawModal, updateTransactionSummary, switchSettingsTab, toggleAllDevices, checkDeviceSelection, disconnectSelectedDevices, savePreferences, changeTxPage, changeTxItemsPerPage, setTransactionSort, proceedEditFixedCost, closeFCEditScopeModal, parseCurrencyMask,
+    openTxDrawer, closeTxDrawer, submitTxDrawer, deleteTxFromDrawer, renderDashboardInsights
   };
 })();
 

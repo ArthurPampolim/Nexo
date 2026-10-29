@@ -1,0 +1,87 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Funções utilitárias de segurança
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocumentOwner() {
+      return isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        !('userId' in resource.data)
+      );
+    }
+
+    function isCreatingForSelf() {
+      return isAuthenticated() && (
+        request.resource.data.userId == request.auth.uid ||
+        !('userId' in request.resource.data)
+      );
+    }
+
+    // Perfil do Usuário (ID do documento = UID do auth)
+    match /Usuarios/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // Coleções financeiras isoladas por usuário
+    match /Transacoes/{docId} {
+      allow read, delete: if isDocumentOwner();
+      allow create: if isCreatingForSelf();
+      allow update: if isDocumentOwner() && isCreatingForSelf();
+    }
+
+    match /Contas/{docId} {
+      allow read, delete: if isDocumentOwner();
+      allow create: if isCreatingForSelf();
+      allow update: if isDocumentOwner() && isCreatingForSelf();
+    }
+
+    match /Cartoes/{docId} {
+      allow read, delete: if isDocumentOwner();
+      allow create: if isCreatingForSelf();
+      allow update: if isDocumentOwner() && isCreatingForSelf();
+    }
+
+    match /TransacoesCartao/{docId} {
+      allow read, delete: if isDocumentOwner();
+      allow create: if isCreatingForSelf();
+      allow update: if isDocumentOwner() && isCreatingForSelf();
+    }
+
+    match /Objetivos/{docId} {
+      allow read, delete: if isDocumentOwner();
+      allow create: if isCreatingForSelf();
+      allow update: if isDocumentOwner() && isCreatingForSelf();
+    }
+
+    match /AportesObjetivo/{docId} {
+      allow read, delete: if isDocumentOwner();
+      allow create: if isCreatingForSelf();
+      allow update: if isDocumentOwner() && isCreatingForSelf();
+    }
+
+    match /Custos Fixos/{docId} {
+      allow read, delete: if isDocumentOwner();
+      allow create: if isCreatingForSelf();
+      allow update: if isDocumentOwner() && isCreatingForSelf();
+    }
+
+    match /Planejamento/{docId} {
+      allow read, delete: if isDocumentOwner();
+      allow create: if isCreatingForSelf();
+      allow update: if isDocumentOwner() && isCreatingForSelf();
+    }
+
+    // Regra default: nega acesso irrestrito a qualquer outra coleção
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

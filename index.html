@@ -1,10 +1,12 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 
 <head>
-  <!-- 1. Configurações de Acentuação e Responsividade -->
+  <!-- 1. Configurações de Acentuação, Responsividade e Segurança -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://npmcdn.com https://cdn.tailwindcss.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://npmcdn.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com wss://*.firebaseio.com; object-src 'none'; base-uri 'self';" />
   <title>Nexo</title>
   <link rel="icon" type="image/png" href="src/assets/Logotipo_Nexo_1.png" />
 
@@ -34,50 +36,12 @@
 </head>
 
 <body>
-  <!-- TELA DE LOGIN (NOVA VERSÃO CUSTOMIZADA) -->
-  <div id="login-screen" class="login-wrapper">
-    <!-- Lado Esquerdo: Área de Arte/Ilustração -->
-    <aside class="login-art" aria-hidden="true">
-      <svg viewBox="0 0 560 420" fill="none" class="login-svg-art">
-        <rect x="70" y="60" width="420" height="270" rx="16" fill="var(--surface)" stroke="var(--border-color)" />
-        <rect x="70" y="60" width="420" height="38" rx="16" fill="var(--primary-color)" />
-        <rect x="70" y="80" width="420" height="18" fill="var(--primary-color)" />
-        <circle cx="94" cy="79" r="5" fill="#fff" opacity=".8" />
-        <circle cx="112" cy="79" r="5" fill="#fff" opacity=".6" />
-        <circle cx="130" cy="79" r="5" fill="#fff" opacity=".4" />
+  <!-- TELA DE LOGIN (NOVA VERSÃO CUSTOMIZADA - CSS SEPARADO) -->
+  <div id="login-screen" class="login-wrap">
 
-        <!-- Cards flutuantes com animação -->
-        <g class="animated-card-1">
-          <rect x="96" y="124" width="110" height="80" rx="10" fill="var(--bg-color)" />
-          <path d="M110 190 L135 160 L160 176 L190 140" stroke="var(--primary-color)" stroke-width="4"
-            stroke-linecap="round" stroke-linejoin="round" />
-        </g>
-
-        <g class="animated-card-2">
-          <rect x="220" y="124" width="110" height="80" rx="10" fill="var(--bg-color)" />
-          <rect x="236" y="164" width="14" height="28" rx="3" fill="var(--primary-color)" opacity=".5" />
-          <rect x="258" y="150" width="14" height="42" rx="3" fill="var(--primary-color)" opacity=".75" />
-          <rect x="280" y="136" width="14" height="56" rx="3" fill="var(--primary-color)" />
-        </g>
-
-        <rect x="344" y="124" width="122" height="80" rx="10" fill="var(--bg-color)" />
-        <circle cx="405" cy="164" r="26" stroke="var(--primary-color)" stroke-width="10" opacity=".25" />
-        <path d="M405 138 A26 26 0 0 1 431 164" stroke="var(--primary-color)" stroke-width="10" stroke-linecap="round"
-          class="animated-chart" />
-
-        <rect x="96" y="226" width="250" height="10" rx="5" fill="var(--border-color)" />
-        <rect x="96" y="248" width="190" height="10" rx="5" fill="var(--border-color)" />
-        <rect x="96" y="270" width="220" height="10" rx="5" fill="var(--border-color)" />
-
-        <circle cx="450" cy="300" r="46" fill="var(--primary-color)" opacity=".15" />
-        <circle cx="450" cy="300" r="26" fill="var(--primary-color)" />
-        <path d="M440 300 l7 7 13-14" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
-        <circle cx="60" cy="350" r="14" fill="var(--primary-color)" opacity=".3" class="animated-dot" />
-      </svg>
-    </aside>
-
-    <!-- Lado Direito: Formulário -->
+    <!-- Lado Esquerdo: Formulários de Autenticação -->
     <main class="login-form-side">
+      <!-- 1. Formulário de Login -->
       <div id="login-view" class="login-box">
         <div class="login-brand">
           <svg viewBox="0 0 34 34" fill="none">
@@ -85,115 +49,192 @@
           </svg>
           Nexo
         </div>
-        <h1 class="login-h1">Bem-vindo ao Nexo! 👋</h1>
-        <p class="login-sub">Faça login na sua conta e assuma o controle das suas finanças.</p>
+        <h1>Bem-vindo! 👋</h1>
+        <p class="login-sub">Entre na sua conta para começar</p>
 
+        <!-- Formulário integrado com o Firebase via IDs -->
         <form id="login-form">
           <div class="login-field">
-            <label for="login-email">Email</label>
+            <label for="login-email">E-mail</label>
             <input id="login-email" type="email" placeholder="voce@exemplo.com" required autocomplete="email">
           </div>
+
           <div class="login-field">
-            <div class="login-row-label">
-              <label for="login-password">Senha</label>
-              <a href="#" id="forgot-pass-btn">Esqueceu a senha?</a>
-            </div>
+            <label for="login-password">Senha</label>
             <input id="login-password" type="password" placeholder="••••••••••••" required
               autocomplete="current-password">
+            <!-- Botão de mostrar/ocultar senha com SVG nativo -->
             <button class="login-eye" type="button" id="toggle-password-btn" aria-label="Mostrar senha">
-              <i class="far fa-eye" id="eye-icon"></i>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" id="eye-icon">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
             </button>
           </div>
 
           <div class="login-row">
-            <label><input type="checkbox"> Lembrar de mim</label>
+            <label for="login-remember"><input type="checkbox" id="login-remember" name="remember"> Lembrar de mim</label>
+            <a href="#" id="forgot-pass-btn">Esqueceu a senha?</a>
           </div>
 
-          <p id="login-error"
-            style="color: #F44336; margin-bottom: 15px; display: none; font-size: 14px; text-align: center;"></p>
+          <p id="login-error" style="color: #F44336; margin-bottom: 15px; display: none; font-size: 14px;"></p>
 
           <button id="login-btn" class="login-btn" type="submit">Entrar</button>
         </form>
 
-        <p class="login-center">Novo na nossa plataforma? <a href="#" id="show-register-btn">Criar uma conta</a></p>
+        <p class="login-center">Novo por aqui? <a href="#" id="show-register-btn">Crie uma conta</a></p>
 
         <div class="login-divider">ou</div>
+
+        <!-- Redes Sociais com SVGs -->
         <div class="login-social">
-          <button aria-label="Facebook"><i class="fab fa-facebook-f" style="color: #1877F2;"></i></button>
-          <button aria-label="Twitter"><i class="fab fa-twitter" style="color: #1DA1F2;"></i></button>
-          <button aria-label="GitHub"><i class="fab fa-github" style="color: #333;"></i></button>
-          <button aria-label="Google"><i class="fab fa-google" style="color: #EA4335;"></i></button>
+          <button type="button" aria-label="Facebook"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M14 8V6c0-.6.4-1 1-1h2V2h-3c-2.8 0-4 1.8-4 4v2H7v3h3v10h4V11h3l1-3z" />
+            </svg></button>
+          <button type="button" aria-label="Twitter"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M22 5.9c-.7.3-1.5.5-2.4.6.9-.5 1.5-1.3 1.8-2.3-.8.5-1.7.8-2.6 1a4.1 4.1 0 0 0-7 3.7C8.4 8.7 5.4 7 3.4 4.5a4.1 4.1 0 0 0 1.3 5.5c-.7 0-1.3-.2-1.9-.5 0 2 1.4 3.7 3.3 4.1-.6.2-1.2.2-1.8.1.5 1.600 2 2.800 3.800 2.800A8.300 8.300 0 0 1 2 18.300 11.700 11.700 0 0 0 8.300 20c7.600 0 11.800-6.300 11.800-11.800v-.5c.8-.6 1.500-1.300 1.900-1.800z" />
+            </svg></button>
+          <button type="button" aria-label="GitHub"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M12 2a10 10 0 0 0-3.200 19.500c.5.1.7-.2.7-.5v-1.800c-2.800.6-3.400-1.200-3.400-1.200-.5-1.200-1.100-1.500-1.100-1.500-.9-.6.1-.6.1-.6 1 .1 1.500 1 1.500 1 .9 1.500 2.300 1.100 2.900.8.1-.7.4-1.100.6-1.300-2.200-.3-4.600-1.100-4.600-5 0-1.100.4-2 1-2.700-.1-.3-.4-1.300.1-2.700 0 0 .8-.3 2.700 1a9.400 9.400 0 0 1 5 0c1.900-1.300 2.700-1 2.700-1 .5 1.400.2 2.400.1 2.700.6.7 1 1.600 1 2.700 0 3.900-2.300 4.700-4.600 5 .4.3.7.9.7 1.800v2.700c0 .3.2.6.7.5A10 10 0 0 0 12 2z" />
+            </svg></button>
+          <button type="button" aria-label="Google"><svg width="18" height="18" viewBox="0 0 24 24">
+              <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.4 9 5 12 5z"/>
+              <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"/>
+              <path fill="#FBBC05" d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.9 7.3C1.1 8.9.7 10.4.7 12s.4 3.1 1.2 4.7l3.7-1.9z"/>
+              <path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2-6.4-4.8L1.9 16.4C3.7 20.1 7.5 23 12 23z"/>
+            </svg></button>
         </div>
       </div>
+
+      <!-- 2. Formulário de Cadastro (Oculto inicialmente) -->
+      <div id="register-view" class="login-box" style="display: none;">
+        <div class="login-brand">
+          <svg viewBox="0 0 34 34" fill="none">
+            <path d="M3 5l12 24L27 5h-6l-6 13L9 5z" fill="var(--primary-color)" />
+          </svg>
+          Nexo
+        </div>
+        <h1>Criar Conta 🚀</h1>
+        <p class="login-sub">Preencha seus dados para começar a gerenciar suas finanças</p>
+
+        <form id="register-form">
+          <div class="login-row-2">
+            <div class="login-field">
+              <label for="reg-nome">Nome</label>
+              <input type="text" id="reg-nome" placeholder="Seu nome" required autocomplete="given-name">
+            </div>
+            <div class="login-field">
+              <label for="reg-sobrenome">Sobrenome</label>
+              <input type="text" id="reg-sobrenome" placeholder="Seu sobrenome" required autocomplete="family-name">
+            </div>
+          </div>
+
+          <div class="login-field">
+            <label for="reg-nascimento">Data de Nascimento</label>
+            <input type="date" id="reg-nascimento" required>
+          </div>
+
+          <div class="login-field">
+            <label for="reg-email">E-mail</label>
+            <input type="email" id="reg-email" placeholder="voce@exemplo.com" required autocomplete="email">
+          </div>
+
+          <div class="login-field">
+            <label for="reg-password">Senha (mínimo 6 caracteres)</label>
+            <input type="password" id="reg-password" placeholder="••••••••••••" required autocomplete="new-password">
+            <button class="login-eye" type="button" id="toggle-reg-password-btn" aria-label="Mostrar senha">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" id="reg-eye-icon">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            </button>
+          </div>
+
+          <div class="login-field">
+            <label for="reg-confirm-password">Confirmar Senha</label>
+            <input type="password" id="reg-confirm-password" placeholder="••••••••••••" required autocomplete="new-password">
+            <button class="login-eye" type="button" id="toggle-reg-confirm-password-btn" aria-label="Mostrar senha">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" id="reg-confirm-eye-icon">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            </button>
+          </div>
+
+          <p id="register-error" style="color: #F44336; margin-bottom: 15px; display: none; font-size: 14px;"></p>
+
+          <button type="submit" id="submit-register-btn" class="login-btn">Confirmar Cadastro</button>
+        </form>
+
+        <p class="login-center">Já tem uma conta? <a href="#" id="back-to-login-btn">Fazer Login</a></p>
+      </div>
+
+      <!-- 3. Formulário de Recuperação de Senha (Oculto inicialmente) -->
+      <div id="forgot-pass-view" class="login-box" style="display: none;">
+        <div class="login-brand">
+          <svg viewBox="0 0 34 34" fill="none">
+            <path d="M3 5l12 24L27 5h-6l-6 13L9 5z" fill="var(--primary-color)" />
+          </svg>
+          Nexo
+        </div>
+        <h1>Recuperar Senha 🔑</h1>
+        <p class="login-sub">Digite seu e-mail cadastrado. Enviaremos um link seguro para redefinição.</p>
+
+        <form id="forgot-pass-form">
+          <div class="login-field">
+            <label for="forgot-email">E-mail</label>
+            <input type="email" id="forgot-email" placeholder="voce@exemplo.com" required autocomplete="email">
+          </div>
+
+          <p id="forgot-error" style="color: #F44336; margin-bottom: 15px; display: none; font-size: 14px;"></p>
+          <p id="forgot-success" style="color: #059669; margin-bottom: 15px; display: none; font-size: 14px;"></p>
+
+          <button type="submit" id="submit-forgot-btn" class="login-btn">Enviar Link</button>
+        </form>
+
+        <p class="login-center"><a href="#" id="back-to-login-forgot-btn">← Voltar para o Login</a></p>
+      </div>
     </main>
+
+    <!-- Lado Direito: Arte -->
+    <aside class="login-art" aria-hidden="true">
+      <svg viewBox="0 0 560 420" fill="none">
+        <rect x="70" y="60" width="420" height="270" rx="16" fill="var(--surface-color)" stroke="var(--border-color)" />
+        <rect x="70" y="60" width="420" height="38" rx="16" fill="var(--primary-color)" />
+        <rect x="70" y="80" width="420" height="18" fill="var(--primary-color)" />
+        <circle cx="94" cy="79" r="5" fill="#fff" opacity=".8" />
+        <circle cx="112" cy="79" r="5" fill="#fff" opacity=".6" />
+        <circle cx="130" cy="79" r="5" fill="#fff" opacity=".4" />
+        <rect x="96" y="124" width="110" height="80" rx="10" fill="var(--bg-color)" />
+        <rect x="220" y="124" width="110" height="80" rx="10" fill="var(--bg-color)" />
+        <rect x="344" y="124" width="122" height="80" rx="10" fill="var(--bg-color)" />
+        <path d="M110 190 L135 160 L160 176 L190 140" stroke="var(--primary-color)" stroke-width="4"
+          stroke-linecap="round" stroke-linejoin="round" />
+        <rect x="236" y="164" width="14" height="28" rx="3" fill="var(--primary-color)" opacity=".5" />
+        <rect x="258" y="150" width="14" height="42" rx="3" fill="var(--primary-color)" opacity=".75" />
+        <rect x="280" y="136" width="14" height="56" rx="3" fill="var(--primary-color)" />
+        <circle cx="405" cy="164" r="26" stroke="var(--primary-color)" stroke-width="10" opacity=".25" />
+        <path d="M405 138 A26 26 0 0 1 431 164" stroke="var(--primary-color)" stroke-width="10"
+          stroke-linecap="round" />
+        <rect x="96" y="226" width="250" height="10" rx="5" fill="var(--border-color)" />
+        <rect x="96" y="248" width="190" height="10" rx="5" fill="var(--border-color)" />
+        <rect x="96" y="270" width="220" height="10" rx="5" fill="var(--border-color)" />
+        <circle cx="450" cy="300" r="46" fill="var(--primary-color)" opacity=".15" />
+        <circle cx="450" cy="300" r="26" fill="var(--primary-color)" />
+        <path d="M440 300 l7 7 13-14" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+        <circle cx="60" cy="350" r="14" fill="var(--primary-color)" opacity=".3" />
+      </svg>
+    </aside>
+
   </div>
-
-  <script>
-    // Script rápido para mostrar/ocultar senha
-    const togglePasswordBtn = document.getElementById('toggle-password-btn');
-    const passwordInput = document.getElementById('login-password');
-    const eyeIcon = document.getElementById('eye-icon');
-
-    togglePasswordBtn.addEventListener('click', function () {
-      const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-      passwordInput.setAttribute('type', type);
-
-      if (type === 'text') {
-        eyeIcon.classList.remove('fa-eye');
-        eyeIcon.classList.add('fa-eye-slash');
-      } else {
-        eyeIcon.classList.remove('fa-eye-slash');
-        eyeIcon.classList.add('fa-eye');
-      }
-    });
-  </script>
   <!-- Fim Tela de Login -->
+
   <div id="app-container" style="display: none;">
-
-    <!-- TELA DE CADASTRO (Oculta) -->
-    <div id="register-view" style="display: none;">
-      <h2 style="color: var(--primary-color); margin-bottom: 20px;">Nova Conta</h2>
-      <form id="register-form">
-        <input type="text" id="reg-nome" placeholder="Nome" required
-          style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px;" />
-        <input type="text" id="reg-sobrenome" placeholder="Sobrenome" required
-          style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px;" />
-        <input type="date" id="reg-nascimento" required
-          style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px;" />
-        <input type="email" id="reg-email" placeholder="E-mail" required
-          style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px;" />
-        <input type="password" id="reg-password" placeholder="Senha" required
-          style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px;" />
-        <input type="password" id="reg-confirm-password" placeholder="Confirmar Senha" required
-          style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px;" />
-        <button type="submit" id="submit-register-btn" class="btn-primary"
-          style="width: 100%; margin-bottom: 10px;">Confirmar Cadastro</button>
-        <button type="button" id="back-to-login-btn"
-          style="width: 100%; background: none; border: none; color: var(--primary-color); cursor: pointer;">Voltar
-          para o Login</button>
-      </form>
-      <p id="register-error" style="color: red; margin-top: 15px; display: none; font-size: 14px;"></p>
-    </div>
-
-    <!-- TELA DE RECUPERAÇÃO DE SENHA (Oculta) -->
-    <div id="forgot-pass-view" style="display: none;">
-      <h2 style="color: var(--primary-color); margin-bottom: 10px;">Recuperar Senha</h2>
-      <p style="font-size: 14px; margin-bottom: 20px; color: #666;">Digite o e-mail cadastrado. Enviaremos um link
-        seguro para a redefinição.</p>
-
-      <form id="forgot-pass-form">
-        <input type="email" id="forgot-email" placeholder="Seu e-mail" required
-          style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px;" />
-        <button type="submit" id="submit-forgot-btn" class="btn-primary"
-          style="width: 100%; margin-bottom: 10px;">Enviar Link</button>
-        <button type="button" id="back-to-login-forgot-btn"
-          style="width: 100%; background: none; border: none; color: var(--primary-color); cursor: pointer;">Voltar
-          para o Login</button>
-      </form>
-
-      <p id="forgot-error" style="color: red; margin-top: 15px; display: none; font-size: 14px;"></p>
-      <p id="forgot-success" style="color: green; margin-top: 15px; display: none; font-size: 14px;"></p>
-    </div>
 
     <!-- NAVEGAÇÃO SUPERIOR -->
     <nav class="top-nav">
@@ -267,6 +308,9 @@
         <div class="dashboard-title-container">
           <h2>Dashboard</h2>
         </div>
+
+        <!-- BANNER DE INSIGHTS & ALERTAS INTELIGENTES -->
+        <div id="dashboard-insights-banner" class="dashboard-insights-banner"></div>
 
         <!-- 4 CARTÕES SUPERIORES -->
         <div class="summary-cards">
@@ -1260,8 +1304,18 @@
             <i class="fas fa-exchange-alt" style="color: #2196F3;"></i> Transferência
           </button>
         </div>
-        <button class="fab-extended" onclick="AppController.toggleFabMenu()">
-          <i class="fas fa-plus"></i> Novo
+        <button type="button" id="fab-new-transaction" class="fab-extended" onclick="AppController.toggleFabMenu()" aria-label="Nova Transação" aria-controls="fab-menu">
+          <span class="fab-label-default">
+            Nova Transação
+          </span>
+          <div class="fab-label-hover" aria-hidden="true">
+            <span>Nova Transação</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M5 12h14" />
+              <path d="m12 5 7 7-7 7" />
+            </svg>
+          </div>
+          <div class="fab-dot"></div>
         </button>
       </div>
     </div>
@@ -1430,6 +1484,96 @@
         </ul>
       </div>
     </div>
+
+    <!-- DRAWER / SLIDE-OVER: DETALHES E EDIÇÃO DE TRANSAÇÃO (HUMANIST LEDGER) -->
+    <div id="tx-drawer-overlay" class="tx-drawer-overlay" onclick="AppController.closeTxDrawer()" aria-hidden="true"></div>
+    <aside id="tx-drawer" class="tx-drawer" aria-labelledby="tx-drawer-title" aria-modal="true" role="dialog">
+      <div class="tx-grab-bar" aria-hidden="true"></div>
+      <div class="tx-drawer-header">
+        <div>
+          <span class="tx-drawer-badge" id="tx-drawer-type-badge">DESPESA</span>
+          <h2 id="tx-drawer-title" class="tx-drawer-title">Detalhes da Transação</h2>
+        </div>
+        <button type="button" class="tx-drawer-close" onclick="AppController.closeTxDrawer()" aria-label="Fechar painel">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="tx-drawer-body">
+        <!-- HERO DO VALOR -->
+        <div class="tx-drawer-hero">
+          <div class="tx-drawer-amount-label">Valor do Lançamento</div>
+          <div class="tx-drawer-amount" id="tx-drawer-hero-val">R$ 0,00</div>
+          <div class="tx-drawer-meta-pills" id="tx-drawer-hero-pills"></div>
+        </div>
+
+        <!-- FORMULÁRIO DE EDIÇÃO RÁPIDA -->
+        <form id="tx-drawer-form" onsubmit="AppController.submitTxDrawer(event)">
+          <input type="hidden" id="tx-drawer-id" name="id">
+          <input type="hidden" id="tx-drawer-is-cc" name="isCreditCard">
+
+          <div class="form-group">
+            <label for="tx-drawer-desc">Descrição</label>
+            <input type="text" id="tx-drawer-desc" name="descricao" required placeholder="Ex: Mercado, Aluguel...">
+          </div>
+
+          <div class="form-row" style="display: flex; gap: 12px;">
+            <div class="form-group" style="flex: 1;">
+              <label for="tx-drawer-val">Valor (R$)</label>
+              <input type="tel" id="tx-drawer-val" name="valor" required oninput="AppController.maskCurrency(this)">
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label for="tx-drawer-date">Data</label>
+              <input type="date" id="tx-drawer-date" name="data" required>
+            </div>
+          </div>
+
+          <div class="form-row" style="display: flex; gap: 12px;">
+            <div class="form-group" style="flex: 1;">
+              <label for="tx-drawer-cat">Categoria</label>
+              <select id="tx-drawer-cat" name="categoria" required>
+                <option value="Alimentação">Alimentação</option>
+                <option value="Moradia / Contas">Moradia / Contas</option>
+                <option value="Transporte">Transporte</option>
+                <option value="Saúde">Saúde</option>
+                <option value="Educação">Educação</option>
+                <option value="Lazer">Lazer</option>
+                <option value="Supermercado">Supermercado</option>
+                <option value="Investimentos">Investimentos</option>
+                <option value="Bar / Restaurante">Bar / Restaurante</option>
+                <option value="Eletrônicos">Eletrônicos</option>
+                <option value="Roupas">Roupas</option>
+                <option value="Salário">Salário</option>
+                <option value="Outros">Outros</option>
+              </select>
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label for="tx-drawer-account">Conta / Origem</label>
+              <select id="tx-drawer-account" name="conta" required>
+                <!-- Preenchido dinamicamente -->
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group" id="tx-drawer-status-group">
+            <label>Situação</label>
+            <div class="tx-drawer-status-box" id="tx-drawer-status-display">
+              <i class="fas fa-check-circle text-green"></i> Efetivado
+            </div>
+          </div>
+
+          <div class="tx-drawer-footer">
+            <button type="button" class="btn-delete" id="tx-drawer-delete-btn" onclick="AppController.deleteTxFromDrawer()">
+              <i class="fas fa-trash"></i> Excluir
+            </button>
+            <div style="display: flex; gap: 10px;">
+              <button type="button" class="btn-text" onclick="AppController.closeTxDrawer()">Cancelar</button>
+              <button type="submit" class="btn-primary" id="tx-drawer-save-btn">Salvar Alterações</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </aside>
 
     <!-- MODAL: TRANSAÇÃO GERAL (Débito/Dinheiro) -->
     <div id="transaction-modal" class="modal-overlay hidden">

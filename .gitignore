@@ -28,5 +28,5 @@ dist-ssr
 .env.local
 .env.*
 
-#agents
-.agents
+# AG Kit backups
+.ag-kit-backups
