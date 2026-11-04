@@ -4865,3 +4865,132 @@ html.modal-open {
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Comprovantes ── */
+.tx-attach-row {
+  border-bottom-color: var(--border-strong);
+}
+
+.tx-attach-btn,
+.tx-receipt-add {
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 15px;
+  cursor: pointer;
+  padding: 6px 0;
+  text-align: left;
+}
+
+.tx-attach-btn:hover,
+.tx-receipt-add:hover {
+  color: var(--text-main);
+}
+
+.tx-attach-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.tx-attach-remove,
+.tx-receipt-remove {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+}
+
+.tx-attach-remove:hover,
+.tx-receipt-remove:hover {
+  background: var(--bg-subtle);
+  color: var(--danger-color);
+}
+
+#tx-drawer-receipt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tx-receipt-open,
+.tx-receipt-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg-subtle);
+  color: var(--text-main);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  max-width: 100%;
+}
+
+.tx-receipt-open {
+  border-style: solid;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tx-receipt-open:hover,
+.tx-receipt-add:hover {
+  background: var(--border-color);
+}
+
+.tx-clip {
+  margin-left: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.receipt-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.75);
+}
+
+.receipt-box {
+  position: relative;
+  max-width: min(92vw, 900px);
+  max-height: 90vh;
+}
+
+.receipt-box img {
+  display: block;
+  max-width: 100%;
+  max-height: 90vh;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  background: #fff;
+}
+
+.receipt-close {
+  position: absolute;
+  top: -14px;
+  right: -14px;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 50%;
+  background: var(--card-bg);
+  color: var(--text-main);
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+}

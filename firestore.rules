@@ -75,6 +75,12 @@ service cloud.firestore {
       allow update: if isDocumentOwner() && isCreatingForSelf();
     }
 
+    match /Comprovantes/{docId} {
+      allow read, delete: if isDocumentOwner();
+      allow create: if isCreatingForSelf();
+      allow update: if isDocumentOwner() && isCreatingForSelf();
+    }
+
     match /Eventos/{docId} {
       allow read, delete: if isDocumentOwner();
       allow create: if isCreatingForSelf();

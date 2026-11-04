@@ -39,7 +39,7 @@ const AppController = (function () {
     }
   }
 
-  const OWNED_COLLECTIONS = ["Transacoes", "Contas", "Cartoes", "TransacoesCartao", "Objetivos", "AportesObjetivo", "CustosFixos", "Planejamento", "Categorias", "Eventos"];
+  const OWNED_COLLECTIONS = ["Transacoes", "Contas", "Cartoes", "TransacoesCartao", "Objetivos", "AportesObjetivo", "CustosFixos", "Planejamento", "Categorias", "Eventos", "Comprovantes"];
 
   /**
    * Migração única: vincula à conta atual os documentos antigos que não têm userId.
@@ -79,7 +79,7 @@ const AppController = (function () {
   };
 
   // ── Bloqueio de rolagem da página com modal aberto ──
-  const MODAL_SELECTOR = '.modal-overlay:not(.hidden), .confirm-overlay, .dp-overlay';
+  const MODAL_SELECTOR = '.modal-overlay:not(.hidden), .confirm-overlay, .dp-overlay, .receipt-overlay';
 
   function syncScrollLock() {
     const root = document.documentElement;
@@ -1876,7 +1876,7 @@ const AppController = (function () {
           <td class="tx-td" style="text-align: center;"><input type="checkbox" class="tx-checkbox" ${!isPending ? 'checked' : ''} disabled></td>
           <td class="tx-td" style="text-align: center;">${statusHtml}</td>
           <td class="tx-td" style="${isPending ? 'opacity:0.6;' : ''}">${escapeHTML(currentDateStr)}</td>
-          <td class="tx-td" style="${isPending ? 'opacity:0.6;' : ''}; font-weight: 500;">${escapeHTML(mainDesc)}</td>
+          <td class="tx-td" style="${isPending ? 'opacity:0.6;' : ''}; font-weight: 500;">${escapeHTML(mainDesc)}${t.ComprovanteId ? ' <i class="fas fa-paperclip tx-clip" title="Comprovante anexado"></i>' : ''}</td>
           <td class="tx-td" style="${isPending ? 'opacity:0.6;' : ''}">
             <div class="cat-badge-container">
               <div class="cat-icon-circle" style="background-color: ${catStyle.color}; color: ${catStyle.ink};">${categoryIconHTML(catStyle)}</div>
@@ -1930,6 +1930,206 @@ const AppController = (function () {
 
     ChartManager.updateDashboardCharts(activeTransactions(), selectedYYYYMM);
     renderDashboardInsights(selectedYYYYMM);
+  }
+
+  // ── Comprovantes ──
+  const RECEIPT_MAX_CHARS = 700000;
+  state.txFile = null;
+  state.txFileRemoved = false;
+  state.txExistingReceipt = null;
+
+  function readAsDataURL(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // Reduz a foto até caber no limite do documento do Firestore
+  async function compressImage(file) {
+    const bitmap = await createImageBitmap(file);
+    for (const scale of [1, 0.75, 0.5]) {
+      const ratio = Math.min(1, 1280 / Math.max(bitmap.width, bitmap.height)) * scale;
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(bitmap.width * ratio);
+      canvas.height = Math.round(bitmap.height * ratio);
+      canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      for (const quality of [0.72, 0.6, 0.45]) {
+        const url = canvas.toDataURL('image/jpeg', quality);
+        if (url.length <= RECEIPT_MAX_CHARS) return url;
+      }
+    }
+    throw new Error('Imagem muito grande para anexar.');
+  }
+
+  async function processReceiptFile(file) {
+    if (file.type.startsWith('image/')) {
+      return { Nome: file.name.slice(0, 80), Tipo: 'image/jpeg', Dados: await compressImage(file) };
+    }
+    if (file.type === 'application/pdf') {
+      const dados = await readAsDataURL(file);
+      if (dados.length > RECEIPT_MAX_CHARS) throw new Error('PDF acima de cerca de 500 KB. Use um arquivo menor ou uma foto.');
+      return { Nome: file.name.slice(0, 80), Tipo: file.type, Dados: dados };
+    }
+    throw new Error('Anexe uma imagem ou um PDF.');
+  }
+
+  // Grava o anexo pendente e devolve os campos a gravar na transação (ou null se nada mudou)
+  async function persistReceipt(txId, oldId) {
+    if (state.txFile) {
+      if (oldId) await deleteDoc(doc(db, "Comprovantes", oldId));
+      const ref = await addDoc(collection(db, "Comprovantes"), { userId: getCurrentUserId(), TransacaoId: txId, ...state.txFile });
+      return { ComprovanteId: ref.id, ComprovanteNome: state.txFile.Nome, ComprovanteTipo: state.txFile.Tipo };
+    }
+    if (state.txFileRemoved && oldId) {
+      await deleteDoc(doc(db, "Comprovantes", oldId));
+      return { ComprovanteId: null, ComprovanteNome: null, ComprovanteTipo: null };
+    }
+    return null;
+  }
+
+  async function deleteReceiptDoc(t) {
+    if (t && t.ComprovanteId) await deleteDoc(doc(db, "Comprovantes", t.ComprovanteId));
+  }
+
+  function renderReceiptRow() {
+    const name = state.txFile
+      ? state.txFile.Nome
+      : (!state.txFileRemoved && state.txExistingReceipt ? state.txExistingReceipt.Nome : '');
+    document.getElementById('tx-attach-btn').classList.toggle('hidden', Boolean(name));
+    const label = document.getElementById('tx-attach-name');
+    label.innerText = name;
+    label.classList.toggle('hidden', !name);
+    document.getElementById('tx-attach-remove').classList.toggle('hidden', !name);
+  }
+
+  function resetReceipt(existing = null) {
+    state.txFile = null;
+    state.txFileRemoved = false;
+    state.txExistingReceipt = existing;
+    renderReceiptRow();
+  }
+
+  async function handleReceiptFile(input) {
+    const file = input.files[0];
+    input.value = '';
+    if (!file) return;
+    try {
+      state.txFile = await processReceiptFile(file);
+      state.txFileRemoved = false;
+      renderReceiptRow();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+
+  function clearReceipt() {
+    state.txFile = null;
+    if (state.txExistingReceipt) state.txFileRemoved = true;
+    renderReceiptRow();
+  }
+
+  // Imagem abre em tela cheia; PDF é baixado
+  async function viewReceipt(id) {
+    try {
+      const snap = await getDoc(doc(db, "Comprovantes", id));
+      if (!snap.exists()) { showToast('Comprovante não encontrado.', 'error'); return; }
+      const { Dados, Tipo, Nome } = snap.data();
+
+      if (!Tipo.startsWith('image/')) {
+        const link = document.createElement('a');
+        link.href = Dados;
+        link.download = Nome;
+        link.click();
+        return;
+      }
+
+      const overlay = document.createElement('div');
+      overlay.className = 'receipt-overlay';
+      overlay.innerHTML = `
+        <div class="receipt-box">
+          <button type="button" class="receipt-close" aria-label="Fechar"><i class="fas fa-times"></i></button>
+          <img alt="Comprovante">
+        </div>`;
+      overlay.querySelector('img').src = Dados;
+
+      const close = () => { document.removeEventListener('keydown', onKey, true); overlay.remove(); };
+      const onKey = (e) => { if (e.key === 'Escape') { e.stopImmediatePropagation(); close(); } };
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+      overlay.querySelector('.receipt-close').addEventListener('click', close);
+      document.addEventListener('keydown', onKey, true);
+      document.body.appendChild(overlay);
+    } catch (err) {
+      showToast('Erro ao abrir comprovante: ' + err.message, 'error');
+    }
+  }
+
+  // ── Comprovante no painel lateral da transação ──
+  function renderDrawerReceipt() {
+    const t = state.drawerTx;
+    const group = document.getElementById('tx-drawer-receipt-group');
+    const box = document.getElementById('tx-drawer-receipt');
+    if (!group || !box) return;
+    group.classList.toggle('hidden', !t || state.drawerIsCC);
+    if (!t || state.drawerIsCC) return;
+
+    if (t.ComprovanteId) {
+      box.innerHTML = `
+        <button type="button" class="tx-receipt-open"><i class="fas fa-paperclip"></i> ${escapeHTML(t.ComprovanteNome || 'Comprovante')}</button>
+        <button type="button" class="tx-receipt-remove" aria-label="Remover comprovante"><i class="fas fa-times"></i></button>`;
+      box.querySelector('.tx-receipt-open').addEventListener('click', () => viewReceipt(t.ComprovanteId));
+      box.querySelector('.tx-receipt-remove').addEventListener('click', removeDrawerReceipt);
+    } else {
+      box.innerHTML = '<button type="button" class="tx-receipt-add"><i class="fas fa-paperclip"></i> Anexar comprovante</button>';
+      box.querySelector('.tx-receipt-add').addEventListener('click', () => document.getElementById('tx-drawer-file').click());
+    }
+  }
+
+  async function handleDrawerReceipt(input) {
+    const t = state.drawerTx;
+    const file = input.files[0];
+    input.value = '';
+    if (!t || !file) return;
+    try {
+      state.txFile = await processReceiptFile(file);
+      state.txFileRemoved = false;
+      const fields = await persistReceipt(t.ID, t.ComprovanteId);
+      await updateDoc(doc(db, "Transacoes", t.ID), fields);
+      Object.assign(t, fields);
+      showToast('Comprovante anexado!', 'success');
+      renderDrawerReceipt();
+      loadTransactions();
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      state.txFile = null;
+    }
+  }
+
+  async function removeDrawerReceipt() {
+    const t = state.drawerTx;
+    if (!t || !t.ComprovanteId) return;
+    if (!await confirmDialog({
+      title: 'Remover comprovante?',
+      message: 'O arquivo anexado será excluído.',
+      detail: t.ComprovanteNome || '',
+      confirmLabel: 'Remover'
+    })) return;
+    try {
+      state.txFile = null;
+      state.txFileRemoved = true;
+      const fields = await persistReceipt(t.ID, t.ComprovanteId);
+      await updateDoc(doc(db, "Transacoes", t.ID), fields);
+      Object.assign(t, fields);
+      renderDrawerReceipt();
+      loadTransactions();
+    } catch (err) {
+      showToast('Erro ao remover: ' + err.message, 'error');
+    } finally {
+      state.txFileRemoved = false;
+    }
   }
 
   // ── Modal de lançamento ──
@@ -2091,6 +2291,7 @@ const AppController = (function () {
     state.editingType = null;
     elements.form.reset();
     resetTxChoices();
+    resetReceipt();
 
     document.getElementById('tx-repeat-block').classList.remove('hidden');
     document.getElementById('tx-repeat-fields').classList.add('hidden');
@@ -2176,6 +2377,7 @@ const AppController = (function () {
     elements.form.elements.observacao.value = t.Observacao || '';
     elements.form.elements.tags.value = Array.isArray(t.Tags) ? t.Tags.join(', ') : '';
     elements.form.elements.ignorar.checked = Boolean(t.Ignorar);
+    resetReceipt(t.ComprovanteId ? { Id: t.ComprovanteId, Nome: t.ComprovanteNome } : null);
 
     // Edição: sem repetição e sem "salvar e criar nova"
     document.getElementById('tx-repeat-block').classList.add('hidden');
@@ -2226,14 +2428,20 @@ const AppController = (function () {
 
     try {
       if (editing) {
-        await updateDoc(doc(db, "Transacoes", state.editingId), base);
+        const receiptFields = await persistReceipt(state.editingId, state.txExistingReceipt && state.txExistingReceipt.Id);
+        await updateDoc(doc(db, "Transacoes", state.editingId), { ...base, ...receiptFields });
       } else {
         for (let i = 0; i < repeat; i++) {
-          await addDoc(collection(db, "Transacoes"), {
+          const newRef = await addDoc(collection(db, "Transacoes"), {
             ...base,
             Data: i === 0 ? base.Data : txAddMonths(base.Data, i),
             Descricao: repeat > 1 ? `${base.Descricao} (${i + 1}/${repeat})`.trim() : base.Descricao
           });
+          // Em lançamentos repetidos, o comprovante fica só no primeiro
+          if (i === 0) {
+            const receiptFields = await persistReceipt(newRef.id, null);
+            if (receiptFields) await updateDoc(newRef, receiptFields);
+          }
         }
       }
 
@@ -2247,6 +2455,7 @@ const AppController = (function () {
         form.elements.ignorar.checked = false;
         document.getElementById('tx-repeat').checked = false;
         toggleTxRepeat();
+        resetReceipt();
         validateTxAmount();
         document.getElementById('tx-valor').focus();
       } else {
@@ -2323,6 +2532,7 @@ const AppController = (function () {
       detail: describeTx(t)
     })) return;
     try {
+      await deleteReceiptDoc(t);
       await deleteDoc(doc(db, "Transacoes", id));
       loadTransactions();
     } catch (error) {
@@ -2454,6 +2664,8 @@ const AppController = (function () {
         : `<i class="fas fa-check-circle" style="color: #059669;"></i> Lançamento Efetivado`;
     }
 
+    renderDrawerReceipt();
+
     overlay.classList.add('open');
     drawer.classList.add('open');
     document.body.style.overflow = 'hidden';
@@ -2535,6 +2747,7 @@ const AppController = (function () {
         loadCreditTransactions();
         setTimeout(() => { if (typeof renderInvoiceItems === 'function') renderInvoiceItems(); }, 300);
       } else {
+        await deleteReceiptDoc(state.drawerTx);
         await deleteDoc(doc(db, "Transacoes", id));
         loadTransactions();
       }
@@ -5393,7 +5606,7 @@ const AppController = (function () {
   }
 
   return {
-    init, claimLegacyData, switchTab, toggleTxDetails, toggleTxRepeat, setTxDateShortcut, openTxDatePicker, validateTxAmount, calPrev, calNext, calToday, openEventModal, closeEventModal, submitEvent, deleteEventFromModal, setEventType, toggleEventAllDay, setTransactionFilter, renderCreditCardsPage, renderFixedCostsPage, renderGoalsPage, renderAccountsPage, renderPlanningView, openMonthPicker, closeMonthPicker, changePickerYear, selectCurrentMonth, openModal, closeModal, submitTransaction, editTransaction, deleteTransaction, openAccountModal, closeAccountModal, submitAccount, openTransferModal, closeTransferModal, submitTransfer,
+    init, claimLegacyData, handleReceiptFile, clearReceipt, handleDrawerReceipt, switchTab, toggleTxDetails, toggleTxRepeat, setTxDateShortcut, openTxDatePicker, validateTxAmount, calPrev, calNext, calToday, openEventModal, closeEventModal, submitEvent, deleteEventFromModal, setEventType, toggleEventAllDay, setTransactionFilter, renderCreditCardsPage, renderFixedCostsPage, renderGoalsPage, renderAccountsPage, renderPlanningView, openMonthPicker, closeMonthPicker, changePickerYear, selectCurrentMonth, openModal, closeModal, submitTransaction, editTransaction, deleteTransaction, openAccountModal, closeAccountModal, submitAccount, openTransferModal, closeTransferModal, submitTransfer,
     openGoalTypeModal, openGoalForm, closeGoalModal, submitGoal, editGoal, deleteGoal, openGoalDepositModal, closeGoalDepositModal, submitGoalDeposit,
     openGoalDetails, closeGoalDetails, editGoalFromDetails, deleteGoalDeposit, editGoalDeposit, toggleGoalOptions, openCurrentGoalDepositModal, deleteCurrentGoal, switchGoalsTab, markGoalAsCompleted, toggleGoalsSortDropdown, setGoalsSortOrder, openFixedCostModal, closeFixedCostModal, submitFixedCost, editFixedCost, deleteFixedCost, markFixedCostPaid, unmarkFixedCostPaid, openFCPayModal, closeFCPayModal, openCCModal, closeCCModal, submitCC, openCCTransModal, closeCCTransModal, submitCCTrans, openCCInvoiceModal, closeCCInvoiceModal, deleteCreditTransaction, toggleFabMenu, closeFabMenu, openNewTransaction, openNewCCTransaction, openNewTransfer, startPlanningWizard, cancelPlanningWizard, copyPreviousPlanning, maskCurrency, calculateWizardBudget, prevWizardStep, nextWizardStep, calculateWizardCategoryTotals, renderWizardCategories, selectCardPreference, finishPlanningWizard, closeFixedCostPayModal, submitFixedCostPay, logout, switchProfileTab, maskCPF, maskPhone, maskCEP, changeTheme, loadUserProfile, openPayInvoiceModal, closePayInvoiceModal, submitPayInvoice, showToast, openCurrentGoalWithdrawModal, updateTransactionSummary, switchSettingsTab, toggleAllDevices, checkDeviceSelection, disconnectSelectedDevices, savePreferences, openCategoryModal, closeCategoryModal, submitCategory, deleteCategory, setCategoryKind, setCategoryFormKind, updateCategoryPreview, onCategoryParentChange, filterCategoryIcons: renderIconGrid, pickCategoryIcon, pickCategoryColor, changeTxPage, changeTxItemsPerPage, setTransactionSort, proceedEditFixedCost, closeFCEditScopeModal, parseCurrencyMask,
     openTxDrawer, closeTxDrawer, openCCDrawer, closeCCDrawer, submitTxDrawer, deleteTxFromDrawer, renderDashboardInsights

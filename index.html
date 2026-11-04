@@ -1588,6 +1588,13 @@
             </div>
           </div>
 
+          <div class="form-group" id="tx-drawer-receipt-group">
+            <label>Comprovante</label>
+            <div id="tx-drawer-receipt"></div>
+            <input type="file" id="tx-drawer-file" class="hidden" accept="image/*,application/pdf"
+              onchange="AppController.handleDrawerReceipt(this)">
+          </div>
+
           <div class="tx-drawer-footer">
             <button type="button" class="btn-delete" id="tx-drawer-delete-btn" onclick="AppController.deleteTxFromDrawer()">
               <i class="fas fa-trash"></i> Excluir
@@ -1652,6 +1659,17 @@
                 <select id="conta" name="conta" required>
                   <option disabled selected>Carregando...</option>
                 </select>
+              </div>
+
+              <div class="tx-row tx-attach-row">
+                <i class="fas fa-paperclip tx-icon"></i>
+                <button type="button" class="tx-attach-btn" id="tx-attach-btn"
+                  onclick="document.getElementById('tx-file').click()">Anexar comprovante</button>
+                <span class="tx-attach-name hidden" id="tx-attach-name"></span>
+                <button type="button" class="tx-attach-remove hidden" id="tx-attach-remove"
+                  onclick="AppController.clearReceipt()" aria-label="Remover comprovante"><i class="fas fa-times"></i></button>
+                <input type="file" id="tx-file" class="hidden" accept="image/*,application/pdf"
+                  onchange="AppController.handleReceiptFile(this)">
               </div>
 
               <label class="tx-row tx-toggle-row">
