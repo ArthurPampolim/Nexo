@@ -3,6 +3,7 @@ import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, setDoc, getDoc,
 import { auth } from './firebase.js';
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail, updatePassword } from "firebase/auth";
 import { ChartManager } from './charts.js';
+import { isSettled, settledTotals, accountBalances, monthSummary, roundCents, parseCurrencyMask, isTransferTransaction, parseLocalDate, txLocalISO, txAddMonths } from './finance.js';
 import { ICON_LIST, COLOR_PALETTE, DEFAULT_CATEGORIES, iconSvg, inkFor, isHexColor, isValidIcon } from './categories.js';
 
 
@@ -104,30 +105,10 @@ const AppController = (function () {
   // Transações marcadas como "Ignorar" não entram em totais, saldos, gráficos nem planejamento
   const activeTransactions = () => state.transactions.filter(t => !t.Ignorar);
 
-  // Efetivado (pago/recebido) entra no saldo; agendado não. Sem o campo, vale a data (legado).
-  function isSettled(t) {
-    if (typeof t.Efetivado === 'boolean') return t.Efetivado;
-    const end = new Date();
-    end.setHours(23, 59, 59, 999);
-    return parseLocalDate(t.Data) <= end;
-  }
-
-  // Arredonda para centavos e elimina o -0 gerado por erros de ponto flutuante
-  function roundCents(value) {
-    return Math.round((parseFloat(value) || 0) * 100) / 100 + 0;
-  }
 
   function balanceClass(bal) {
     if (bal < 0) return 'text-red';
     return bal === 0 ? 'text-zero' : 'text-green';
-  }
-
-  function parseCurrencyMask(str) {
-    if (typeof str === 'number') return str;
-    if (!str) return 0;
-
-    const rawVal = str.replace(/\D/g, '');
-    return (parseFloat(rawVal) / 100) || 0;
   }
 
   state.txSortCol = 'Data';
@@ -148,11 +129,6 @@ const AppController = (function () {
       }
     });
     renderTransactions();
-  }
-
-  function isTransferTransaction(t) {
-    const cat = String(t ? t.Categoria : '').toLowerCase();
-    return cat.includes('transferência') || cat.includes('transferencia');
   }
 
   // ── Categorias ──
@@ -1218,17 +1194,6 @@ const AppController = (function () {
 
   const currencyFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
-  function parseLocalDate(dateInput) {
-    if (!dateInput) return new Date();
-    if (dateInput instanceof Date) return dateInput;
-    const str = String(dateInput).split('T')[0];
-    const parts = str.split('-');
-    if (parts.length === 3) {
-      return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10), 12, 0, 0);
-    }
-    return new Date(dateInput);
-  }
-
   function formatDateBR(dateInput) {
     if (!dateInput) return '';
     const d = parseLocalDate(dateInput);
@@ -1550,19 +1515,11 @@ const AppController = (function () {
     const container = document.getElementById('accounts-container'); if (!container) return;
     container.innerHTML = '';
     if (state.accounts.length === 0) { container.innerHTML = '<div style="color:#888; padding:15px; font-size:14px;">Nenhuma conta.</div>'; return; }
-    const balances = {}; state.accounts.forEach(acc => { balances[acc.Nome] = parseFloat(acc.SaldoInicial) || 0; });
+    const balances = accountBalances(state.accounts, transactions);
 
     const today = new Date();
     today.setHours(23, 59, 59, 999);
 
-    transactions.forEach(t => {
-      if (!isSettled(t)) return;
-
-      if (t.Conta && balances[t.Conta] !== undefined) {
-        const amount = parseFloat(t.Valor) || 0;
-        if (t.Tipo === 'RECEITA') balances[t.Conta] += amount; else if (t.Tipo === 'DESPESA') balances[t.Conta] -= amount;
-      }
-    });
 
     state.accounts.forEach(acc => {
       const card = document.createElement('div'); card.className = 'account-mini-card';
@@ -1781,23 +1738,10 @@ const AppController = (function () {
     if (countBadge) countBadge.innerText = `${totalItems} registro(s)`;
 
     // Resumos Superiores
-    const globalSummary = activeTransactions().reduce((acc, current) => {
-      if (isSettled(current)) {
-        const amount = parseFloat(current.Valor) || 0;
-        if (current.Tipo === 'RECEITA') acc.income += amount;
-        else if (current.Tipo === 'DESPESA') acc.expense += amount;
-      }
-      return acc;
-    }, { income: 0, expense: 0 });
+    const globalSummary = settledTotals(activeTransactions());
     const currentGlobalBalance = baseBalance + globalSummary.income - globalSummary.expense;
 
-    const monthlySummary = monthlyTransactions.reduce((acc, current) => {
-      if (isTransferTransaction(current) || current.Ignorar) return acc;
-      const amount = parseFloat(current.Valor) || 0;
-      if (current.Tipo === 'RECEITA') acc.income += amount;
-      else if (current.Tipo === 'DESPESA') acc.expense += amount;
-      return acc;
-    }, { income: 0, expense: 0 });
+    const monthlySummary = monthSummary(monthlyTransactions);
 
     if (elements.totalBalance) elements.totalBalance.innerText = currencyFormatter.format(currentGlobalBalance);
     if (elements.totalIncome) elements.totalIncome.innerText = currencyFormatter.format(monthlySummary.income);
@@ -2242,18 +2186,6 @@ const AppController = (function () {
   }
 
   // ── Modal de lançamento ──
-  const txLocalISO = (d = new Date()) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-
-  // Soma meses mantendo o dia (ou o último dia do mês, se não existir)
-  function txAddMonths(iso, n) {
-    const [y, m, d] = iso.split('-').map(Number);
-    const target = new Date(y, m - 1 + n, 1);
-    const last = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
-    target.setDate(Math.min(d, last));
-    return txLocalISO(target);
-  }
-
   function setTxType(tipo) {
     const radio = document.querySelector(`#transaction-form input[name="tipo"][value="${tipo}"]`);
     if (radio) radio.checked = true;
@@ -4308,28 +4240,11 @@ const AppController = (function () {
     const today = new Date();
     today.setHours(23, 59, 59, 999);
 
-    const balances = {};
-    state.accounts.forEach(acc => { balances[acc.Nome] = parseFloat(acc.SaldoInicial) || 0; });
+    const balances = accountBalances(state.accounts, activeTransactions());
 
-    activeTransactions().forEach(t => {
-      if (!isSettled(t)) return;
-
-      if (t.Conta && balances[t.Conta] !== undefined) {
-        const amount = parseFloat(t.Valor) || 0;
-        if (t.Tipo === 'RECEITA') balances[t.Conta] += amount;
-        else if (t.Tipo === 'DESPESA') balances[t.Conta] -= amount;
-      }
-    });
 
     const baseBalance = state.accounts.reduce((acc, currentAcc) => acc + (parseFloat(currentAcc.SaldoInicial) || 0), 0);
-    const globalSummary = activeTransactions().reduce((acc, current) => {
-      if (isSettled(current)) {
-        const amount = parseFloat(current.Valor) || 0;
-        if (current.Tipo === 'RECEITA') acc.income += amount;
-        else if (current.Tipo === 'DESPESA') acc.expense += amount;
-      }
-      return acc;
-    }, { income: 0, expense: 0 });
+    const globalSummary = settledTotals(activeTransactions());
 
     const currentGlobalBalance = baseBalance + globalSummary.income - globalSummary.expense;
     if (totalElem) totalElem.innerText = currencyFormatter.format(currentGlobalBalance);
@@ -5595,14 +5510,7 @@ const AppController = (function () {
 
     // 4. Saldo Atual Global (A matemática exata do Dashboard)
     const baseBalance = (state.accounts || []).reduce((acc, currentAcc) => acc + (parseFloat(currentAcc.SaldoInicial) || 0), 0);
-    const globalSummary = activeTransactions().reduce((acc, current) => {
-      if (isSettled(current)) {
-        const amount = parseFloat(current.Valor) || 0;
-        if (current.Tipo === 'RECEITA') acc.income += amount;
-        else if (current.Tipo === 'DESPESA') acc.expense += amount;
-      }
-      return acc;
-    }, { income: 0, expense: 0 });
+    const globalSummary = settledTotals(activeTransactions());
 
     const saldoAtual = baseBalance + globalSummary.income - globalSummary.expense;
     const filter = state.txFilter || 'ALL';

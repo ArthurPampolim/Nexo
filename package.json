@@ -7,10 +7,12 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "check:agents": "npm run check:agents"
+    "check:agents": "npm run check:agents",
+    "test": "vitest run"
   },
   "devDependencies": {
-    "vite": "^8.2.2"
+    "vite": "^8.2.2",
+    "vitest": "^5.1.0"
   },
   "dependencies": {
     "firebase": "^12.18.0",
