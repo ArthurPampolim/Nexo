@@ -8,7 +8,7 @@
   <meta name="referrer" content="strict-origin-when-cross-origin" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://npmcdn.com https://cdn.tailwindcss.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://npmcdn.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com wss://*.firebaseio.com; object-src 'none'; base-uri 'self';" />
   <title>Nexo</title>
-  <link rel="icon" type="image/png" href="src/assets/Logotipo_Nexo_1.png" />
+  <link rel="icon" type="image/svg+xml" href="src/assets/nexo-aba-simbolo.svg" />
 
   <!-- 2. Tipografia Profissional (Plus Jakarta Sans + JetBrains Mono) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -44,10 +44,8 @@
       <!-- 1. Formulário de Login -->
       <div id="login-view" class="login-box">
         <div class="login-brand">
-          <svg viewBox="0 0 34 34" fill="none">
-            <path d="M3 5l12 24L27 5h-6l-6 13L9 5z" fill="var(--primary-color)" />
-          </svg>
-          Nexo
+          <img class="brand-logo brand-logo-light" src="src/assets/nexo-logo-pontos-claro.svg" alt="Nexo" />
+          <img class="brand-logo brand-logo-dark" src="src/assets/nexo-logo-pontos-escuro.svg" alt="Nexo" />
         </div>
         <h1>Bem-vindo! 👋</h1>
         <p class="login-sub">Entre na sua conta para começar</p>
@@ -112,10 +110,8 @@
       <!-- 2. Formulário de Cadastro (Oculto inicialmente) -->
       <div id="register-view" class="login-box" style="display: none;">
         <div class="login-brand">
-          <svg viewBox="0 0 34 34" fill="none">
-            <path d="M3 5l12 24L27 5h-6l-6 13L9 5z" fill="var(--primary-color)" />
-          </svg>
-          Nexo
+          <img class="brand-logo brand-logo-light" src="src/assets/nexo-logo-pontos-claro.svg" alt="Nexo" />
+          <img class="brand-logo brand-logo-dark" src="src/assets/nexo-logo-pontos-escuro.svg" alt="Nexo" />
         </div>
         <h1>Criar Conta 🚀</h1>
         <p class="login-sub">Preencha seus dados para começar a gerenciar suas finanças</p>
@@ -177,10 +173,8 @@
       <!-- 3. Formulário de Recuperação de Senha (Oculto inicialmente) -->
       <div id="forgot-pass-view" class="login-box" style="display: none;">
         <div class="login-brand">
-          <svg viewBox="0 0 34 34" fill="none">
-            <path d="M3 5l12 24L27 5h-6l-6 13L9 5z" fill="var(--primary-color)" />
-          </svg>
-          Nexo
+          <img class="brand-logo brand-logo-light" src="src/assets/nexo-logo-pontos-claro.svg" alt="Nexo" />
+          <img class="brand-logo brand-logo-dark" src="src/assets/nexo-logo-pontos-escuro.svg" alt="Nexo" />
         </div>
         <h1>Recuperar Senha 🔑</h1>
         <p class="login-sub">Digite seu e-mail cadastrado. Enviaremos um link seguro para redefinição.</p>
@@ -241,7 +235,8 @@
       <div class="nav-left">
         <a href="#" id="logo-home-btn"
           style="text-decoration: none; display: flex; align-items: center; cursor: pointer;">
-          <img src="src/assets/Logotipo_Nexo_2.png" alt="Nexo" style="height: 32px; width: auto;" />
+          <img class="brand-logo brand-logo-light" src="src/assets/nexo-logo-pontos-claro.svg" alt="Nexo" />
+          <img class="brand-logo brand-logo-dark" src="src/assets/nexo-logo-pontos-escuro.svg" alt="Nexo" />
         </a>
       </div>
       <div class="nav-center">
@@ -258,7 +253,7 @@
             style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--primary-color); display: flex; align-items: center; justify-content: center;">
             <i class="far fa-user"></i>
           </div>
-          <span style="font-weight: 600; color: #333;">Arthur Barbosa</span>
+          <span style="font-weight: 600; color: #333;">Usuário</span>
           <i class="fas fa-chevron-down" style="font-size: 12px; color: #666;"></i>
         </div>
 
@@ -278,6 +273,7 @@
     <div id="main-dashboard-content">
       <!-- ABAS DE NAVEGAÇÃO DA APLICAÇÃO -->
       <div class="app-tab-nav">
+        <span class="tab-indicator" id="tab-indicator" aria-hidden="true"></span>
         <button id="tab-btn-dashboard" class="app-tab-btn active" onclick="AppController.switchTab('dashboard')">
           <i class="fas fa-chart-pie"></i> Dashboard
         </button>
@@ -298,6 +294,12 @@
         </button>
         <button id="tab-btn-planning" class="app-tab-btn" onclick="AppController.switchTab('planning')">
           <i class="fas fa-route"></i> Planejamento
+        </button>
+        <button id="tab-btn-calendar" class="app-tab-btn" onclick="AppController.switchTab('calendar')">
+          <i class="fas fa-calendar-alt"></i> Calendário
+        </button>
+        <button id="tab-btn-categories" class="app-tab-btn" onclick="AppController.switchTab('categories')">
+          <i class="fas fa-tags"></i> Categorias
         </button>
       </div>
 
@@ -519,8 +521,8 @@
         <div class="dashboard-title-container">
           <h2>Cartões de Crédito e Faturas</h2>
           <div>
-            <button class="btn-text" onclick="AppController.openCCModal()" style="margin-right: 15px;"><i
-                class="fas fa-plus"></i> Novo Cartão</button>
+            <button class="btn-add-card" onclick="AppController.openCCModal()"><i
+                class="fas fa-plus"></i> Novo cartão</button>
           </div>
         </div>
         <div style="max-width: 1200px; margin: 0 auto; padding: 0 15px 50px;">
@@ -528,23 +530,10 @@
           <!-- Seção Meus Cartões -->
           <div style="margin-bottom: 30px;">
             <h3 style="font-size: 18px; color: #333; margin-bottom: 15px;">Meus Cartões</h3>
-            <div id="cc-cards-grid"
-              style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+            <div id="cc-cards-grid" class="cc-cards-grid">
               <div class="loading">Carregando cartões...</div>
             </div>
           </div>
-
-          <!-- Seção Itens da Fatura -->
-          <main class="transaction-list"
-            style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #eaeaea;">
-            <div class="section-header" style="margin-bottom: 15px;">
-              <h3 style="margin: 0; font-size: 18px; color: #333;">Lançamentos da Fatura</h3>
-              <span id="cc-items-count-badge" style="font-size: 13px; color: #777; font-weight: 500;"></span>
-            </div>
-            <ul id="cc-page-items-container">
-              <li class="loading">Carregando lançamentos...</li>
-            </ul>
-          </main>
         </div>
       </div>
 
@@ -585,18 +574,33 @@
         <div class="dashboard-title-container">
           <h2>Custos Fixos</h2>
           <div>
-            <button class="btn-text" onclick="AppController.openFixedCostModal()"><i class="fas fa-plus"></i> Novo Custo
-              Fixo</button>
+            <button class="btn-add-card" onclick="AppController.openFixedCostModal()"><i class="fas fa-plus"></i> Novo custo
+              fixo</button>
           </div>
         </div>
         <div style="max-width: 1200px; margin: 0 auto; padding: 0 15px 50px;">
-          <!-- Cartões de Resumo do Mês para Custos Fixos -->
-          <div class="summary-cards" style="padding: 0; margin-bottom: 25px;">
+          <div class="wizard-split-layout">
+            <div class="wizard-left-col">
+          <!-- Lista Principal de Custos Fixos -->
+          <main class="transaction-list"
+            style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #eaeaea;">
+            <div class="section-header" style="margin-bottom: 20px;">
+              <h3 style="margin: 0; font-size: 18px; color: #333;">Lançamentos de Custos Fixos</h3>
+              <span id="fc-count-badge" style="font-size: 13px; color: #777; font-weight: 500;"></span>
+            </div>
+            <ul id="fc-page-items-container">
+              <li class="loading">Carregando custos fixos...</li>
+            </ul>
+          </main>
+            </div>
+
+            <!-- Cartões de Resumo do Mês para Custos Fixos -->
+            <div class="wizard-right-col" style="display: flex; flex-direction: column; gap: 15px;">
             <div class="summary-card" style="border-left: 4px solid var(--primary-color);">
               <div class="card-icon" style="background-color: var(--primary-color);"><i
                   class="fas fa-file-invoice-dollar"></i></div>
               <div class="card-info">
-                <div class="card-label">Total Custos Fixos (<span id="fc-page-period-title">--</span>)</div>
+                <div class="card-label">Total Custos Fixos</div>
                 <h3 class="card-value" id="fc-page-total-cost">R$ 0,00</h3>
               </div>
             </div>
@@ -614,19 +618,36 @@
                 <h3 class="card-value" id="fc-page-total-pending">R$ 0,00</h3>
               </div>
             </div>
-          </div>
-
-          <!-- Lista Principal de Custos Fixos -->
-          <main class="transaction-list"
-            style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #eaeaea;">
-            <div class="section-header" style="margin-bottom: 20px;">
-              <h3 style="margin: 0; font-size: 18px; color: #333;">Lançamentos de Custos Fixos</h3>
-              <span id="fc-count-badge" style="font-size: 13px; color: #777; font-weight: 500;"></span>
             </div>
-            <ul id="fc-page-items-container">
-              <li class="loading">Carregando custos fixos...</li>
-            </ul>
-          </main>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW: CALENDÁRIO -->
+      <div id="view-calendar" class="app-view hidden">
+        <div class="dashboard-title-container cal-title">
+          <div>
+            <h2>Calendário</h2>
+            <p id="cal-subtitle" class="cal-subtitle"></p>
+          </div>
+          <div class="cal-toolbar">
+            <button type="button" class="cal-nav-btn" onclick="AppController.calPrev()" aria-label="Semana anterior"><i
+                class="fas fa-chevron-left"></i></button>
+            <button type="button" class="cal-today-btn" id="cal-today-btn" onclick="AppController.calToday()">Hoje</button>
+            <button type="button" class="cal-nav-btn" onclick="AppController.calNext()" aria-label="Próxima semana"><i
+                class="fas fa-chevron-right"></i></button>
+            <button type="button" class="btn-add-card" onclick="AppController.openEventModal()"><i
+                class="fas fa-plus"></i> Novo evento</button>
+          </div>
+        </div>
+        <div class="cal-layout">
+          <aside class="cal-side">
+            <div class="cal-mini" id="cal-mini"></div>
+          </aside>
+          <section class="cal-main">
+            <div class="cal-card" id="cal-week"></div>
+            <div class="cal-legend" id="cal-legend"></div>
+          </section>
         </div>
       </div>
 
@@ -667,13 +688,11 @@
             style="background: white; border-radius: 20px; padding: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #eaeaea;">
 
             <!-- Segmented Control (Toggle) -->
-            <div
-              style="display: flex; background: #ffffff; border-radius: 30px; margin-bottom: 40px; border: 1px solid #e0e0e0; padding: 2px;">
-              <button id="btn-goal-andamento"
-                style="flex: 1; padding: 12px; border: none; background: var(--primary-color); color: white; font-weight: 600; border-radius: 30px; cursor: pointer; transition: all 0.3s;"
+            <div class="seg-control" id="goals-seg">
+              <span class="seg-pill" id="goals-seg-pill" aria-hidden="true"></span>
+              <button id="btn-goal-andamento" class="seg-btn active"
                 onclick="AppController.switchGoalsTab('ANDAMENTO')">Em Andamento</button>
-              <button id="btn-goal-concluidos"
-                style="flex: 1; padding: 12px; border: none; background: transparent; color: #666; font-weight: 500; cursor: pointer; border-radius: 30px; transition: all 0.3s;"
+              <button id="btn-goal-concluidos" class="seg-btn"
                 onclick="AppController.switchGoalsTab('CONCLUIDOS')">Concluídos</button>
             </div>
 
@@ -952,8 +971,7 @@
           <!-- Cabeçalho do Dashboard -->
           <div
             style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 15px;">
-            <h2 style="font-size: 22px; color: #111; margin: 0;">Planejamento (<span id="dash-month-label">--</span>)
-            </h2>
+            <h2 style="font-size: 22px; color: #111; margin: 0;">Planejamento</h2>
             <button class="btn-text"
               style="border: 1px solid #cbd5e1; padding: 10px 20px; border-radius: 20px; color: var(--primary-color); font-weight: 600; background: white;"
               onclick="AppController.startPlanningWizard()"><i class="fas fa-plus"></i> NOVO ORÇAMENTO</button>
@@ -1049,6 +1067,26 @@
         </div>
       </div> <!-- FIM DA VIEW 7: PLANEJAMENTO MENSAL -->
 
+      <!-- VIEW: CATEGORIAS -->
+      <div id="view-categories" class="app-view hidden">
+        <div class="dashboard-title-container cat-head">
+          <h2>Categorias</h2>
+          <div class="cat-head-actions">
+            <div class="seg-control" id="cat-seg">
+              <span class="seg-pill" aria-hidden="true"></span>
+              <button id="cat-seg-despesa" class="seg-btn active"
+                onclick="AppController.setCategoryKind('DESPESA')">Despesas</button>
+              <button id="cat-seg-receita" class="seg-btn"
+                onclick="AppController.setCategoryKind('RECEITA')">Receitas</button>
+            </div>
+            <button type="button" class="btn-primary cat-new-btn" onclick="AppController.openCategoryModal()">
+              <span data-lucide-inline="plus"></span> Nova categoria
+            </button>
+          </div>
+        </div>
+        <div id="cat-grid" class="cat-grid"></div>
+      </div>
+
       <!-- VIEW 8: CONFIGURAÇÕES -->
       <div id="view-settings" class="app-view hidden">
 
@@ -1057,17 +1095,16 @@
           style="align-items: center; margin-bottom: 30px; gap: 20px; flex-wrap: wrap;">
           <h2 style="font-size: 28px; margin: 0;">Configurações</h2>
 
-          <div
-            style="display: flex; background: white; border-radius: 30px; padding: 5px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #eaeaea; margin-left: auto;">
-            <button id="tab-set-pref" onclick="AppController.switchSettingsTab('pref')"
-              style="background: var(--primary-color); color: white; border: none; border-radius: 24px; padding: 10px 24px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-size: 14px;">Preferências</button>
-            <button id="tab-set-alerts" onclick="AppController.switchSettingsTab('alerts')"
-              style="background: transparent; color: #666; border: none; border-radius: 24px; padding: 10px 24px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-size: 14px;">Alertas
-              e notificações</button>
-            <button id="tab-set-dash" onclick="AppController.switchSettingsTab('dash')"
-              style="background: transparent; color: #666; border: none; border-radius: 24px; padding: 10px 24px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-size: 14px;">Dashboard</button>
-            <button id="tab-set-sec" onclick="AppController.switchSettingsTab('sec')"
-              style="background: transparent; color: #666; border: none; border-radius: 24px; padding: 10px 24px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-size: 14px;">Segurança</button>
+          <div class="seg-control set-seg" id="set-seg">
+            <span class="seg-pill" id="set-seg-pill" aria-hidden="true"></span>
+            <button id="tab-set-pref" class="seg-btn active"
+              onclick="AppController.switchSettingsTab('pref')">Preferências</button>
+            <button id="tab-set-alerts" class="seg-btn"
+              onclick="AppController.switchSettingsTab('alerts')">Alertas e notificações</button>
+            <button id="tab-set-dash" class="seg-btn"
+              onclick="AppController.switchSettingsTab('dash')">Dashboard</button>
+            <button id="tab-set-sec" class="seg-btn"
+              onclick="AppController.switchSettingsTab('sec')">Segurança</button>
           </div>
         </div>
 
@@ -1105,7 +1142,7 @@
               </div>
             </div>
             <div style="text-align: right;">
-              <button class="btn-primary" onclick="AppController.savePreferences()"
+              <button class="btn-primary" onclick="AppController.savePreferences(this)"
                 style="width: auto; padding: 12px 30px; border-radius: 24px; font-size: 13px; background: var(--primary-color);">SALVAR
                 ALTERAÇÕES</button>
             </div>
@@ -1444,21 +1481,8 @@
           </div>
           <div class="form-group">
             <label>Categoria</label>
-            <select name="categoria" required>
+            <select name="categoria" data-category-select data-category-kind="DESPESA" data-placeholder="Selecione..." required>
               <option value="" disabled selected>Selecione...</option>
-              <option value="Moradia / Contas">Moradia / Contas</option>
-              <option value="Alimentação">Alimentação</option>
-              <option value="Transporte">Transporte</option>
-              <option value="Saúde">Saúde</option>
-              <option value="Educação">Educação</option>
-              <option value="Lazer">Lazer</option>
-              <option value="Supermercado">Supermercado</option>
-              <option value="Investimentos">Investimentos</option>
-              <option value="Bar / Restaurante">Bar / Restaurante</option>
-              <option value="Eletrônicos">Eletrônicos</option>
-              <option value="Roupas">Roupas</option>
-              <option value="Salário">Salário</option>
-              <option value="Outros">Outros</option>
             </select>
           </div>
           <div class="form-group"><label>Descrição</label><input type="text" name="descricao"></div>
@@ -1486,6 +1510,22 @@
     </div>
 
     <!-- DRAWER / SLIDE-OVER: DETALHES E EDIÇÃO DE TRANSAÇÃO (HUMANIST LEDGER) -->
+    <div id="cc-drawer-overlay" class="tx-drawer-overlay" onclick="AppController.closeCCDrawer()" aria-hidden="true"></div>
+    <aside id="cc-drawer" class="tx-drawer" aria-labelledby="cc-drawer-title" aria-modal="true" role="dialog">
+      <div class="tx-grab-bar" aria-hidden="true"></div>
+      <div class="tx-drawer-header">
+        <div>
+          <span class="tx-drawer-badge badge-cartao" id="cc-drawer-badge">CARTÃO</span>
+          <h2 id="cc-drawer-title" class="tx-drawer-title">Cartão</h2>
+        </div>
+        <button type="button" class="tx-drawer-close" onclick="AppController.closeCCDrawer()" aria-label="Fechar painel">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="tx-drawer-body" id="cc-drawer-body"></div>
+      <div class="tx-drawer-footer" id="cc-drawer-footer"></div>
+    </aside>
+
     <div id="tx-drawer-overlay" class="tx-drawer-overlay" onclick="AppController.closeTxDrawer()" aria-hidden="true"></div>
     <aside id="tx-drawer" class="tx-drawer" aria-labelledby="tx-drawer-title" aria-modal="true" role="dialog">
       <div class="tx-grab-bar" aria-hidden="true"></div>
@@ -1531,21 +1571,7 @@
           <div class="form-row" style="display: flex; gap: 12px;">
             <div class="form-group" style="flex: 1;">
               <label for="tx-drawer-cat">Categoria</label>
-              <select id="tx-drawer-cat" name="categoria" required>
-                <option value="Alimentação">Alimentação</option>
-                <option value="Moradia / Contas">Moradia / Contas</option>
-                <option value="Transporte">Transporte</option>
-                <option value="Saúde">Saúde</option>
-                <option value="Educação">Educação</option>
-                <option value="Lazer">Lazer</option>
-                <option value="Supermercado">Supermercado</option>
-                <option value="Investimentos">Investimentos</option>
-                <option value="Bar / Restaurante">Bar / Restaurante</option>
-                <option value="Eletrônicos">Eletrônicos</option>
-                <option value="Roupas">Roupas</option>
-                <option value="Salário">Salário</option>
-                <option value="Outros">Outros</option>
-              </select>
+              <select id="tx-drawer-cat" name="categoria" data-category-select required></select>
             </div>
             <div class="form-group" style="flex: 1;">
               <label for="tx-drawer-account">Conta / Origem</label>
@@ -1577,45 +1603,100 @@
 
     <!-- MODAL: TRANSAÇÃO GERAL (Débito/Dinheiro) -->
     <div id="transaction-modal" class="modal-overlay hidden">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2>Nova Transação</h2><button class="close-btn" onclick="AppController.closeModal()"><i
+      <div class="modal-content tx-modal" id="tx-modal-box" data-type="DESPESA">
+        <div class="tx-modal-head">
+          <h2 id="tx-modal-title">Nova Despesa</h2>
+          <button type="button" class="tx-modal-close" onclick="AppController.closeModal()" aria-label="Fechar"><i
               class="fas fa-times"></i></button>
         </div>
         <form id="transaction-form" onsubmit="AppController.submitTransaction(event)">
-          <div class="form-group type-toggle">
-            <label class="radio-label expense"><input type="radio" name="tipo" value="DESPESA" checked> Despesa</label>
-            <label class="radio-label income"><input type="radio" name="tipo" value="RECEITA"> Receita</label>
+          <div class="tx-modal-cols">
+            <div class="tx-col-main">
+              <div class="form-group type-toggle">
+                <label class="radio-label expense"><input type="radio" name="tipo" value="DESPESA" checked> Despesa</label>
+                <label class="radio-label income"><input type="radio" name="tipo" value="RECEITA"> Receita</label>
+              </div>
+
+              <div class="tx-amount">
+                <i class="fas fa-calculator tx-icon"></i>
+                <input type="tel" name="valor" id="tx-valor" placeholder="R$ 0,00" autocomplete="off"
+                  oninput="AppController.maskCurrency(this); AppController.validateTxAmount()">
+                <span class="tx-currency">BRL</span>
+              </div>
+              <div class="tx-hint" id="tx-amount-hint">Deve ter um valor diferente de 0</div>
+
+              <div class="tx-row">
+                <i class="far fa-calendar-alt tx-icon"></i>
+                <div class="tx-date-chips">
+                  <button type="button" class="tx-chip" id="tx-chip-today" onclick="AppController.setTxDateShortcut(0)">Hoje</button>
+                  <button type="button" class="tx-chip" id="tx-chip-yesterday" onclick="AppController.setTxDateShortcut(-1)">Ontem</button>
+                  <button type="button" class="tx-chip" id="tx-chip-other" onclick="AppController.openTxDatePicker()">Outros…</button>
+                </div>
+                <input type="hidden" id="dataTransacao" name="dataTransacao" required>
+              </div>
+
+              <div class="tx-row">
+                <i class="far fa-file-alt tx-icon"></i>
+                <input type="text" name="descricao" placeholder="Descrição" maxlength="120" autocomplete="off">
+              </div>
+
+              <div class="tx-row">
+                <i class="far fa-bookmark tx-icon"></i>
+                <select name="categoria" data-category-select data-placeholder="Categoria" required>
+                  <option value="" disabled selected>Categoria</option>
+                </select>
+              </div>
+
+              <div class="tx-row">
+                <i class="fas fa-university tx-icon"></i>
+                <select id="conta" name="conta" required>
+                  <option disabled selected>Carregando...</option>
+                </select>
+              </div>
+
+              <label class="tx-row tx-toggle-row">
+                <i class="fas fa-info-circle tx-icon"></i>
+                <span>Ignorar transação</span>
+                <input type="checkbox" name="ignorar" class="tx-switch">
+              </label>
+
+              <button type="button" class="tx-more-btn" id="tx-more-btn" onclick="AppController.toggleTxDetails()"
+                aria-expanded="false" aria-controls="tx-details">
+                <span id="tx-more-label">Mais detalhes</span> <i class="fas fa-chevron-right" id="tx-more-icon"></i>
+              </button>
+            </div>
+
+            <div class="tx-col-details" id="tx-details" aria-hidden="true">
+              <div class="tx-details-inner">
+                <div class="tx-row">
+                  <i class="fas fa-tag tx-icon"></i>
+                  <input type="text" name="tags" placeholder="Tags (separe por vírgula)" maxlength="80" autocomplete="off">
+                </div>
+                <div class="tx-row">
+                  <i class="fas fa-pen tx-icon"></i>
+                  <input type="text" name="observacao" placeholder="Observação" maxlength="200" autocomplete="off">
+                </div>
+                <div id="tx-repeat-block">
+                  <label class="tx-row tx-toggle-row">
+                    <i class="fas fa-redo tx-icon"></i>
+                    <span>Repetir</span>
+                    <input type="checkbox" id="tx-repeat" class="tx-switch" onchange="AppController.toggleTxRepeat()">
+                  </label>
+                  <div class="tx-repeat-fields hidden" id="tx-repeat-fields">
+                    <input type="number" name="repeticoes" min="2" max="60" value="2" aria-label="Quantidade de repetições">
+                    <span>vezes</span>
+                    <span class="tx-repeat-unit">Meses</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="form-group"><label>Data</label><input type="date" id="dataTransacao" name="dataTransacao"
-              required>
+
+          <div class="tx-modal-foot">
+            <button type="button" class="tx-btn-ghost" id="tx-save-new-btn"
+              onclick="AppController.submitTransaction(event, true)">Salvar e criar nova</button>
+            <button type="submit" id="submit-btn" class="tx-btn-save">Salvar</button>
           </div>
-          <div class="form-group"><label>Conta</label><select id="conta" name="conta" required>
-              <option disabled selected>Carregando...</option>
-            </select></div>
-          <div class="form-group"><label>Valor</label><input type="tel" name="valor" required
-              oninput="AppController.maskCurrency(this)"></div>
-          <div class="form-group">
-            <label>Categoria</label>
-            <select name="categoria" required>
-              <option value="" disabled selected>Selecione...</option>
-              <option value="Moradia / Contas">Moradia / Contas</option>
-              <option value="Alimentação">Alimentação</option>
-              <option value="Transporte">Transporte</option>
-              <option value="Saúde">Saúde</option>
-              <option value="Educação">Educação</option>
-              <option value="Lazer">Lazer</option>
-              <option value="Supermercado">Supermercado</option>
-              <option value="Investimentos">Investimentos</option>
-              <option value="Bar / Restaurante">Bar / Restaurante</option>
-              <option value="Eletrônicos">Eletrônicos</option>
-              <option value="Roupas">Roupas</option>
-              <option value="Salário">Salário</option>
-              <option value="Outros">Outros</option>
-            </select>
-          </div>
-          <div class="form-group"><label>Descrição</label><input type="text" name="descricao"></div>
-          <button type="submit" id="submit-btn" class="btn-primary">Salvar Transação</button>
         </form>
       </div>
     </div>
@@ -1665,7 +1746,7 @@
         </div>
         <form id="goal-form" onsubmit="AppController.submitGoal(event)">
           <input type="hidden" id="goal-icon-val" name="icone" value="fa-bullseye">
-          <input type="hidden" id="goal-color-val" name="cor" value="#0d253f">
+          <input type="hidden" id="goal-color-val" name="cor" value="#36454f">
 
           <div class="form-group goal-floating-input">
             <label>Valor do objetivo</label>
@@ -1786,6 +1867,109 @@
       </div>
     </div>
 
+    <!-- MODAL: CATEGORIA -->
+    <div id="category-modal" class="modal-overlay hidden">
+      <div class="modal-content cat-modal">
+        <div class="modal-header">
+          <h2 id="category-modal-title">Nova categoria</h2>
+          <button type="button" class="close-btn" onclick="AppController.closeCategoryModal()" aria-label="Fechar"><i
+              class="fas fa-times"></i></button>
+        </div>
+        <form id="category-form" onsubmit="AppController.submitCategory(event)" autocomplete="off">
+          <div class="cat-preview">
+            <span id="cat-preview-bubble" class="cat-bubble cat-bubble-lg"></span>
+            <span id="cat-preview-name" class="cat-preview-name">Nova categoria</span>
+          </div>
+
+          <div class="form-group">
+            <label for="cat-name-input">Nome</label>
+            <input type="text" id="cat-name-input" name="nome" required maxlength="40"
+              oninput="AppController.updateCategoryPreview()">
+          </div>
+
+          <div class="form-group">
+            <label for="cat-parent-select">Subcategoria de</label>
+            <select id="cat-parent-select" name="parent" class="no-choices"
+              onchange="AppController.onCategoryParentChange()"></select>
+          </div>
+
+          <div class="form-group" id="cat-kind-group">
+            <label>Tipo</label>
+            <div class="event-type-picker" id="cat-kind-picker">
+              <button type="button" class="event-type-btn active" data-kind="DESPESA" style="--ev:#e11d48"
+                onclick="AppController.setCategoryFormKind('DESPESA')">Despesa</button>
+              <button type="button" class="event-type-btn" data-kind="RECEITA" style="--ev:#059669"
+                onclick="AppController.setCategoryFormKind('RECEITA')">Receita</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Cor</label>
+            <div class="cat-colors" id="cat-colors"></div>
+          </div>
+
+          <div class="form-group">
+            <label for="cat-icon-search">Ícone <span class="cat-lucide-credit">Lucide</span></label>
+            <input type="search" id="cat-icon-search" placeholder="Buscar ícone (ex.: casa, comida, carro)"
+              oninput="AppController.filterCategoryIcons()">
+            <div class="cat-icons" id="cat-icons" role="listbox" aria-label="Ícones"></div>
+          </div>
+
+          <div class="event-actions">
+            <button type="submit" id="category-submit-btn" class="btn-primary" style="flex: 1; margin: 0;">Salvar
+              categoria</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL: EVENTO DO CALENDÁRIO -->
+    <div id="event-modal" class="modal-overlay hidden">
+      <div class="modal-content" style="max-width: 460px;">
+        <div class="modal-header">
+          <h2 id="event-modal-title">Novo evento</h2>
+          <button type="button" class="close-btn" onclick="AppController.closeEventModal()" aria-label="Fechar"><i
+              class="fas fa-times"></i></button>
+        </div>
+        <form id="event-form" onsubmit="AppController.submitEvent(event)">
+          <div class="form-group"><label>Título</label><input type="text" name="titulo" required maxlength="80"></div>
+
+          <div class="form-group">
+            <label>Tipo</label>
+            <input type="hidden" id="event-type-val" value="COMPROMISSO">
+            <div class="event-type-picker" id="event-type-picker">
+              <button type="button" class="event-type-btn active" data-type="COMPROMISSO" style="--ev:#6fa9a8"
+                onclick="AppController.setEventType('COMPROMISSO')">Compromisso</button>
+              <button type="button" class="event-type-btn" data-type="PAGAMENTO" style="--ev:#36454f"
+                onclick="AppController.setEventType('PAGAMENTO')">Pagamento</button>
+              <button type="button" class="event-type-btn" data-type="PRAZO" style="--ev:#e11d48"
+                onclick="AppController.setEventType('PRAZO')">Prazo</button>
+              <button type="button" class="event-type-btn" data-type="LEMBRETE" style="--ev:#d97706"
+                onclick="AppController.setEventType('LEMBRETE')">Lembrete</button>
+            </div>
+          </div>
+
+          <div class="form-group"><label>Data</label><input type="date" name="data" required></div>
+
+          <label class="event-allday-toggle"><input type="checkbox" id="event-allday" onchange="AppController.toggleEventAllDay()">
+            Dia inteiro</label>
+
+          <div id="event-times" class="event-times">
+            <div class="form-group"><label>Início</label><input type="time" name="inicio"></div>
+            <div class="form-group"><label>Fim</label><input type="time" name="fim"></div>
+          </div>
+
+          <div class="form-group"><label>Local ou observação</label><input type="text" name="descricao" maxlength="80"></div>
+
+          <div class="event-actions">
+            <button type="button" id="event-delete-btn" class="btn-danger-outline hidden"
+              onclick="AppController.deleteEventFromModal()"><i class="fas fa-trash"></i> Excluir</button>
+            <button type="submit" id="event-submit-btn" class="btn-primary" style="flex: 1; margin: 0;">Salvar evento</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- MODAL: PAGAR CUSTO FIXO (seleção de conta) -->
     <div id="fc-pay-modal" class="modal-overlay hidden">
       <div class="modal-content" style="max-width: 440px;">
@@ -1809,22 +1993,9 @@
           </div>
           <div style="margin-bottom: 15px;">
             <label style="display: block; font-size: 14px; margin-bottom: 5px;">Categoria da Despesa?</label>
-            <select name="categoria" required
+            <select name="categoria" data-category-select data-category-kind="DESPESA" data-placeholder="Selecione..." required
               style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; outline: none;">
               <option value="" disabled selected>Selecione...</option>
-              <option value="Moradia / Contas">Moradia / Contas</option>
-              <option value="Alimentação">Alimentação</option>
-              <option value="Transporte">Transporte</option>
-              <option value="Saúde">Saúde</option>
-              <option value="Educação">Educação</option>
-              <option value="Lazer">Lazer</option>
-              <option value="Supermercado">Supermercado</option>
-              <option value="Investimentos">Investimentos</option>
-              <option value="Bar / Restaurante">Bar / Restaurante</option>
-              <option value="Eletrônicos">Eletrônicos</option>
-              <option value="Roupas">Roupas</option>
-              <option value="Salário">Salário</option>
-              <option value="Outros">Outros</option>
             </select>
           </div>
           <button type="submit" id="fc-pay-btn" class="btn-primary"><i class="fas fa-check-circle"
@@ -1895,21 +2066,19 @@
       <!-- Cabeçalho e Tabs -->
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <h2 style="font-size: 24px; color: #111;">Meu perfil</h2>
-        <div
-          style="display: flex; background: #fff; border-radius: 30px; padding: 5px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-          <button id="tab-prof-overview" onclick="AppController.switchProfileTab('overview')"
-            style="background: var(--primary-color); color: white; border: none; border-radius: 20px; padding: 8px 20px; font-weight: 600; cursor: pointer; transition: all 0.2s;">Visão
-            geral</button>
-          <button id="tab-prof-registration" onclick="AppController.switchProfileTab('registration')"
-            style="background: none; border: none; color: #666; border-radius: 20px; padding: 8px 20px; font-weight: 600; cursor: pointer; transition: all 0.2s;">Meu
-            cadastro</button>
-          <button style="background: none; border: none; color: #ccc; padding: 8px 20px; cursor: not-allowed;" disabled
+        <div class="seg-control prof-seg" id="prof-seg">
+          <span class="seg-pill" id="prof-seg-pill" aria-hidden="true"></span>
+          <button id="tab-prof-overview" class="seg-btn active"
+            onclick="AppController.switchProfileTab('overview')">Visão geral</button>
+          <button id="tab-prof-registration" class="seg-btn"
+            onclick="AppController.switchProfileTab('registration')">Meu cadastro</button>
+          <button class="seg-btn" style="cursor: not-allowed; opacity: 0.5;" disabled
             title="Em breve">Assinatura</button>
         </div>
       </div>
 
       <!-- CONTEÚDO 1: PREFERÊNCIAS -->
-      <div id="set-content-pref"
+      <div id="prof-content-overview"
         style="background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #eaeaea;">
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 60px;">
           <div>
@@ -1944,7 +2113,7 @@
           </div>
         </div>
         <div style="text-align: right;">
-          <button class="btn-primary" onclick="AppController.savePreferences()"
+          <button class="btn-primary" onclick="AppController.savePreferences(this)"
             style="width: auto; padding: 12px 30px; border-radius: 24px; font-size: 13px; background: var(--primary-color);">SALVAR
             ALTERAÇÕES</button>
         </div>
@@ -1989,19 +2158,19 @@
               <div>
                 <div class="form-group" style="margin-bottom: 25px;">
                   <label style="font-size: 12px; color: #666;">Nome completo</label>
-                  <input type="text" id="edit-nome" value="Arthur Pampolim Barbosa"
+                  <input type="text" id="edit-nome"
                     style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 15px; outline: none; transition: border-color 0.3s;"
                     onfocus="this.style.borderColor='var(--primary-color)'" onblur="this.style.borderColor='#ddd'">
                 </div>
                 <div class="form-group" style="margin-bottom: 25px;">
                   <label style="font-size: 12px; color: #666;">Como você gostaria de ser chamado?</label>
-                  <input type="text" id="edit-apelido" value="Arthur Barbosa"
+                  <input type="text" id="edit-apelido"
                     style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 15px; outline: none; transition: border-color 0.3s;"
                     onfocus="this.style.borderColor='var(--primary-color)'" onblur="this.style.borderColor='#ddd'">
                 </div>
                 <div class="form-group" style="margin-bottom: 25px;">
                   <label style="font-size: 12px; color: #666;">Email</label>
-                  <input type="email" id="edit-email" value="thurpampolim@gmail.com" disabled
+                  <input type="email" id="edit-email" disabled
                     style="width: 100%; border: none; border-bottom: 1px dotted #ddd; padding: 8px 0; font-size: 15px; color: #888; background: transparent; outline: none;">
                 </div>
                 <div class="form-group" style="margin-bottom: 25px;">
@@ -2019,13 +2188,13 @@
                 </div>
                 <div class="form-group" style="margin-bottom: 25px;">
                   <label style="font-size: 12px; color: #666;">Estado</label>
-                  <input type="text" id="edit-estado" value="Espírito Santo"
+                  <input type="text" id="edit-estado"
                     style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 15px; outline: none; transition: border-color 0.3s;"
                     onfocus="this.style.borderColor='var(--primary-color)'" onblur="this.style.borderColor='#ddd'">
                 </div>
                 <div class="form-group" style="margin-bottom: 25px;">
                   <label style="font-size: 12px; color: #666;">Cidade</label>
-                  <input type="text" id="edit-cidade" value="Vila Velha"
+                  <input type="text" id="edit-cidade"
                     style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 15px; outline: none; transition: border-color 0.3s;"
                     onfocus="this.style.borderColor='var(--primary-color)'" onblur="this.style.borderColor='#ddd'">
                 </div>
@@ -2035,7 +2204,7 @@
               <div>
                 <div class="form-group" style="margin-bottom: 25px;">
                   <label style="font-size: 12px; color: #666;">Aniversário</label>
-                  <input type="date" id="edit-nascimento" value="2001-10-17"
+                  <input type="date" id="edit-nascimento"
                     style="width: 100%; border: none; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 15px; outline: none; transition: border-color 0.3s;"
                     onfocus="this.style.borderColor='var(--primary-color)'" onblur="this.style.borderColor='#ddd'">
                   <small style="color: #999; font-size: 11px; display: block; margin-top: 5px;">Nossos termos exigem que

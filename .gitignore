@@ -30,3 +30,7 @@ dist-ssr
 
 # AG Kit backups
 .ag-kit-backups
+# Notas de trabalho (nao publicar)
+Prompt para bot*o.md
+humanist-ledger-phase2.md
+!.env.example

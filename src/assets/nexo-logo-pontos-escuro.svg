@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 160" width="440" height="160">
+  <title>Nexo - logo pontos (escura)</title>
+  <g transform="translate(20 24)" fill="#F4F7F6">
+    <circle cx="8" cy="8" r="5"/><circle cx="24" cy="8" r="3.5"/><circle cx="40" cy="8" r="2"/><circle cx="72" cy="8" r="2"/><circle cx="88" cy="8" r="3.5"/><circle cx="104" cy="8" r="5"/>
+    <circle cx="8" cy="24" r="3.5"/><circle cx="24" cy="24" r="5"/><circle cx="40" cy="24" r="3.5"/><circle cx="56" cy="24" r="2"/><circle cx="72" cy="24" r="3.5"/><circle cx="88" cy="24" r="5"/><circle cx="104" cy="24" r="3.5"/>
+    <circle cx="8" cy="40" r="2"/><circle cx="24" cy="40" r="3.5"/><circle cx="40" cy="40" r="5"/><circle cx="56" cy="40" r="3.5"/><circle cx="72" cy="40" r="5"/><circle cx="88" cy="40" r="3.5"/><circle cx="104" cy="40" r="2"/>
+    <circle cx="24" cy="56" r="2"/><circle cx="40" cy="56" r="3.5"/><circle cx="56" cy="56" r="5"/><circle cx="72" cy="56" r="3.5"/><circle cx="88" cy="56" r="2"/>
+    <circle cx="8" cy="72" r="2"/><circle cx="24" cy="72" r="3.5"/><circle cx="40" cy="72" r="5"/><circle cx="56" cy="72" r="3.5"/><circle cx="72" cy="72" r="5"/><circle cx="88" cy="72" r="3.5"/><circle cx="104" cy="72" r="2"/>
+    <circle cx="8" cy="88" r="3.5"/><circle cx="24" cy="88" r="5"/><circle cx="40" cy="88" r="3.5"/><circle cx="56" cy="88" r="2"/><circle cx="72" cy="88" r="3.5"/><circle cx="88" cy="88" r="5"/><circle cx="104" cy="88" r="3.5"/>
+    <circle cx="8" cy="104" r="5"/><circle cx="24" cy="104" r="3.5"/><circle cx="40" cy="104" r="2"/><circle cx="72" cy="104" r="2"/><circle cx="88" cy="104" r="3.5"/><circle cx="104" cy="104" r="5"/>
+  </g>
+  <g transform="translate(-12 -3)" fill="none" stroke="#F4F7F6" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M172 108 V84 Q172 58 194 58 Q216 58 216 84 V108"/>
+    <path d="M242 83 H290 A24 24 0 1 0 282 100"/>
+    <path d="M316 58 L344 108 M344 58 L316 108"/>
+    <circle cx="396" cy="83" r="24"/>
+  </g>
+</svg>

@@ -3,6 +3,7 @@ import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, setDoc, getDoc,
 import { auth } from './firebase.js';
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail, updatePassword } from "firebase/auth";
 import { ChartManager } from './charts.js';
+import { ICON_LIST, COLOR_PALETTE, DEFAULT_CATEGORIES, iconSvg, inkFor, isHexColor, isValidIcon } from './categories.js';
 
 
 const AppController = (function () {
@@ -26,39 +27,47 @@ const AppController = (function () {
 
   async function fetchUserScopedDocs(collectionName) {
     const uid = getCurrentUserId();
-    const colRef = collection(db, collectionName);
+    if (!uid) return [];
 
-    if (uid) {
-      try {
-        const q = query(colRef, where("userId", "==", uid));
-        const snap = await getDocs(q);
-        const userDocs = snap.docs.map(d => ({ ID: d.id, ...d.data() }));
-        if (userDocs.length > 0) {
-          return userDocs;
-        }
-      } catch (err) {
-        console.warn(`Query por userId em ${collectionName} falhou:`, err);
-      }
-
-      // Fallback para documentos legados sem userId
-      try {
-        const allSnap = await getDocs(colRef);
-        return allSnap.docs
-          .map(d => ({ ID: d.id, ...d.data() }))
-          .filter(d => !d.userId || d.userId === uid);
-      } catch (err) {
-        console.warn(`Fallback de leitura para ${collectionName}:`, err);
-        return [];
-      }
-    }
-
+    // Somente documentos do próprio usuário: nunca baixa a coleção inteira
     try {
-      const snap = await getDocs(colRef);
+      const snap = await getDocs(query(collection(db, collectionName), where("userId", "==", uid)));
       return snap.docs.map(d => ({ ID: d.id, ...d.data() }));
-    } catch (e) {
-      console.warn(`Erro ao ler coleção ${collectionName}:`, e);
+    } catch (err) {
+      console.warn(`Erro ao ler ${collectionName}:`, err);
       return [];
     }
+  }
+
+  const OWNED_COLLECTIONS = ["Transacoes", "Contas", "Cartoes", "TransacoesCartao", "Objetivos", "AportesObjetivo", "CustosFixos", "Planejamento", "Categorias", "Eventos"];
+
+  /**
+   * Migração única: vincula à conta atual os documentos antigos que não têm userId.
+   * Rode apenas logado na conta dona dos dados antigos: AppController.claimLegacyData()
+   */
+  async function claimLegacyData() {
+    const uid = getCurrentUserId();
+    if (!uid) return;
+    if (!await confirmDialog({
+      title: 'Vincular dados antigos a esta conta?',
+      message: `Todos os registros sem dono passarão a pertencer a ${auth.currentUser.email}. Faça isso só na conta que criou esses dados.`,
+      confirmLabel: 'Vincular',
+      danger: false
+    })) return;
+
+    let total = 0;
+    for (const name of OWNED_COLLECTIONS) {
+      try {
+        const snap = await getDocs(collection(db, name));
+        const orphans = snap.docs.filter(d => !d.data().userId);
+        await Promise.all(orphans.map(d => updateDoc(doc(db, name, d.id), { userId: uid })));
+        total += orphans.length;
+      } catch (err) {
+        console.warn(`Migração de ${name} falhou:`, err);
+      }
+    }
+    showToast(`${total} registro(s) vinculados à sua conta.`, 'success');
+    init();
   }
 
   // 1. ESTADO
@@ -68,6 +77,42 @@ const AppController = (function () {
     editingId: null, editingType: null, currentTab: 'dashboard',
     txFilter: 'ALL'
   };
+
+  // ── Bloqueio de rolagem da página com modal aberto ──
+  const MODAL_SELECTOR = '.modal-overlay:not(.hidden), .confirm-overlay, .dp-overlay';
+
+  function syncScrollLock() {
+    const root = document.documentElement;
+    const shouldLock = Boolean(document.querySelector(MODAL_SELECTOR));
+    if (shouldLock === root.classList.contains('modal-open')) return;
+
+    if (shouldLock) {
+      // Compensa a largura da barra de rolagem para a página não "pular"
+      const gap = window.innerWidth - root.clientWidth;
+      if (gap > 0) root.style.paddingRight = `${gap}px`;
+      root.classList.add('modal-open');
+    } else {
+      root.classList.remove('modal-open');
+      root.style.paddingRight = '';
+    }
+  }
+
+  new MutationObserver(syncScrollLock).observe(document.body, {
+    subtree: true, childList: true, attributes: true, attributeFilter: ['class']
+  });
+
+  // Transações marcadas como "Ignorar" não entram em totais, saldos, gráficos nem planejamento
+  const activeTransactions = () => state.transactions.filter(t => !t.Ignorar);
+
+  // Arredonda para centavos e elimina o -0 gerado por erros de ponto flutuante
+  function roundCents(value) {
+    return Math.round((parseFloat(value) || 0) * 100) / 100 + 0;
+  }
+
+  function balanceClass(bal) {
+    if (bal < 0) return 'text-red';
+    return bal === 0 ? 'text-zero' : 'text-green';
+  }
 
   function parseCurrencyMask(str) {
     if (typeof str === 'number') return str;
@@ -102,13 +147,933 @@ const AppController = (function () {
     return cat.includes('transferência') || cat.includes('transferencia');
   }
 
+  // ── Categorias ──
+  const freshDefaultCategories = () => DEFAULT_CATEGORIES.map((c, i) => ({ ...c, ID: `def-${i}` }));
+  state.categories = freshDefaultCategories();
+  state.categoriesPersisted = false;
+  state.catUI = { kind: 'DESPESA', editingId: null, formKind: 'DESPESA', color: COLOR_PALETTE[0], icon: 'tag', touched: false };
+
+  let categoriesSeeding = false;
+  const stripAccents = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const catKey = (s) => stripAccents(s).trim().toLowerCase();
+  const safeId = (id) => String(id).replace(/[^\w-]/g, '');
+  const byCatOrder = (a, b) => a.Ordem - b.Ordem || a.Nome.localeCompare(b.Nome, 'pt-BR');
+  const findCategory = (id) => (id ? state.categories.find(c => c.ID === id) || null : null);
+  const catParents = (kind) => state.categories.filter(c => !c.ParentId && (!kind || c.Tipo === kind)).sort(byCatOrder);
+  const catChildren = (id) => state.categories.filter(c => c.ParentId === id).sort(byCatOrder);
+
+  function normalizeCategory(raw) {
+    return {
+      ID: raw.ID,
+      Nome: String(raw.Nome || '').trim().slice(0, 40),
+      Cor: isHexColor(raw.Cor) ? raw.Cor : '#9e9e9e',
+      Icone: isValidIcon(raw.Icone) ? raw.Icone : 'tag',
+      Tipo: raw.Tipo === 'RECEITA' ? 'RECEITA' : 'DESPESA',
+      ParentId: raw.ParentId || null,
+      Ordem: Number.isFinite(Number(raw.Ordem)) ? Number(raw.Ordem) : 0
+    };
+  }
+
+  /** Estilo (ícone Lucide + cores) de uma categoria pelo nome gravado na transação. */
+  function getCategoryStyle(name) {
+    const key = catKey(name);
+    const cat = state.categories.find(c => catKey(c.Nome) === key);
+    const color = cat ? cat.Cor : '#9e9e9e';
+    return { icon: cat ? cat.Icone : 'tag', color, ink: inkFor(color) };
+  }
+
+  const categoryIconHTML = (style, size = 14) => iconSvg(style.icon, size);
+
+  async function loadCategories() {
+    const uid = getCurrentUserId();
+    if (!uid) return;
+    state.categories = freshDefaultCategories();
+    state.categoriesPersisted = false;
+
+    try {
+      const snap = await getDocs(query(collection(db, "Categorias"), where("userId", "==", uid)));
+      let list = snap.docs.map(d => normalizeCategory({ ID: d.id, ...d.data() })).filter(c => c.Nome);
+
+      if (list.length === 0 && !categoriesSeeding) {
+        // Primeira vez do usuário: grava as categorias padrão para ele poder editá-las
+        categoriesSeeding = true;
+        try {
+          list = await Promise.all(DEFAULT_CATEGORIES.map(async (c) => {
+            const ref = await addDoc(collection(db, "Categorias"), { userId: uid, ...c });
+            return normalizeCategory({ ID: ref.id, ...c });
+          }));
+        } finally {
+          categoriesSeeding = false;
+        }
+      }
+
+      const ids = new Set(list.map(c => c.ID));
+      list.forEach(c => { if (c.ParentId && !ids.has(c.ParentId)) c.ParentId = null; });
+      state.categories = list;
+      state.categoriesPersisted = true;
+    } catch (error) {
+      console.warn("Categorias indisponíveis, usando padrões em memória:", error);
+    }
+
+    populateCategorySelects();
+    if (state.currentTab === 'categories') renderCategoriesPage();
+  }
+
+  // ── Selects de categoria (lançamentos, cartão, custo fixo) ──
+  function categoryOptionsHTML(kind) {
+    const opt = (value, label) => `<option value="${escapeHTML(value)}">${escapeHTML(label)}</option>`;
+    const out = [];
+    catParents(kind).forEach(p => {
+      out.push(opt(p.Nome, p.Nome));
+      catChildren(p.ID).forEach(s => out.push(opt(s.Nome, `${p.Nome} › ${s.Nome}`)));
+    });
+    return out.join('');
+  }
+
+  /** Reconstrói um select de categoria; `extraValue` mantém uma categoria que já não existe mais. */
+  function rebuildCategorySelect(sel, extraValue = '') {
+    const current = extraValue || sel.value;
+    const inst = sel.choicesInstance;
+    if (inst) inst.destroy();
+
+    const placeholder = sel.dataset.placeholder;
+    let html = placeholder ? `<option value="" disabled selected>${escapeHTML(placeholder)}</option>` : '';
+    html += categoryOptionsHTML(sel.dataset.categoryKind || '');
+    if (extraValue && !state.categories.some(c => c.Nome === extraValue)) {
+      html += `<option value="${escapeHTML(extraValue)}">${escapeHTML(extraValue)}</option>`;
+    }
+    sel.innerHTML = html;
+
+    const known = Array.from(sel.options).some(o => o.value && o.value === current);
+    if (known) sel.value = current;
+    else if (placeholder) sel.value = '';
+
+    if (inst) sel.choicesInstance = new Choices(sel, { searchEnabled: false, itemSelectText: '', shouldSort: false });
+  }
+
+  function populateCategorySelects() {
+    document.querySelectorAll('select[data-category-select]').forEach(sel => rebuildCategorySelect(sel));
+  }
+
+  function setCategorySelectValue(sel, name) {
+    if (!sel) return;
+    const value = name || '';
+    if (value && !Array.from(sel.options).some(o => o.value === value)) rebuildCategorySelect(sel, value);
+    if (sel.choicesInstance) sel.choicesInstance.setChoiceByValue(value);
+    else sel.value = value;
+  }
+
+  // ── Página Categorias ──
+  function categoryUsage() {
+    const counts = new Map();
+    [...state.transactions, ...state.creditTransactions].forEach(t => {
+      const key = catKey(t.Categoria);
+      if (key) counts.set(key, (counts.get(key) || 0) + 1);
+    });
+    return counts;
+  }
+
+  function renderCategoriesPage(animate = false) {
+    const grid = document.getElementById('cat-grid');
+    if (!grid) return;
+    const usage = categoryUsage();
+    const used = (c) => usage.get(catKey(c.Nome)) || 0;
+    const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+    const parents = catParents(state.catUI.kind);
+
+    if (!parents.length) {
+      grid.innerHTML = `<div class="cat-empty">Nenhuma categoria de ${state.catUI.kind === 'RECEITA' ? 'receita' : 'despesa'} ainda.
+        Use "Nova categoria" para criar a primeira.</div>`;
+    } else {
+      grid.innerHTML = parents.map(p => {
+        const subs = catChildren(p.ID);
+        const style = { icon: p.Icone, color: p.Cor, ink: inkFor(p.Cor) };
+        const id = safeId(p.ID);
+        return `
+        <article class="cat-card">
+          <header class="cat-card-head">
+            <span class="cat-bubble" style="background-color:${style.color};color:${style.ink}">${categoryIconHTML(style, 20)}</span>
+            <div class="cat-card-title">
+              <strong>${escapeHTML(p.Nome)}</strong>
+              <small>${plural(subs.length, 'subcategoria', 'subcategorias')} · ${plural(used(p), 'lançamento', 'lançamentos')}</small>
+            </div>
+            <div class="cat-card-actions">
+              <button type="button" class="cat-icon-btn" title="Adicionar subcategoria" aria-label="Adicionar subcategoria"
+                onclick="AppController.openCategoryModal(null, '${id}')">${iconSvg('plus', 16)}</button>
+              <button type="button" class="cat-icon-btn" title="Editar" aria-label="Editar categoria"
+                onclick="AppController.openCategoryModal('${id}')">${iconSvg('pencil', 16)}</button>
+              <button type="button" class="cat-icon-btn danger" title="Excluir" aria-label="Excluir categoria"
+                onclick="AppController.deleteCategory('${id}')">${iconSvg('trash-2', 16)}</button>
+            </div>
+          </header>
+          ${subs.length ? `<ul class="cat-sub-list">${subs.map(s => {
+            const sStyle = { icon: s.Icone, color: s.Cor, ink: inkFor(s.Cor) };
+            const sid = safeId(s.ID);
+            return `
+            <li class="cat-sub">
+              <span class="cat-sub-branch">${iconSvg('corner-down-right', 14)}</span>
+              <span class="cat-bubble cat-bubble-sm" style="background-color:${sStyle.color};color:${sStyle.ink}">${categoryIconHTML(sStyle, 14)}</span>
+              <span class="cat-sub-name">${escapeHTML(s.Nome)}</span>
+              <span class="cat-sub-count">${used(s)}</span>
+              <button type="button" class="cat-icon-btn" title="Editar" aria-label="Editar subcategoria"
+                onclick="AppController.openCategoryModal('${sid}')">${iconSvg('pencil', 14)}</button>
+              <button type="button" class="cat-icon-btn danger" title="Excluir" aria-label="Excluir subcategoria"
+                onclick="AppController.deleteCategory('${sid}')">${iconSvg('trash-2', 14)}</button>
+            </li>`;
+          }).join('')}</ul>` : ''}
+        </article>`;
+      }).join('');
+    }
+
+    if (animate) {
+      grid.classList.remove('tab-pane-enter');
+      void grid.offsetWidth;
+      grid.classList.add('tab-pane-enter');
+    }
+  }
+
+  function setCategoryKind(kind) {
+    state.catUI.kind = kind === 'RECEITA' ? 'RECEITA' : 'DESPESA';
+    document.getElementById('cat-seg-despesa').classList.toggle('active', state.catUI.kind === 'DESPESA');
+    document.getElementById('cat-seg-receita').classList.toggle('active', state.catUI.kind === 'RECEITA');
+    moveSegPill('cat-seg');
+    renderCategoriesPage(true);
+  }
+
+  // ── Modal de categoria ──
+  function fillCategoryParentSelect(selectedParentId, editing) {
+    const sel = document.getElementById('cat-parent-select');
+    const hasChildren = Boolean(editing) && catChildren(editing.ID).length > 0;
+    const opts = ['<option value="">Nenhuma (categoria principal)</option>'];
+    catParents().forEach(p => {
+      if (editing && p.ID === editing.ID) return;
+      opts.push(`<option value="${safeId(p.ID)}">${escapeHTML(p.Nome)}</option>`);
+    });
+    sel.innerHTML = opts.join('');
+    sel.value = selectedParentId ? safeId(selectedParentId) : '';
+    sel.disabled = hasChildren;
+    sel.title = hasChildren ? 'Esta categoria tem subcategorias e não pode virar subcategoria.' : '';
+  }
+
+  function refreshCategoryModalTitle() {
+    const editing = state.catUI.editingId;
+    const isSub = Boolean(document.getElementById('cat-parent-select').value);
+    document.getElementById('category-modal-title').innerText =
+      `${editing ? 'Editar' : 'Nova'} ${isSub ? 'subcategoria' : 'categoria'}`;
+    document.getElementById('category-submit-btn').innerText =
+      editing ? 'Salvar alterações' : `Salvar ${isSub ? 'subcategoria' : 'categoria'}`;
+  }
+
+  function setCategoryFormKind(kind) {
+    state.catUI.formKind = kind === 'RECEITA' ? 'RECEITA' : 'DESPESA';
+    document.querySelectorAll('#cat-kind-picker .event-type-btn').forEach(btn =>
+      btn.classList.toggle('active', btn.dataset.kind === state.catUI.formKind));
+  }
+
+  function renderColorSwatches() {
+    const host = document.getElementById('cat-colors');
+    host.innerHTML = COLOR_PALETTE.map(c =>
+      `<button type="button" class="cat-swatch" data-color="${c}" style="--sw:${c}" aria-label="Cor ${c}"
+        onclick="AppController.pickCategoryColor('${c}')"></button>`).join('') +
+      `<label class="cat-swatch cat-swatch-custom" title="Cor personalizada">
+        <input type="color" id="cat-color-custom" value="${state.catUI.color}"
+          oninput="AppController.pickCategoryColor(this.value)"></label>`;
+    syncColorSelection();
+  }
+
+  function syncColorSelection() {
+    const host = document.getElementById('cat-colors');
+    const current = state.catUI.color.toLowerCase();
+    let matched = false;
+    host.querySelectorAll('.cat-swatch[data-color]').forEach(btn => {
+      const on = btn.dataset.color.toLowerCase() === current;
+      btn.classList.toggle('active', on);
+      if (on) matched = true;
+    });
+    const custom = host.querySelector('.cat-swatch-custom');
+    if (custom) {
+      custom.classList.toggle('active', !matched);
+      custom.style.setProperty('--sw', matched ? 'transparent' : state.catUI.color);
+      custom.querySelector('input').value = state.catUI.color;
+    }
+  }
+
+  function pickCategoryColor(hex) {
+    if (!isHexColor(hex)) return;
+    state.catUI.color = hex;
+    state.catUI.touched = true;
+    syncColorSelection();
+    updateCategoryPreview();
+  }
+
+  function renderIconGrid() {
+    const host = document.getElementById('cat-icons');
+    const query = stripAccents(document.getElementById('cat-icon-search').value).trim().toLowerCase();
+    const list = query ? ICON_LIST.filter(i => stripAccents(i.search).includes(query)) : ICON_LIST;
+    host.innerHTML = list.length
+      ? list.map(i => `<button type="button" role="option" class="cat-icon-opt${i.name === state.catUI.icon ? ' active' : ''}"
+          data-icon="${i.name}" title="${i.name}" aria-selected="${i.name === state.catUI.icon}"
+          onclick="AppController.pickCategoryIcon('${i.name}')">${iconSvg(i.name, 20)}</button>`).join('')
+      : '<p class="cat-icons-empty">Nenhum ícone encontrado.</p>';
+  }
+
+  function pickCategoryIcon(name) {
+    if (!isValidIcon(name)) return;
+    state.catUI.icon = name;
+    state.catUI.touched = true;
+    document.querySelectorAll('#cat-icons .cat-icon-opt').forEach(btn => {
+      const on = btn.dataset.icon === name;
+      btn.classList.toggle('active', on);
+      btn.setAttribute('aria-selected', String(on));
+    });
+    updateCategoryPreview();
+  }
+
+  function updateCategoryPreview() {
+    const bubble = document.getElementById('cat-preview-bubble');
+    bubble.style.backgroundColor = state.catUI.color;
+    bubble.style.color = inkFor(state.catUI.color);
+    bubble.innerHTML = iconSvg(state.catUI.icon, 26);
+    document.getElementById('cat-preview-name').innerText =
+      document.getElementById('cat-name-input').value.trim() || 'Nova categoria';
+  }
+
+  function onCategoryParentChange() {
+    const parent = findCategory(document.getElementById('cat-parent-select').value);
+    document.getElementById('cat-kind-group').classList.toggle('hidden', Boolean(parent));
+    if (parent) {
+      setCategoryFormKind(parent.Tipo);
+      if (!state.catUI.touched) {
+        state.catUI.color = parent.Cor;
+        state.catUI.icon = parent.Icone;
+        syncColorSelection();
+        renderIconGrid();
+      }
+    }
+    refreshCategoryModalTitle();
+    updateCategoryPreview();
+  }
+
+  function openCategoryModal(id = null, parentId = null) {
+    if (!state.categoriesPersisted) {
+      showToast('Não foi possível carregar suas categorias. Verifique se as regras do Firestore foram publicadas.', 'error');
+      return;
+    }
+    const editing = id ? findCategory(id) : null;
+    const parent = editing ? findCategory(editing.ParentId) : findCategory(parentId);
+
+    state.catUI.editingId = editing ? editing.ID : null;
+    state.catUI.touched = Boolean(editing);
+    state.catUI.color = editing ? editing.Cor : (parent ? parent.Cor : COLOR_PALETTE[0]);
+    state.catUI.icon = editing ? editing.Icone : (parent ? parent.Icone : 'tag');
+
+    document.getElementById('cat-name-input').value = editing ? editing.Nome : '';
+    document.getElementById('cat-icon-search').value = '';
+    fillCategoryParentSelect(parent ? parent.ID : null, editing);
+    document.getElementById('cat-kind-group').classList.toggle('hidden', Boolean(parent));
+    setCategoryFormKind(editing ? editing.Tipo : (parent ? parent.Tipo : state.catUI.kind));
+    renderColorSwatches();
+    renderIconGrid();
+    refreshCategoryModalTitle();
+    updateCategoryPreview();
+
+    document.getElementById('category-modal').classList.remove('hidden');
+    document.getElementById('cat-name-input').focus();
+    const active = document.querySelector('#cat-icons .cat-icon-opt.active');
+    if (active) active.scrollIntoView({ block: 'nearest' });
+  }
+
+  function closeCategoryModal() {
+    document.getElementById('category-modal').classList.add('hidden');
+    state.catUI.editingId = null;
+  }
+
+  /** Renomear uma categoria atualiza os lançamentos que usam o nome antigo. */
+  async function renameCategoryInRecords(oldName, newName) {
+    const sources = [
+      ['Transacoes', state.transactions], ['TransacoesCartao', state.creditTransactions],
+      ['Planejamento', state.planning], ['Custos Fixos', state.fixedCosts]
+    ];
+    const jobs = [];
+    sources.forEach(([collectionName, rows]) => rows.forEach(row => {
+      if (row.ID && !row.isCreditCard && row.Categoria === oldName) jobs.push({ collectionName, row });
+    }));
+    const results = await Promise.allSettled(jobs.map(({ collectionName, row }) =>
+      updateDoc(doc(db, collectionName, row.ID), { Categoria: newName })));
+    let failed = 0;
+    results.forEach((res, i) => {
+      if (res.status === 'fulfilled') jobs[i].row.Categoria = newName;
+      else failed++;
+    });
+    return { total: jobs.length, failed };
+  }
+
+  async function submitCategory(event) {
+    event.preventDefault();
+    const btn = document.getElementById('category-submit-btn');
+    const nome = document.getElementById('cat-name-input').value.trim().replace(/\s+/g, ' ');
+    const parent = findCategory(document.getElementById('cat-parent-select').value);
+    const editing = state.catUI.editingId ? findCategory(state.catUI.editingId) : null;
+
+    if (!nome) { showToast('Dê um nome para a categoria.', 'error'); return; }
+    if (catKey(nome) === 'transferencia') { showToast('"Transferência" é um nome reservado do sistema.', 'error'); return; }
+    if (state.categories.some(c => c.ID !== (editing && editing.ID) && catKey(c.Nome) === catKey(nome))) {
+      showToast('Já existe uma categoria com esse nome.', 'error');
+      return;
+    }
+    if (!isHexColor(state.catUI.color) || !isValidIcon(state.catUI.icon)) {
+      showToast('Escolha uma cor e um ícone válidos.', 'error');
+      return;
+    }
+
+    const payload = {
+      Nome: nome,
+      Icone: state.catUI.icon,
+      Cor: state.catUI.color,
+      Tipo: parent ? parent.Tipo : state.catUI.formKind,
+      ParentId: parent ? parent.ID : null
+    };
+
+    btn.disabled = true;
+    try {
+      let renameInfo = null;
+      if (editing) {
+        const oldName = editing.Nome;
+        await updateDoc(doc(db, "Categorias", editing.ID), payload);
+        Object.assign(editing, payload);
+
+        // Tipo da categoria principal vale para as subcategorias
+        if (!editing.ParentId) {
+          const stale = catChildren(editing.ID).filter(s => s.Tipo !== editing.Tipo);
+          await Promise.all(stale.map(s => updateDoc(doc(db, "Categorias", s.ID), { Tipo: editing.Tipo })));
+          stale.forEach(s => { s.Tipo = editing.Tipo; });
+        }
+        if (oldName !== nome) renameInfo = await renameCategoryInRecords(oldName, nome);
+      } else {
+        const Ordem = state.categories.reduce((max, c) => Math.max(max, c.Ordem), -1) + 1;
+        const ref = await addDoc(collection(db, "Categorias"), { userId: getCurrentUserId(), ...payload, Ordem });
+        state.categories.push(normalizeCategory({ ID: ref.id, ...payload, Ordem }));
+      }
+
+      closeCategoryModal();
+      if (parent) state.catUI.kind = parent.Tipo;
+      populateCategorySelects();
+      renderCategoriesPage();
+      renderTransactions();
+
+      if (renameInfo && renameInfo.failed) {
+        showToast(`Categoria salva, mas ${renameInfo.failed} de ${renameInfo.total} lançamentos não foram atualizados.`, 'error');
+      } else if (renameInfo && renameInfo.total) {
+        showToast(`Categoria salva. ${renameInfo.total} lançamento(s) atualizado(s).`, 'success');
+      } else {
+        showToast('Categoria salva com sucesso!', 'success');
+      }
+    } catch (error) {
+      showToast('Erro ao salvar categoria: ' + error.message, 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function deleteCategory(id) {
+    const cat = findCategory(id);
+    if (!cat || !state.categoriesPersisted) return;
+    const subs = catChildren(cat.ID);
+    const usage = categoryUsage();
+    const inUse = [cat, ...subs].reduce((sum, c) => sum + (usage.get(catKey(c.Nome)) || 0), 0);
+
+    const parts = [];
+    if (subs.length) parts.push(`${subs.length} subcategoria(s) serão excluídas junto`);
+    if (inUse) parts.push(`${inUse} lançamento(s) manterão o nome, sem cor nem ícone`);
+    if (!await confirmDialog({
+      title: cat.ParentId ? 'Excluir subcategoria?' : 'Excluir categoria?',
+      message: parts.join('; ') || 'Esta ação não pode ser desfeita.',
+      detail: cat.Nome
+    })) return;
+
+    try {
+      const doomed = [cat, ...subs];
+      await Promise.all(doomed.map(c => deleteDoc(doc(db, "Categorias", c.ID))));
+      const gone = new Set(doomed.map(c => c.ID));
+      state.categories = state.categories.filter(c => !gone.has(c.ID));
+      populateCategorySelects();
+      renderCategoriesPage();
+      renderTransactions();
+      showToast('Categoria excluída.', 'success');
+    } catch (error) {
+      showToast('Erro ao excluir: ' + error.message, 'error');
+    }
+  }
+
+  document.querySelectorAll('[data-lucide-inline]').forEach(el => { el.innerHTML = iconSvg(el.dataset.lucideInline, 16); });
+
+  // ── Calendário ──
+  const CAL_HOUR_PX = 44;
+  const CAL_TYPES = {
+    COMPROMISSO: { label: 'Compromisso', color: '#6fa9a8' },
+    PAGAMENTO: { label: 'Pagamento', color: '#36454f' },
+    PRAZO: { label: 'Prazo', color: '#e11d48' },
+    LEMBRETE: { label: 'Lembrete', color: '#d97706' }
+  };
+
+  state.events = [];
+  state.cal = { weekStart: null, mini: null, editingId: null, type: 'COMPROMISSO' };
+
+  const calPad = (n) => String(n).padStart(2, '0');
+  const calISO = (d) => `${d.getFullYear()}-${calPad(d.getMonth() + 1)}-${calPad(d.getDate())}`;
+  const calAddDays = (d, n) => { const r = new Date(d); r.setDate(r.getDate() + n); return r; };
+  const calMondayOf = (d) => {
+    const r = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    r.setDate(r.getDate() - ((r.getDay() + 6) % 7));
+    return r;
+  };
+  const calToMin = (hhmm) => {
+    const [h, m] = String(hhmm || '00:00').split(':').map(n => parseInt(n, 10) || 0);
+    return h * 60 + m;
+  };
+  const calFromMin = (min) => `${calPad(Math.floor(min / 60))}:${calPad(min % 60)}`;
+  const calShort = (d) => d.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }).replace('.', '');
+
+  function ensureCalState() {
+    if (!state.cal.weekStart) state.cal.weekStart = calMondayOf(new Date());
+    if (!state.cal.mini) state.cal.mini = { y: state.cal.weekStart.getFullYear(), m: state.cal.weekStart.getMonth() };
+  }
+
+  async function loadEvents() {
+    try {
+      state.events = await fetchUserScopedDocs("Eventos");
+      if (state.currentTab === 'calendar') renderCalendar();
+    } catch (error) {
+      console.error("Erro ao carregar eventos:", error);
+    }
+  }
+
+  // Itens automáticos: vencimentos de custos fixos e faturas de cartão
+  function calAutoItems(date) {
+    const ym = `${date.getFullYear()}-${calPad(date.getMonth() + 1)}`;
+    const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+    const items = [];
+
+    state.fixedCosts.forEach(cost => {
+      const ex = cost.Excecoes && cost.Excecoes[ym];
+      const dia = parseInt(ex && ex.DiaVencimento ? ex.DiaVencimento : cost.DiaVencimento) || 1;
+      if (Math.min(dia, lastDay) !== date.getDate()) return;
+      const paid = String(cost.MesesPagos || '').split(',').map(s => s.trim()).includes(ym);
+      const valor = parseFloat(ex && ex.Valor !== undefined ? ex.Valor : cost.Valor) || 0;
+      items.push({
+        auto: true, tab: 'fixed-costs', tipo: 'PAGAMENTO', paid,
+        titulo: `${(ex && ex.Nome) || cost.Nome} · ${currencyFormatter.format(valor)}`
+      });
+    });
+
+    state.creditCards.forEach(card => {
+      const dia = parseInt(card.DiaVencimento) || 1;
+      if (Math.min(dia, lastDay) !== date.getDate()) return;
+      const pending = state.creditTransactions
+        .filter(ct => String(ct.IdCartao || ct.CartaoID) === String(card.ID) && String(ct.MesFatura).startsWith(ym) && ct.Status !== 'Pago')
+        .reduce((sum, ct) => sum + (parseFloat(ct.Valor) || 0), 0);
+      if (pending <= 0) return;
+      items.push({
+        auto: true, tab: 'credit-cards', tipo: 'PRAZO', paid: false,
+        titulo: `Fatura ${card.Nome} · ${currencyFormatter.format(pending)}`
+      });
+    });
+    return items;
+  }
+
+  function calEventsOn(dateStr) {
+    return state.events.filter(ev => ev.Data === dateStr);
+  }
+
+  // Distribui eventos sobrepostos lado a lado
+  function calLayout(events) {
+    const sorted = [...events].sort((a, b) => calToMin(a.Inicio) - calToMin(b.Inicio));
+    const placed = [];
+    let cluster = [];
+    let clusterEnd = -1;
+    const flush = () => {
+      const lanes = cluster.reduce((max, e) => Math.max(max, e.lane + 1), 1);
+      cluster.forEach(e => { e.lanes = lanes; });
+      placed.push(...cluster);
+      cluster = [];
+    };
+    sorted.forEach(ev => {
+      const start = calToMin(ev.Inicio);
+      const end = Math.max(calToMin(ev.Fim), start + 30);
+      if (cluster.length && start >= clusterEnd) flush();
+      const used = cluster.filter(c => c.end > start).map(c => c.lane);
+      let lane = 0;
+      while (used.includes(lane)) lane++;
+      cluster.push({ ev, start, end, lane });
+      clusterEnd = Math.max(clusterEnd, end);
+    });
+    if (cluster.length) flush();
+    return placed;
+  }
+
+  function renderCalendar(resetScroll = false) {
+    const host = document.getElementById('cal-week');
+    if (!host) return;
+    ensureCalState();
+
+    const prevScroll = document.getElementById('cal-scroll');
+    const keepTop = prevScroll ? prevScroll.scrollTop : null;
+
+    const start = state.cal.weekStart;
+    const days = Array.from({ length: 7 }, (_, i) => calAddDays(start, i));
+    const todayStr = calISO(new Date());
+    const weekEvents = days.reduce((sum, d) => sum + calEventsOn(calISO(d)).length, 0);
+
+    const sub = document.getElementById('cal-subtitle');
+    if (sub) {
+      sub.innerText = `${calShort(days[0])} – ${calShort(days[6])} de ${days[6].getFullYear()} · ${weekEvents} compromisso(s) · arraste para mover, clique em um horário vazio para adicionar`;
+    }
+    const todayBtn = document.getElementById('cal-today-btn');
+    if (todayBtn) todayBtn.disabled = days.some(d => calISO(d) === todayStr);
+
+    const head = days.map(d => {
+      const wd = d.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '').toUpperCase();
+      return `<div class="cal-dayhead ${calISO(d) === todayStr ? 'today' : ''}"><span>${wd}</span><b>${d.getDate()}</b></div>`;
+    }).join('');
+
+    const allday = days.map(d => {
+      const ds = calISO(d);
+      const userAll = calEventsOn(ds).filter(ev => ev.DiaInteiro);
+      const chips = [
+        ...calAutoItems(d).map(it => `<button type="button" class="cal-chip auto ${it.paid ? 'paid' : ''}" style="--ev:${CAL_TYPES[it.tipo].color}" data-tab="${it.tab}" title="Abrir ${it.tab === 'fixed-costs' ? 'Custos Fixos' : 'Cartões & Faturas'}"><i class="fas ${it.tab === 'fixed-costs' ? 'fa-calendar-check' : 'fa-credit-card'}"></i> ${escapeHTML(it.titulo)}</button>`),
+        ...userAll.map(ev => `<button type="button" class="cal-chip" style="--ev:${(CAL_TYPES[ev.Tipo] || CAL_TYPES.COMPROMISSO).color}" data-event="${escapeHTML(ev.ID)}">${escapeHTML(ev.Titulo)}</button>`)
+      ].join('');
+      return `<div class="cal-allday-cell">${chips}</div>`;
+    }).join('');
+
+    const hourLabels = Array.from({ length: 24 }, (_, h) =>
+      h === 0 ? '' : `<span style="top:${h * CAL_HOUR_PX}px">${h}h</span>`).join('');
+
+    const cols = days.map(d => {
+      const ds = calISO(d);
+      const timed = calEventsOn(ds).filter(ev => !ev.DiaInteiro);
+      const blocks = calLayout(timed).map(({ ev, start: s, end: e, lane, lanes }) => {
+        const top = (s / 60) * CAL_HOUR_PX;
+        const height = Math.max(((e - s) / 60) * CAL_HOUR_PX, 22);
+        const t = CAL_TYPES[ev.Tipo] || CAL_TYPES.COMPROMISSO;
+        return `<div class="cal-event" data-event="${escapeHTML(ev.ID)}" style="--ev:${t.color}; top:${top}px; height:${height}px; left:calc(${(lane / lanes) * 100}% + 2px); width:calc(${100 / lanes}% - 4px)">
+          <strong>${escapeHTML(ev.Titulo)}</strong>
+          <small>${escapeHTML(ev.Inicio)} – ${escapeHTML(ev.Fim)}${ev.Descricao ? ' · ' + escapeHTML(ev.Descricao) : ''}</small>
+        </div>`;
+      }).join('');
+      return `<div class="cal-col ${ds === todayStr ? 'today' : ''}" data-date="${ds}">${blocks}${ds === todayStr ? '<div class="cal-now" id="cal-now"></div>' : ''}</div>`;
+    }).join('');
+
+    host.innerHTML = `
+      <div class="cal-row cal-head"><div class="cal-gutter"></div>${head}</div>
+      <div class="cal-row cal-allday"><div class="cal-gutter">dia todo</div>${allday}</div>
+      <div class="cal-scroll" id="cal-scroll">
+        <div class="cal-grid" style="height:${24 * CAL_HOUR_PX}px">
+          <div class="cal-times">${hourLabels}</div>${cols}
+        </div>
+      </div>`;
+
+    const legend = document.getElementById('cal-legend');
+    if (legend) {
+      legend.innerHTML = Object.values(CAL_TYPES).map(t =>
+        `<span><i style="background:${t.color}"></i>${t.label}</span>`).join('') +
+        '<span><i class="auto"></i>Automático (custos fixos e faturas)</span>';
+    }
+
+    const scroller = document.getElementById('cal-scroll');
+    if (scroller) {
+      scroller.scrollTop = (resetScroll || keepTop === null) ? CAL_HOUR_PX * 7 : keepTop;
+    }
+
+    bindCalendarEvents();
+    updateCalNow();
+    renderMiniCalendar();
+  }
+
+  function updateCalNow() {
+    const line = document.getElementById('cal-now');
+    if (!line) return;
+    const now = new Date();
+    line.style.top = `${((now.getHours() * 60 + now.getMinutes()) / 60) * CAL_HOUR_PX}px`;
+  }
+  setInterval(updateCalNow, 60000);
+
+  function renderMiniCalendar() {
+    const host = document.getElementById('cal-mini');
+    if (!host) return;
+    ensureCalState();
+    const { y, m } = state.cal.mini;
+    const first = new Date(y, m, 1);
+    const gridStart = calMondayOf(first);
+    const weekDays = new Set(Array.from({ length: 7 }, (_, i) => calISO(calAddDays(state.cal.weekStart, i))));
+    const todayStr = calISO(new Date());
+    const title = first.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
+    let cells = '';
+    for (let i = 0; i < 42; i++) {
+      const d = calAddDays(gridStart, i);
+      if (i >= 35 && d.getMonth() !== m) break;
+      const ds = calISO(d);
+      const has = calEventsOn(ds).length > 0 || calAutoItems(d).length > 0;
+      cells += `<button type="button" class="cal-mini-day ${d.getMonth() !== m ? 'other' : ''} ${weekDays.has(ds) ? 'in-week' : ''} ${ds === todayStr ? 'today' : ''}" data-date="${ds}">${d.getDate()}${has ? '<i></i>' : ''}</button>`;
+    }
+
+    host.innerHTML = `
+      <div class="cal-mini-head">
+        <strong>${escapeHTML(title)}</strong>
+        <div><button type="button" id="cal-mini-prev" aria-label="Mês anterior"><i class="fas fa-chevron-left"></i></button>
+        <button type="button" id="cal-mini-next" aria-label="Próximo mês"><i class="fas fa-chevron-right"></i></button></div>
+      </div>
+      <div class="cal-mini-grid">${['S', 'T', 'Q', 'Q', 'S', 'S', 'D'].map(l => `<span class="wd">${l}</span>`).join('')}${cells}</div>`;
+
+    const shiftMini = (delta) => {
+      const d = new Date(y, m + delta, 1);
+      state.cal.mini = { y: d.getFullYear(), m: d.getMonth() };
+      renderMiniCalendar();
+    };
+    document.getElementById('cal-mini-prev').addEventListener('click', () => shiftMini(-1));
+    document.getElementById('cal-mini-next').addEventListener('click', () => shiftMini(1));
+    host.querySelectorAll('.cal-mini-day').forEach(btn => btn.addEventListener('click', () => {
+      state.cal.weekStart = calMondayOf(parseLocalDate(btn.dataset.date));
+      renderCalendar();
+    }));
+  }
+
+  function bindCalendarEvents() {
+    const host = document.getElementById('cal-week');
+
+    host.querySelectorAll('.cal-chip[data-tab]').forEach(chip =>
+      chip.addEventListener('click', () => switchTab(chip.dataset.tab)));
+    host.querySelectorAll('.cal-chip[data-event]').forEach(chip =>
+      chip.addEventListener('click', () => openEventModal(chip.dataset.event)));
+
+    host.querySelectorAll('.cal-col').forEach(col => col.addEventListener('click', (e) => {
+      if (e.target !== col && !e.target.classList.contains('cal-now')) return;
+      const y = e.clientY - col.getBoundingClientRect().top;
+      const startMin = Math.min(Math.floor(((y / CAL_HOUR_PX) * 60) / 30) * 30, 23 * 60);
+      openEventModal(null, { date: col.dataset.date, start: calFromMin(startMin), end: calFromMin(Math.min(startMin + 60, 24 * 60 - 1)) });
+    }));
+
+    host.querySelectorAll('.cal-event').forEach(el => el.addEventListener('pointerdown', (e) => startEventDrag(e, el)));
+  }
+
+  // Arrastar para mover (snap de 15 min entre horários e dias)
+  function startEventDrag(e, el) {
+    if (e.button !== 0) return;
+    const ev = state.events.find(x => String(x.ID) === String(el.dataset.event));
+    if (!ev) return;
+
+    const col = el.parentElement;
+    const colW = col.getBoundingClientRect().width;
+    const startMin = calToMin(ev.Inicio);
+    const dur = Math.max(calToMin(ev.Fim) - startMin, 30);
+    const originX = e.clientX;
+    const originY = e.clientY;
+    const dayIdx = Array.from(col.parentElement.querySelectorAll('.cal-col')).indexOf(col);
+    let moved = false;
+    let newMin = startMin;
+    let dayDelta = 0;
+
+    el.setPointerCapture(e.pointerId);
+
+    const onMove = (m) => {
+      const dx = m.clientX - originX;
+      const dy = m.clientY - originY;
+      if (!moved && Math.hypot(dx, dy) < 5) return;
+      moved = true;
+      el.classList.add('dragging');
+      const rawMin = startMin + (dy / CAL_HOUR_PX) * 60;
+      newMin = Math.max(0, Math.min(Math.round(rawMin / 15) * 15, 24 * 60 - dur));
+      dayDelta = Math.max(-dayIdx, Math.min(Math.round(dx / colW), 6 - dayIdx));
+      el.style.transform = `translate(${dayDelta * colW}px, ${((newMin - startMin) / 60) * CAL_HOUR_PX}px)`;
+    };
+
+    const onUp = async () => {
+      el.removeEventListener('pointermove', onMove);
+      el.removeEventListener('pointerup', onUp);
+      el.removeEventListener('pointercancel', onUp);
+      if (!moved) { openEventModal(ev.ID); return; }
+
+      const newDate = calISO(calAddDays(state.cal.weekStart, dayIdx + dayDelta));
+      if (newDate === ev.Data && newMin === startMin) { renderCalendar(); return; }
+      try {
+        await updateDoc(doc(db, "Eventos", ev.ID), { Data: newDate, Inicio: calFromMin(newMin), Fim: calFromMin(newMin + dur) });
+        ev.Data = newDate; ev.Inicio = calFromMin(newMin); ev.Fim = calFromMin(newMin + dur);
+      } catch (error) {
+        showToast('Erro ao mover evento: ' + error.message, 'error');
+      }
+      renderCalendar();
+    };
+
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerup', onUp);
+    el.addEventListener('pointercancel', onUp);
+  }
+
+  function calPrev() { ensureCalState(); state.cal.weekStart = calAddDays(state.cal.weekStart, -7); syncMiniToWeek(); renderCalendar(); }
+  function calNext() { ensureCalState(); state.cal.weekStart = calAddDays(state.cal.weekStart, 7); syncMiniToWeek(); renderCalendar(); }
+  function calToday() { state.cal.weekStart = calMondayOf(new Date()); syncMiniToWeek(); renderCalendar(); }
+  function syncMiniToWeek() {
+    const mid = calAddDays(state.cal.weekStart, 3);
+    state.cal.mini = { y: mid.getFullYear(), m: mid.getMonth() };
+  }
+
+  // ── Modal de evento ──
+  function setEventType(type) {
+    state.cal.type = type;
+    document.getElementById('event-type-val').value = type;
+    document.querySelectorAll('#event-type-picker .event-type-btn').forEach(btn =>
+      btn.classList.toggle('active', btn.dataset.type === type));
+  }
+
+  function toggleEventAllDay() {
+    const allDay = document.getElementById('event-allday').checked;
+    document.getElementById('event-times').classList.toggle('hidden', allDay);
+  }
+
+  function openEventModal(id, preset) {
+    ensureCalState();
+    const form = document.getElementById('event-form');
+    form.reset();
+    const ev = id ? state.events.find(x => String(x.ID) === String(id)) : null;
+    state.cal.editingId = ev ? ev.ID : null;
+
+    document.getElementById('event-modal-title').innerText = ev ? 'Editar evento' : 'Novo evento';
+    document.getElementById('event-delete-btn').classList.toggle('hidden', !ev);
+    document.getElementById('event-submit-btn').innerText = ev ? 'Salvar alterações' : 'Salvar evento';
+
+    const today = calISO(new Date());
+    const base = ev || { Titulo: '', Tipo: 'COMPROMISSO', Data: (preset && preset.date) || today, Inicio: (preset && preset.start) || '09:00', Fim: (preset && preset.end) || '10:00', DiaInteiro: false, Descricao: '' };
+    form.elements.titulo.value = base.Titulo;
+    form.elements.data.value = base.Data;
+    form.elements.inicio.value = base.Inicio || '09:00';
+    form.elements.fim.value = base.Fim || '10:00';
+    form.elements.descricao.value = base.Descricao || '';
+    document.getElementById('event-allday').checked = Boolean(base.DiaInteiro);
+    toggleEventAllDay();
+    setEventType(CAL_TYPES[base.Tipo] ? base.Tipo : 'COMPROMISSO');
+
+    document.getElementById('event-modal').classList.remove('hidden');
+    form.elements.titulo.focus();
+  }
+
+  function closeEventModal() {
+    document.getElementById('event-modal').classList.add('hidden');
+    state.cal.editingId = null;
+  }
+
+  async function submitEvent(event) {
+    event.preventDefault();
+    const form = document.getElementById('event-form');
+    const btn = document.getElementById('event-submit-btn');
+    const allDay = document.getElementById('event-allday').checked;
+    const inicio = form.elements.inicio.value || '09:00';
+    let fim = form.elements.fim.value || inicio;
+
+    if (!allDay && calToMin(fim) <= calToMin(inicio)) {
+      showToast('O horário final deve ser depois do início.', 'error');
+      return;
+    }
+    if (allDay) fim = inicio;
+
+    const payload = {
+      Titulo: form.elements.titulo.value.trim(),
+      Tipo: document.getElementById('event-type-val').value,
+      Data: form.elements.data.value,
+      Inicio: allDay ? '00:00' : inicio,
+      Fim: allDay ? '23:59' : fim,
+      DiaInteiro: allDay,
+      Descricao: form.elements.descricao.value.trim()
+    };
+
+    btn.disabled = true;
+    try {
+      if (state.cal.editingId) {
+        await updateDoc(doc(db, "Eventos", state.cal.editingId), payload);
+      } else {
+        await addDoc(collection(db, "Eventos"), { userId: getCurrentUserId(), ...payload });
+      }
+      // Leva a semana visível até a data do evento salvo
+      state.cal.weekStart = calMondayOf(parseLocalDate(payload.Data));
+      syncMiniToWeek();
+      closeEventModal();
+      showToast('Evento salvo com sucesso!', 'success');
+      await loadEvents();
+      renderCalendar();
+    } catch (error) {
+      showToast('Erro ao salvar evento: ' + error.message, 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function deleteEventFromModal() {
+    const ev = state.events.find(x => String(x.ID) === String(state.cal.editingId));
+    if (!ev) return;
+    if (!await confirmDialog({
+      title: 'Excluir evento?',
+      message: 'Esta ação não pode ser desfeita.',
+      detail: `${ev.Titulo} · ${formatDateBR(ev.Data)}`
+    })) return;
+    try {
+      await deleteDoc(doc(db, "Eventos", ev.ID));
+      closeEventModal();
+      showToast('Evento excluído.', 'success');
+      await loadEvents();
+      renderCalendar();
+    } catch (error) {
+      showToast('Erro ao excluir: ' + error.message, 'error');
+    }
+  }
+
+  // ── Indicador deslizante das abas ──
+  let tabIndicatorTimer = null;
+
+  function moveTabIndicator(animate = true) {
+    const ind = document.getElementById('tab-indicator');
+    const btn = document.getElementById(`tab-btn-${state.currentTab}`);
+    if (!ind || !btn || btn.offsetParent === null) return;
+
+    const horizontal = window.matchMedia('(max-width: 768px)').matches;
+    const posProp = horizontal ? 'left' : 'top';
+    const sizeProp = horizontal ? 'width' : 'height';
+    const newPos = horizontal ? btn.offsetLeft : btn.offsetTop;
+    const newSize = horizontal ? btn.offsetWidth : btn.offsetHeight;
+
+    clearTimeout(tabIndicatorTimer);
+    const first = !ind.classList.contains('ready');
+    if (first || !animate || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      ind.classList.add('no-anim');
+      ind.style[posProp] = `${newPos}px`;
+      ind.style[sizeProp] = `${newSize}px`;
+      void ind.offsetWidth;
+      ind.classList.remove('no-anim');
+      ind.classList.add('ready');
+      return;
+    }
+
+    // Estica até cobrir origem e destino, depois encolhe no destino
+    const oldPos = parseFloat(ind.style[posProp]) || 0;
+    const oldSize = parseFloat(ind.style[sizeProp]) || 0;
+    const start = Math.min(oldPos, newPos);
+    const end = Math.max(oldPos + oldSize, newPos + newSize);
+    ind.style[posProp] = `${start}px`;
+    ind.style[sizeProp] = `${end - start}px`;
+    tabIndicatorTimer = setTimeout(() => {
+      ind.style[posProp] = `${newPos}px`;
+      ind.style[sizeProp] = `${newSize}px`;
+    }, 240);
+  }
+
+  window.addEventListener('resize', () => moveTabIndicator(false));
+
   function switchTab(tabName) {
     if (state.currentTab === 'transactions' && tabName !== 'transactions') {
       state.txSortCol = 'Data';
       state.txSortDir = 'desc';
     }
     state.currentTab = tabName;
-    ['dashboard', 'transactions', 'credit-cards', 'fixed-costs', 'goals', 'accounts', 'planning', 'settings'].forEach(t => {
+    ['dashboard', 'transactions', 'credit-cards', 'fixed-costs', 'goals', 'accounts', 'planning', 'calendar', 'categories', 'settings'].forEach(t => {
       const btn = document.getElementById(`tab-btn-${t}`);
       const view = document.getElementById(`view-${t}`);
       if (btn) {
@@ -121,12 +1086,21 @@ const AppController = (function () {
       }
     });
 
+    moveTabIndicator();
+    if (tabName === 'goals') requestAnimationFrame(() => moveGoalsPill(false));
+    if (tabName === 'settings') requestAnimationFrame(() => moveSegPill('set-seg', false));
+
     if (tabName === 'dashboard') renderDashboardInsights();
     if (tabName === 'credit-cards') renderCreditCardsPage();
     if (tabName === 'fixed-costs') renderFixedCostsPage();
     if (tabName === 'goals') renderGoalsPage();
     if (tabName === 'accounts') renderAccountsPage();
     if (tabName === 'planning') renderPlanningView();
+    if (tabName === 'calendar') renderCalendar(true);
+    if (tabName === 'categories') {
+      renderCategoriesPage(true);
+      requestAnimationFrame(() => moveSegPill('cat-seg', false));
+    }
   }
 
   // 2. SELETOR DE MÊS / ANO (MONTH PICKER)
@@ -263,16 +1237,20 @@ const AppController = (function () {
       if (selectEl.choicesInstance) selectEl.choicesInstance.destroy();
       selectEl.choicesInstance = new Choices(selectEl, config);
     });
+    syncThemeSelectors(localStorage.getItem('nexo_theme') === 'dark' ? 'dark' : 'light');
   }
   function init() {
     try {
       loadTheme();
+      populateCategorySelects();
+      loadCategories();
       loadAccounts();
       loadTransactions();
       loadGoals();
       loadFixedCosts();
       loadCreditData();
       loadPlanning();
+      loadEvents();
     } catch (e) {
       console.error("Erro na inicialização:", e);
     }
@@ -284,11 +1262,18 @@ const AppController = (function () {
       // Esconde o Login e MOSTRA o Sistema
       document.getElementById('login-screen').style.display = 'none';
       document.getElementById('app-container').style.display = 'block';
+      requestAnimationFrame(() => moveTabIndicator(false));
 
       definirMesAtual();
       init();
       loadUserProfile();
     } else {
+      // Descarta os dados do usuário anterior da memória
+      Object.assign(state, {
+        accounts: [], creditCards: [], creditTransactions: [], transactions: [],
+        goals: [], fixedCosts: [], planning: [], events: []
+      });
+
       // Mostra o Login e ESCONDE o Sistema
       document.getElementById('login-screen').style.display = 'grid';
       document.getElementById('app-container').style.display = 'none';
@@ -461,9 +1446,15 @@ const AppController = (function () {
       errorMsg.style.display = 'none';
 
       // Cria a conta no Firebase
-      await createUserWithEmailAndPassword(auth, email, pass);
+      const credential = await createUserWithEmailAndPassword(auth, email, pass);
 
-      // (Opcional) Aqui você poderá enviar o nome/nascimento para uma tabela "Usuarios" no banco de dados posteriormente
+      // Salva o cadastro do novo usuário para o nome aparecer no sistema
+      await setDoc(doc(db, "Usuarios", credential.user.uid), {
+        nome: `${nome} ${sobrenome}`.trim(),
+        apelido: nome,
+        nascimento
+      }, { merge: true });
+      loadUserProfile();
 
       AppController.showToast(`Conta criada com sucesso, ${nome}! O login será feito automaticamente.`, 'success');
     } catch (error) {
@@ -568,7 +1559,7 @@ const AppController = (function () {
 
     state.accounts.forEach(acc => {
       const card = document.createElement('div'); card.className = 'account-mini-card';
-      const bal = balances[acc.Nome]; const bClass = bal < 0 ? 'text-red' : 'text-green';
+      const bal = roundCents(balances[acc.Nome]); const bClass = balanceClass(bal);
       card.innerHTML = `<div class="acc-name"><i class="fas fa-wallet" style="margin-right: 8px; color: #aaa;"></i>${escapeHTML(acc.Nome)}</div><div class="acc-balance ${bClass}">${currencyFormatter.format(bal)}</div>`;
       container.appendChild(card);
     });
@@ -740,7 +1731,7 @@ const AppController = (function () {
 
     // 4. LÓGICA DO SALDO DO FINAL DO DIA
     const baseBalance = state.accounts.reduce((acc, currentAcc) => acc + (parseFloat(currentAcc.SaldoInicial) || 0), 0);
-    const allSortedChronologically = [...state.transactions].sort((a, b) => {
+    const allSortedChronologically = [...activeTransactions()].sort((a, b) => {
       return parseLocalDate(a.Data).getTime() - parseLocalDate(b.Data).getTime();
     });
 
@@ -776,7 +1767,7 @@ const AppController = (function () {
     if (countBadge) countBadge.innerText = `${totalItems} registro(s)`;
 
     // Resumos Superiores
-    const globalSummary = state.transactions.reduce((acc, current) => {
+    const globalSummary = activeTransactions().reduce((acc, current) => {
       const tDate = parseLocalDate(current.Data);
       if (tDate <= today) {
         const amount = parseFloat(current.Valor) || 0;
@@ -788,7 +1779,7 @@ const AppController = (function () {
     const currentGlobalBalance = baseBalance + globalSummary.income - globalSummary.expense;
 
     const monthlySummary = monthlyTransactions.reduce((acc, current) => {
-      if (isTransferTransaction(current)) return acc;
+      if (isTransferTransaction(current) || current.Ignorar) return acc;
       const amount = parseFloat(current.Valor) || 0;
       if (current.Tipo === 'RECEITA') acc.income += amount;
       else if (current.Tipo === 'DESPESA') acc.expense += amount;
@@ -799,7 +1790,7 @@ const AppController = (function () {
     if (elements.totalIncome) elements.totalIncome.innerText = currencyFormatter.format(monthlySummary.income);
     if (elements.totalExpense) elements.totalExpense.innerText = currencyFormatter.format(monthlySummary.expense);
 
-    renderAccountBalances(state.transactions);
+    renderAccountBalances(activeTransactions());
     elements.transactionsContainer.innerHTML = '';
 
     // =========================================================
@@ -831,26 +1822,9 @@ const AppController = (function () {
         if (btn) btn.disabled = true;
       });
 
-      ChartManager.updateDashboardCharts(state.transactions, selectedYYYYMM);
+      ChartManager.updateDashboardCharts(activeTransactions(), selectedYYYYMM);
       renderDashboardInsights(selectedYYYYMM);
       return;
-    }
-
-    function getCategoryStyle(cat) {
-      const styles = {
-        'Alimentação': { icon: 'fa-utensils', color: '#E91E63' },
-        'Salário': { icon: 'fa-money-bill-wave', color: '#F44336' },
-        'Investimentos': { icon: 'fa-chart-line', color: '#8BC34A' },
-        'Moradia / Contas': { icon: 'fa-home', color: '#3F51B5' },
-        'Transporte': { icon: 'fa-car', color: '#FF9800' },
-        'Lazer': { icon: 'fa-cocktail', color: '#9C27B0' },
-        'Saúde': { icon: 'fa-heartbeat', color: '#00BCD4' },
-        'Educação': { icon: 'fa-book', color: '#607D8B' },
-        'Supermercado': { icon: 'fa-shopping-cart', color: '#795548' },
-        'Roupas': { icon: 'fa-tshirt', color: '#FF5722' },
-        'Outros': { icon: 'fa-tag', color: '#9e9e9e' }
-      };
-      return styles[cat] || { icon: 'fa-tag', color: '#9e9e9e' };
     }
 
     // DESENHAR LINHAS PAGINADAS
@@ -905,13 +1879,17 @@ const AppController = (function () {
           <td class="tx-td" style="${isPending ? 'opacity:0.6;' : ''}; font-weight: 500;">${escapeHTML(mainDesc)}</td>
           <td class="tx-td" style="${isPending ? 'opacity:0.6;' : ''}">
             <div class="cat-badge-container">
-              <div class="cat-icon-circle" style="background-color: ${catStyle.color};"><i class="fas ${catStyle.icon}"></i></div>
+              <div class="cat-icon-circle" style="background-color: ${catStyle.color}; color: ${catStyle.ink};">${categoryIconHTML(catStyle)}</div>
               <span>${escapeHTML(t.Categoria || 'Outros')}</span>
             </div>
           </td>
           <td class="tx-td" style="${isPending ? 'opacity:0.6;' : ''}">${escapeHTML(t.Conta || '--')}</td>
           <td class="tx-td ${valClass}" style="text-align: right; ${isPending ? 'opacity:0.6;' : ''}">${sign} ${currencyFormatter.format(t.Valor)}</td>
           <td class="tx-td" style="text-align: center;"><div class="action-btn-group" style="${t.isCreditCard ? 'opacity: 1;' : ''}">${actionButtons}</div></td>`;
+      if (t.Ignorar) {
+        tr.style.opacity = '0.5';
+        tr.title = 'Transação ignorada: não entra nos totais';
+      }
 
       elements.transactionsContainer.appendChild(tr);
 
@@ -950,30 +1928,181 @@ const AppController = (function () {
     if (btnNext) btnNext.disabled = state.txCurrentPage === totalPages || totalPages === 0;
     if (btnLast) btnLast.disabled = state.txCurrentPage === totalPages || totalPages === 0;
 
-    ChartManager.updateDashboardCharts(state.transactions, selectedYYYYMM);
+    ChartManager.updateDashboardCharts(activeTransactions(), selectedYYYYMM);
     renderDashboardInsights(selectedYYYYMM);
+  }
+
+  // ── Modal de lançamento ──
+  const txLocalISO = (d = new Date()) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+  // Soma meses mantendo o dia (ou o último dia do mês, se não existir)
+  function txAddMonths(iso, n) {
+    const [y, m, d] = iso.split('-').map(Number);
+    const target = new Date(y, m - 1 + n, 1);
+    const last = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+    target.setDate(Math.min(d, last));
+    return txLocalISO(target);
+  }
+
+  function setTxType(tipo) {
+    const radio = document.querySelector(`#transaction-form input[name="tipo"][value="${tipo}"]`);
+    if (radio) radio.checked = true;
+    document.getElementById('tx-modal-box').dataset.type = tipo;
+    const catSel = document.querySelector('#transaction-form select[name="categoria"]');
+    if (catSel && catSel.dataset.categoryKind !== tipo) {
+      catSel.dataset.categoryKind = tipo;
+      rebuildCategorySelect(catSel);
+    }
+    const label = tipo === 'RECEITA' ? 'Receita' : 'Despesa';
+    document.getElementById('tx-modal-title').innerText = state.editingId ? `Editar ${label}` : `Nova ${label}`;
+  }
+
+  function setTxDate(iso) {
+    document.getElementById('dataTransacao').value = iso;
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const isToday = iso === txLocalISO();
+    const isYesterday = iso === txLocalISO(yesterday);
+
+    document.getElementById('tx-chip-today').classList.toggle('active', isToday);
+    document.getElementById('tx-chip-yesterday').classList.toggle('active', isYesterday);
+    const other = document.getElementById('tx-chip-other');
+    other.classList.toggle('active', !isToday && !isYesterday);
+    other.innerText = (!isToday && !isYesterday) ? formatDateBR(iso) : 'Outros…';
+  }
+
+  function setTxDateShortcut(offsetDays) {
+    const d = new Date();
+    d.setDate(d.getDate() + offsetDays);
+    setTxDate(txLocalISO(d));
+  }
+
+  function validateTxAmount() {
+    const input = document.getElementById('tx-valor');
+    const valid = parseCurrencyMask(input.value) !== 0;
+    document.getElementById('tx-amount-hint').classList.toggle('hidden', valid);
+    return valid;
+  }
+
+  function setTxDetailsOpen(open) {
+    document.getElementById('tx-modal-box').classList.toggle('expanded', open);
+    document.getElementById('tx-details').setAttribute('aria-hidden', String(!open));
+    document.getElementById('tx-more-btn').setAttribute('aria-expanded', String(open));
+    document.getElementById('tx-more-label').innerText = open ? 'Menos detalhes' : 'Mais detalhes';
+    document.getElementById('tx-more-icon').className = `fas ${open ? 'fa-chevron-left' : 'fa-chevron-right'}`;
+  }
+
+  function toggleTxDetails() {
+    setTxDetailsOpen(!document.getElementById('tx-modal-box').classList.contains('expanded'));
+  }
+
+  function toggleTxRepeat() {
+    const on = document.getElementById('tx-repeat').checked;
+    document.getElementById('tx-repeat-fields').classList.toggle('hidden', !on);
+  }
+
+  // Seletor de data em calendário (aberto por "Outros…")
+  function openTxDatePicker() {
+    const current = document.getElementById('dataTransacao').value || txLocalISO();
+    let selected = current;
+    let [viewY, viewM] = current.split('-').map(Number);
+    viewM -= 1;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'dp-overlay';
+    overlay.innerHTML = `
+      <div class="dp-card" role="dialog" aria-modal="true" aria-label="Selecionar data">
+        <div class="dp-head"><small id="dp-year"></small><strong id="dp-title"></strong></div>
+        <div class="dp-body">
+          <div class="dp-nav">
+            <button type="button" id="dp-prev" aria-label="Mês anterior"><i class="fas fa-chevron-left"></i></button>
+            <span id="dp-month"></span>
+            <button type="button" id="dp-next" aria-label="Próximo mês"><i class="fas fa-chevron-right"></i></button>
+          </div>
+          <div class="dp-grid" id="dp-grid"></div>
+          <div class="dp-actions">
+            <button type="button" id="dp-cancel">CANCELAR</button>
+            <button type="button" id="dp-ok">OK</button>
+          </div>
+        </div>
+      </div>`;
+
+    const render = () => {
+      const [sy, sm, sd] = selected.split('-').map(Number);
+      const selDate = new Date(sy, sm - 1, sd);
+      const wd = selDate.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '');
+      const mon = selDate.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
+      overlay.querySelector('#dp-year').innerText = sy;
+      overlay.querySelector('#dp-title').innerText = `${wd}, ${mon} ${sd}`;
+      overlay.querySelector('#dp-month').innerText = new Date(viewY, viewM, 1)
+        .toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
+      const firstWeekday = new Date(viewY, viewM, 1).getDay();
+      const daysInMonth = new Date(viewY, viewM + 1, 0).getDate();
+      const today = txLocalISO();
+      let html = ['Do', '2ª', '3ª', '4ª', '5ª', '6ª', 'Sá'].map(l => `<span class="dp-wd">${l}</span>`).join('');
+      html += '<span></span>'.repeat(firstWeekday);
+      for (let day = 1; day <= daysInMonth; day++) {
+        const iso = `${viewY}-${String(viewM + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        html += `<button type="button" class="dp-day ${iso === selected ? 'selected' : ''} ${iso === today ? 'today' : ''}" data-iso="${iso}">${day}</button>`;
+      }
+      overlay.querySelector('#dp-grid').innerHTML = html;
+    };
+
+    const close = () => {
+      document.removeEventListener('keydown', onKey, true);
+      overlay.remove();
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') { e.stopImmediatePropagation(); close(); }
+    };
+
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) { close(); return; }
+      const dayBtn = e.target.closest('.dp-day');
+      if (dayBtn) { selected = dayBtn.dataset.iso; render(); }
+    });
+    overlay.querySelector('#dp-prev').addEventListener('click', () => {
+      const d = new Date(viewY, viewM - 1, 1); viewY = d.getFullYear(); viewM = d.getMonth(); render();
+    });
+    overlay.querySelector('#dp-next').addEventListener('click', () => {
+      const d = new Date(viewY, viewM + 1, 1); viewY = d.getFullYear(); viewM = d.getMonth(); render();
+    });
+    overlay.querySelector('#dp-cancel').addEventListener('click', close);
+    overlay.querySelector('#dp-ok').addEventListener('click', () => { setTxDate(selected); close(); });
+
+    document.addEventListener('keydown', onKey, true);
+    document.body.appendChild(overlay);
+    render();
+  }
+
+  function resetTxChoices() {
+    elements.form.querySelectorAll('select:not(.no-choices)').forEach(s => {
+      if (s.choicesInstance) {
+        s.choicesInstance.destroy();
+        s.choicesInstance = new Choices(s, { searchEnabled: false, itemSelectText: '', shouldSort: false });
+      }
+    });
   }
 
   function openModal() {
     state.editingId = null;
     state.editingType = null;
     elements.form.reset();
-    
-    const selects = elements.form.querySelectorAll('select:not(.no-choices)');
-    selects.forEach(s => {
-      if (s.choicesInstance) {
-        s.choicesInstance.destroy();
-        s.choicesInstance = new Choices(s, { searchEnabled: false, itemSelectText: '', shouldSort: false});
-      }
-    });
+    resetTxChoices();
 
-    elements.submitBtn.innerText = 'Salvar Transação';
+    document.getElementById('tx-repeat-block').classList.remove('hidden');
+    document.getElementById('tx-repeat-fields').classList.add('hidden');
+    document.getElementById('tx-save-new-btn').classList.remove('hidden');
+    setTxDetailsOpen(false);
+    setTxType('DESPESA');
+    setTxDate(txLocalISO());
+    validateTxAmount();
+
+    elements.submitBtn.innerText = 'Salvar';
     elements.modal.classList.remove('hidden');
-    const localISO = new Date(new Date ().getTime() - (newDate().getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-
-    const dateInput = document.getElementById('dataTransacao');
-    if (dateInput && dateInput._flatpickr) dateInput._flatpickr.setDate(localISO);
-    else if (dateInput) dateInput.value = localISO;
+    document.getElementById('tx-valor').focus();
   }
   // --- LÓGICA DO MENU FAB E ROTEAMENTO ---
   function toggleFabMenu() {
@@ -990,35 +2119,7 @@ const AppController = (function () {
   function openNewTransaction(tipo) {
     closeFabMenu();
     openModal();
-
-    const toggleDiv = document.querySelector('#transaction-form .type-toggle');
-    if (toggleDiv) toggleDiv.style.display = 'none';
-
-    const radio = document.querySelector(`#transaction-form input[name="tipo"][value="${tipo}"]`);
-    if (radio) radio.checked = true;
-
-    const header = document.querySelector('#transaction-modal .modal-header h2');
-    const valueInput = document.querySelector('#transaction-form input[name="valor"]');
-
-    // Captura o campo de texto visual (altInput) gerado pelo Flatpickr
-    const dateElement = document.getElementById('dataTransacao');
-    const dateInput = dateElement && dateElement._flatpickr ? dateElement._flatpickr.altInput : null;
-
-    if (tipo === 'RECEITA') {
-      if (header) { header.innerText = 'Nova Receita'; header.style.color = 'var(--text-main)'; }
-      if (valueInput) { valueInput.style.color = '#4CAF50'; valueInput.style.borderBottomColor = '#4CAF50'; }
-      if (dateInput) {
-        dateInput.style.color = '#4CAF50';
-        dateInput.style.fontWeight = '600';
-      }
-    } else {
-      if (header) { header.innerText = 'Nova Despesa'; header.style.color = 'var(--text-main)'; }
-      if (valueInput) { valueInput.style.color = '#F44336'; valueInput.style.borderBottomColor = '#F44336'; }
-      if (dateInput) {
-        dateInput.style.color = '#F44336';
-        dateInput.style.fontWeight = '600';
-      }
-    }
+    setTxType(tipo);
   }
 
   function openNewCCTransaction() {
@@ -1053,72 +2154,174 @@ const AppController = (function () {
   function editTransaction(id) {
     const t = state.transactions.find(x => String(x.ID) === String(id));
     if (!t) return;
+    openModal();
     state.editingId = id; state.editingType = 'TRANSACTION';
-    const typeInput = document.querySelector(`#transaction-form input[name="tipo"][value="${t.Tipo}"]`);
-    if (typeInput) typeInput.checked = true;
-    if (t.Data) {
-      const d = parseLocalDate(t.Data);
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth() + 1).padStart(2, '0');
-      const dd = String(d.getDate()).padStart(2, '0');
-      const dateStr = `${yyyy}-${mm}-${dd}`;
+    setTxType(t.Tipo);
 
-      const dateInput = document.getElementById('dataTransacao');
-      if (dateInput && dateInput._flatpickr) dateInput._flatpickr.setDate(dateStr);
-      else if (dateInput) dateInput.value = dateStr;
-    }
+    setTxDate(t.Data ? txLocalISO(parseLocalDate(t.Data)) : txLocalISO());
+
     const contaSelect = document.getElementById('conta');
     if (contaSelect) {
       if (contaSelect.choicesInstance) contaSelect.choicesInstance.setChoiceByValue(t.Conta);
       else contaSelect.value = t.Conta;
     }
-    const valorInput = document.querySelector(`#transaction-form input[name="valor"]`);
-    if (valorInput) valorInput.value = t.Valor;
-    const catSelect = document.querySelector(`#transaction-form select[name="categoria"]`);
+    const catSelect = elements.form.querySelector('select[name="categoria"]');
     if (catSelect) {
-      if (catSelect.choicesInstance) catSelect.choicesInstance.setChoiceByValue(t.Categoria);
-      else catSelect.value = t.Categoria;
+      setCategorySelectValue(catSelect, t.Categoria);
     }
-    const descInput = document.querySelector(`#transaction-form input[name="descricao"]`);
-    if (descInput) descInput.value = t.Descricao || '';
-    elements.submitBtn.innerText = 'Atualizar Transação';
-    elements.modal.classList.remove('hidden');
-  }
-  function closeModal() { elements.modal.classList.add('hidden'); elements.form.reset(); state.editingId = null; state.editingType = null; elements.submitBtn.innerText = 'Salvar Transação'; }
 
-  async function submitTransaction(event) {
+    document.getElementById('tx-valor').value = currencyFormatter.format(parseFloat(t.Valor) || 0);
+    validateTxAmount();
+    elements.form.elements.descricao.value = t.Descricao || '';
+    elements.form.elements.observacao.value = t.Observacao || '';
+    elements.form.elements.tags.value = Array.isArray(t.Tags) ? t.Tags.join(', ') : '';
+    elements.form.elements.ignorar.checked = Boolean(t.Ignorar);
+
+    // Edição: sem repetição e sem "salvar e criar nova"
+    document.getElementById('tx-repeat-block').classList.add('hidden');
+    document.getElementById('tx-save-new-btn').classList.add('hidden');
+    elements.submitBtn.innerText = 'Atualizar';
+  }
+
+  function closeModal() {
+    elements.modal.classList.add('hidden');
+    elements.form.reset();
+    state.editingId = null;
+    state.editingType = null;
+    elements.submitBtn.innerText = 'Salvar';
+  }
+
+
+  async function submitTransaction(event, andNew = false) {
     event.preventDefault();
+    const form = elements.form;
+    if (!form.reportValidity()) return;
+    if (!validateTxAmount()) {
+      document.getElementById('tx-valor').focus();
+      return;
+    }
+
+    const saveNewBtn = document.getElementById('tx-save-new-btn');
     elements.submitBtn.disabled = true;
+    saveNewBtn.disabled = true;
     elements.submitBtn.innerHTML = 'Salvando...';
 
-    const formDados = Object.fromEntries(new FormData(elements.form).entries());
-    const payloadFormatado = {
+    const formDados = Object.fromEntries(new FormData(form).entries());
+    const editing = state.editingId && state.editingType === 'TRANSACTION';
+    const base = {
       userId: getCurrentUserId(),
       Tipo: formDados.tipo,
       Data: formDados.dataTransacao,
       Conta: formDados.conta,
       Valor: parseCurrencyMask(formDados.valor),
       Categoria: formDados.categoria,
-      Descricao: formDados.descricao || ''
+      Descricao: formDados.descricao || '',
+      Observacao: (formDados.observacao || '').trim(),
+      Tags: (formDados.tags || '').split(',').map(s => s.trim()).filter(Boolean),
+      Ignorar: formDados.ignorar === 'on'
     };
+    const repeat = !editing && document.getElementById('tx-repeat').checked
+      ? Math.max(2, Math.min(parseInt(formDados.repeticoes) || 2, 60))
+      : 1;
 
     try {
-      if (state.editingId && state.editingType === 'TRANSACTION') {
-        await updateDoc(doc(db, "Transacoes", state.editingId), payloadFormatado);
+      if (editing) {
+        await updateDoc(doc(db, "Transacoes", state.editingId), base);
       } else {
-        await addDoc(collection(db, "Transacoes"), payloadFormatado);
+        for (let i = 0; i < repeat; i++) {
+          await addDoc(collection(db, "Transacoes"), {
+            ...base,
+            Data: i === 0 ? base.Data : txAddMonths(base.Data, i),
+            Descricao: repeat > 1 ? `${base.Descricao} (${i + 1}/${repeat})`.trim() : base.Descricao
+          });
+        }
       }
-      closeModal();
+
+      AppController.showToast(repeat > 1 ? `${repeat} lançamentos criados!` : 'Transação salva com sucesso!', 'success');
+      if (andNew && !editing) {
+        // Mantém tipo, data, categoria e conta; limpa o restante
+        document.getElementById('tx-valor').value = '';
+        form.elements.descricao.value = '';
+        form.elements.observacao.value = '';
+        form.elements.tags.value = '';
+        form.elements.ignorar.checked = false;
+        document.getElementById('tx-repeat').checked = false;
+        toggleTxRepeat();
+        validateTxAmount();
+        document.getElementById('tx-valor').focus();
+      } else {
+        closeModal();
+      }
       loadTransactions();
     } catch (error) {
       AppController.showToast("Erro ao salvar transação: " + error.message, 'error');
     } finally {
       elements.submitBtn.disabled = false;
+      saveNewBtn.disabled = false;
+      elements.submitBtn.innerText = state.editingId ? 'Atualizar' : 'Salvar';
     }
   }
 
+  // ── Diálogo de confirmação ──
+  /**
+   * Substitui window.confirm: retorna uma Promise<boolean>.
+   * Esc e clique no fundo cancelam; o foco inicial fica em "Cancelar".
+   */
+  function confirmDialog({ title, message = '', detail = '', confirmLabel = 'Excluir', cancelLabel = 'Cancelar', danger = true }) {
+    return new Promise(resolve => {
+      const previousFocus = document.activeElement;
+      const overlay = document.createElement('div');
+      overlay.className = 'confirm-overlay';
+      overlay.innerHTML = `
+        <div class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title">
+          <div class="confirm-icon ${danger ? 'danger' : ''}"><i class="fas ${danger ? 'fa-trash-alt' : 'fa-question'}"></i></div>
+          <h3 id="confirm-title" class="confirm-title">${escapeHTML(title)}</h3>
+          ${message ? `<p class="confirm-message">${escapeHTML(message)}</p>` : ''}
+          ${detail ? `<div class="confirm-detail">${escapeHTML(detail)}</div>` : ''}
+          <div class="confirm-actions">
+            <button type="button" class="confirm-btn cancel">${escapeHTML(cancelLabel)}</button>
+            <button type="button" class="confirm-btn ok ${danger ? 'danger' : ''}">${escapeHTML(confirmLabel)}</button>
+          </div>
+        </div>`;
+
+      const finish = (result) => {
+        document.removeEventListener('keydown', onKey, true);
+        overlay.classList.remove('open');
+        setTimeout(() => overlay.remove(), 200);
+        if (previousFocus && previousFocus.focus) previousFocus.focus();
+        resolve(result);
+      };
+      const onKey = (e) => {
+        if (e.key === 'Escape') {
+          e.stopImmediatePropagation();
+          finish(false);
+        }
+      };
+
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) finish(false); });
+      overlay.querySelector('.cancel').addEventListener('click', () => finish(false));
+      overlay.querySelector('.ok').addEventListener('click', () => finish(true));
+      document.addEventListener('keydown', onKey, true);
+
+      document.body.appendChild(overlay);
+      requestAnimationFrame(() => overlay.classList.add('open'));
+      overlay.querySelector('.cancel').focus();
+    });
+  }
+
+  function describeTx(t) {
+    if (!t) return '';
+    const name = t.Descricao || t.Categoria || 'Lançamento';
+    return `${name} · ${currencyFormatter.format(parseFloat(t.Valor) || 0)}`;
+  }
+
   async function deleteTransaction(id) {
-    if (!confirm("Excluir?")) return;
+    const t = state.transactions.find(x => String(x.ID) === String(id));
+    if (!await confirmDialog({
+      title: 'Excluir transação?',
+      message: 'Esta ação não pode ser desfeita.',
+      detail: describeTx(t)
+    })) return;
     try {
       await deleteDoc(doc(db, "Transacoes", id));
       loadTransactions();
@@ -1173,7 +2376,11 @@ const AppController = (function () {
       dateInput.value = '';
     }
 
-    if (catSelect) catSelect.value = t.Categoria || 'Outros';
+    if (catSelect) {
+      catSelect.dataset.categoryKind = t.Tipo === 'RECEITA' ? 'RECEITA' : 'DESPESA';
+      rebuildCategorySelect(catSelect);
+    }
+    setCategorySelectValue(catSelect, t.Categoria || 'Outros');
 
     // Popular contas
     if (accSelect) {
@@ -1316,7 +2523,11 @@ const AppController = (function () {
     const id = state.drawerTx.ID;
     const isCC = state.drawerIsCC;
 
-    if (!confirm('Deseja realmente excluir esta transação?')) return;
+    if (!await confirmDialog({
+      title: 'Excluir transação?',
+      message: 'Esta ação não pode ser desfeita.',
+      detail: describeTx(state.drawerTx)
+    })) return;
 
     try {
       if (isCC) {
@@ -1415,7 +2626,7 @@ const AppController = (function () {
     }
 
     // 3. INSIGHT DE SAÚDE DE CAIXA NO MÊS
-    const monthlyTransactions = state.transactions.filter(t => {
+    const monthlyTransactions = activeTransactions().filter(t => {
       if (!t.Data || isTransferTransaction(t)) return false;
       const tDate = parseLocalDate(t.Data);
       const tMonth = String(tDate.getMonth() + 1).padStart(2, '0');
@@ -1478,6 +2689,17 @@ const AppController = (function () {
       const drawer = document.getElementById('tx-drawer');
       if (drawer && drawer.classList.contains('open')) {
         closeTxDrawer();
+      }
+      const ccDrawer = document.getElementById('cc-drawer');
+      if (ccDrawer && ccDrawer.classList.contains('open')) {
+        closeCCDrawer();
+      }
+      if (elements.modal && !elements.modal.classList.contains('hidden')) {
+        closeModal();
+      }
+      const eventModal = document.getElementById('event-modal');
+      if (eventModal && !eventModal.classList.contains('hidden')) {
+        closeEventModal();
       }
     }
   });
@@ -1696,7 +2918,7 @@ const AppController = (function () {
     document.querySelector(`#goal-form input[name="valorAlvo"]`).value = currencyFormatter.format(g.ValorAlvo);
     document.querySelector(`#goal-form input[name="valorAtual"]`).value = currencyFormatter.format(g.ValorAtual || 0);
     document.getElementById('goal-icon-val').value = g.Icone || 'fa-bullseye';
-    document.getElementById('goal-color-val').value = g.Cor || '#0d253f';
+    document.getElementById('goal-color-val').value = g.Cor || '#36454f';
 
     const dateStr = g.DataLimite ? String(g.DataLimite).split('T')[0] : '';
     const dateInput = document.querySelector(`#goal-form input[name="dataLimite"]`);
@@ -1808,7 +3030,7 @@ const AppController = (function () {
   // --- CUSTOS FIXOS ---
   async function loadFixedCosts() {
     try {
-      state.fixedCosts = await fetchUserScopedDocs("Custos Fixos");
+      state.fixedCosts = await fetchUserScopedDocs("CustosFixos");
 
       // Ordena por dia de vencimento
       state.fixedCosts.sort((a, b) => (parseInt(a.DiaVencimento) || 0) - (parseInt(b.DiaVencimento) || 0));
@@ -1958,7 +3180,7 @@ const AppController = (function () {
     }
 
     document.querySelector(`#fixed-cost-form input[name="nome"]`).value = defaultName;
-    document.querySelector(`#fixed-cost-form input[name="valor"]`).value = defaultValue;
+    document.querySelector(`#fixed-cost-form input[name="valor"]`).value = currencyFormatter.format(parseFloat(defaultValue) || 0);
     document.querySelector(`#fixed-cost-form input[name="diaVencimento"]`).value = defaultDay;
 
     const btnSubmit = document.getElementById('submit-fc-btn');
@@ -1997,27 +3219,27 @@ const AppController = (function () {
             Valor: parseCurrencyMask(formDados.valor) || 0,
             DiaVencimento: parseInt(formDados.diaVencimento) || 1
           };
-          await updateDoc(doc(db, "Custos Fixos", state.editingId), { Excecoes: excecoes });
+          await updateDoc(doc(db, "CustosFixos", state.editingId), { Excecoes: excecoes });
         } else {
           // Atualiza globalmente (Este mês e seguintes / ALL)
           const payloadFormatado = {
             Nome: formDados.nome,
-            Valor: parseFloat(formDados.valor) || 0,
+            Valor: parseCurrencyMask(formDados.valor),
             DiaVencimento: parseInt(formDados.diaVencimento) || 1
           };
-          await updateDoc(doc(db, "Custos Fixos", state.editingId), payloadFormatado);
+          await updateDoc(doc(db, "CustosFixos", state.editingId), payloadFormatado);
         }
       } else {
         // Criação de um NOVO custo
         const payloadFormatado = {
           userId: getCurrentUserId(),
           Nome: formDados.nome,
-          Valor: parseFloat(formDados.valor) || 0,
+          Valor: parseCurrencyMask(formDados.valor),
           DiaVencimento: parseInt(formDados.diaVencimento) || 1,
           Status: 'Pendente',
           MesesPagos: ''
         };
-        await addDoc(collection(db, "Custos Fixos"), payloadFormatado);
+        await addDoc(collection(db, "CustosFixos"), payloadFormatado);
       }
       closeFixedCostModal();
       loadFixedCosts();
@@ -2029,9 +3251,14 @@ const AppController = (function () {
   }
 
   async function deleteFixedCost(id) {
-    if (!confirm("Excluir?")) return;
+    const cost = state.fixedCosts.find(c => String(c.ID) === String(id));
+    if (!await confirmDialog({
+      title: 'Excluir custo fixo?',
+      message: 'Esta ação não pode ser desfeita.',
+      detail: cost ? `${cost.Nome} · ${currencyFormatter.format(parseFloat(cost.Valor) || 0)}` : ''
+    })) return;
     try {
-      await deleteDoc(doc(db, "Custos Fixos", id));
+      await deleteDoc(doc(db, "CustosFixos", id));
       loadFixedCosts();
     } catch (error) {
       AppController.showToast("Erro ao excluir: " + error.message, 'error');
@@ -2068,7 +3295,7 @@ const AppController = (function () {
       if (!paidList.includes(currentTargetMonth)) {
         paidList.push(currentTargetMonth);
       }
-      await updateDoc(doc(db, "Custos Fixos", costId), { MesesPagos: paidList.join(','), Status: 'Pago' });
+      await updateDoc(doc(db, "CustosFixos", costId), { MesesPagos: paidList.join(','), Status: 'Pago' });
 
       // Cálculos com as exceções na hora do pagamento
       let amount = parseFloat(cost.Valor) || 0;
@@ -2282,16 +3509,22 @@ const AppController = (function () {
 
 
   async function unmarkFixedCostPaid(id) {
-    if (!confirm("Desmarcar como pago? A despesa automática será removida do histórico.")) return;
-
     const currentTargetMonth = getSelectedYYYYMM();
     const cost = state.fixedCosts.find(c => String(c.ID) === String(id));
     if (!cost) return;
 
+    if (!await confirmDialog({
+      title: 'Desmarcar como pago?',
+      message: 'A despesa automática será removida do histórico.',
+      detail: `${cost.Nome} · ${currencyFormatter.format(parseFloat(cost.Valor) || 0)}`,
+      confirmLabel: 'Desmarcar',
+      danger: false
+    })) return;
+
     try {
       let paidList = cost.MesesPagos ? String(cost.MesesPagos).split(',').map(s => s.trim()).filter(Boolean) : [];
       paidList = paidList.filter(m => m !== currentTargetMonth);
-      await updateDoc(doc(db, "Custos Fixos", id), { MesesPagos: paidList.join(','), Status: paidList.length > 0 ? 'Pago' : 'Pendente' });
+      await updateDoc(doc(db, "CustosFixos", id), { MesesPagos: paidList.join(','), Status: paidList.length > 0 ? 'Pago' : 'Pendente' });
 
       // Identifica o nome correto (em caso de exceção) para buscar a transação e apagá-la
       let nomeParaBusca = cost.Nome;
@@ -2514,7 +3747,12 @@ const AppController = (function () {
   }
 
   async function deleteCreditTransaction(id) {
-    if (!confirm("Excluir lançamento da fatura?")) return;
+    const item = state.creditTransactions.find(x => String(x.ID) === String(id));
+    if (!await confirmDialog({
+      title: 'Excluir lançamento da fatura?',
+      message: 'Esta ação não pode ser desfeita.',
+      detail: describeTx(item)
+    })) return;
     try {
       await deleteDoc(doc(db, "TransacoesCartao", id));
       loadCreditTransactions();
@@ -2529,8 +3767,6 @@ const AppController = (function () {
     const titleElem = document.getElementById('cc-page-period-title');
     const totalElem = document.getElementById('cc-page-total-invoice');
     const cardsGrid = document.getElementById('cc-cards-grid');
-    const itemsContainer = document.getElementById('cc-page-items-container');
-    const countBadge = document.getElementById('cc-items-count-badge');
 
     const selectedYYYYMM = getSelectedYYYYMM();
     if (titleElem) titleElem.innerText = selectedYYYYMM;
@@ -2541,104 +3777,177 @@ const AppController = (function () {
 
     const totalInvoiceVal = invoiceItems.reduce((acc, current) => acc + (parseFloat(current.Valor) || 0), 0);
     if (totalElem) totalElem.innerText = currencyFormatter.format(totalInvoiceVal);
-    if (countBadge) countBadge.innerText = `${invoiceItems.length} registro(s)`;
 
     if (cardsGrid) {
       cardsGrid.innerHTML = '';
       if (state.creditCards.length === 0) {
         cardsGrid.innerHTML = '<div style="color:#888; padding:15px;">Nenhum cartão de crédito cadastrado.</div>';
       } else {
-        state.creditCards.forEach(card => {
-          const cardDiv = document.createElement('div');
-          cardDiv.className = 'summary-card';
-          cardDiv.style.flexDirection = 'column';
-          cardDiv.style.alignItems = 'flex-start';
-          cardDiv.style.gap = '8px';
+        state.creditCards.forEach((card, idx) => {
+          const wrap = document.createElement('div');
+          wrap.className = 'cc-tile';
+          wrap.tabIndex = 0;
+          wrap.setAttribute('role', 'button');
 
           const limitVal = parseFloat(card.Limite) || 0;
-          const cardTxns = state.creditTransactions.filter(ct => String(ct.IdCartao || ct.CartaoID) === String(card.ID));
-          const usedLimit = cardTxns.reduce((sum, item) => sum + (parseFloat(item.Valor) || 0), 0);
-          const remainingLimit = limitVal - usedLimit;
-          const remClass = remainingLimit < 0 ? 'text-red' : 'text-green';
+          const usedLimit = state.creditTransactions
+            .filter(ct => String(ct.IdCartao || ct.CartaoID) === String(card.ID) && ct.Status !== 'Pago')
+            .reduce((sum, item) => sum + (parseFloat(item.Valor) || 0), 0);
+          const usedPct = limitVal > 0 ? Math.min(100, (usedLimit / limitVal) * 100) : 0;
+          const barClass = usedPct >= 90 ? 'danger' : (usedPct >= 70 ? 'warn' : '');
 
-          // Lógica para verificar se há fatura pendente neste cartão específico
-          const cardInvoiceItems = state.creditTransactions.filter(ct => String(ct.MesFatura) === selectedYYYYMM && String(ct.IdCartao || ct.CartaoID) === String(card.ID));
-          const pendingItems = cardInvoiceItems.filter(ct => ct.Status !== 'Pago');
-          const hasPending = pendingItems.length > 0;
-          const pendingTotal = pendingItems.reduce((sum, item) => sum + (parseFloat(item.Valor) || 0), 0);
+          wrap.setAttribute('aria-label', `Abrir detalhes do cartão ${card.Nome}`);
+          wrap.innerHTML = `
+            <div class="cc-visual cc-theme-${idx % 4}">
+              <div class="cc-visual-top">
+                <span class="cc-visual-name">${escapeHTML(card.Nome)}</span>
+                <i class="fas fa-wifi cc-visual-wifi"></i>
+              </div>
+              <div class="cc-visual-chip"></div>
+              <div class="cc-visual-bottom">
+                <span>Fecha dia ${escapeHTML(card.DiaFechamento || '--')} · Vence dia ${escapeHTML(card.DiaVencimento || '--')}</span>
+                <strong>${escapeHTML(card.Bandeira || 'NEXO')}</strong>
+              </div>
+            </div>
+            <div class="cc-tile-meta">
+              <div>
+                <strong>${currencyFormatter.format(usedLimit)}</strong>
+                <small>de ${currencyFormatter.format(limitVal)}</small>
+              </div>
+              <div class="cc-limit-bar"><span class="${barClass}" style="width:${usedPct}%"></span></div>
+            </div>`;
 
-          const safeCardId = escapeHTML(card.ID);
-          const safeCardNome = escapeHTML(card.Nome);
-          const safeBandeira = escapeHTML(card.Bandeira || 'Cartão');
-          const safeFechamento = escapeHTML(card.DiaFechamento || '--');
-          const safeVencimento = escapeHTML(card.DiaVencimento || '--');
-
-          cardDiv.innerHTML = `
-              <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
-                <strong style="font-size:16px; color:#333;"><i class="fas fa-credit-card" style="color:var(--primary-color); margin-right:8px;"></i>${safeCardNome}</strong>
-                <span style="font-size:12px; color:#777; background:#f0f0f0; padding:2px 8px; border-radius:10px;">${safeBandeira}</span>
-              </div>
-              <div style="font-size:13px; color:#666; margin-top:4px;">
-                Limite: <strong>${currencyFormatter.format(limitVal)}</strong>
-              </div>
-              <div style="font-size:13px; color:#666; margin-top:2px;">
-                Saldo Restante: <strong class="${remClass}">${currencyFormatter.format(remainingLimit)}</strong>
-              </div>
-              <div style="font-size:12px; color:#888; display:flex; gap:15px; margin-top:4px;">
-                <span>Fecha dia: <strong>${safeFechamento}</strong></span>
-                <span>Vence dia: <strong>${safeVencimento}</strong></span>
-              </div>
-              
-              <!-- Botão Dinâmico de Pagamento Individual -->
-              <div style="width: 100%; margin-top: 15px; border-top: 1px solid #f0f0f0; padding-top: 15px;">
-                ${hasPending ? `
-                  <button class="btn-primary" onclick="AppController.openPayInvoiceModal('${safeCardId}')" style="width: 100%; padding: 8px; font-size: 13px; margin: 0; background: #00796B;">
-                    <i class="fas fa-check-circle" style="margin-right: 5px;"></i> Pagar Fatura (${currencyFormatter.format(pendingTotal)})
-                  </button>
-                ` : `
-                  <div style="text-align: center; color: #4CAF50; font-size: 13px; font-weight: 600;">
-                    <i class="fas fa-check-double" style="margin-right: 5px;"></i> Fatura Paga ou Vazia
-                  </div>
-                `}
-              </div>`;
-
-          cardsGrid.appendChild(cardDiv); // Esta era a linha vital que estava faltando!
+          const open = () => openCCDrawer(card.ID);
+          wrap.addEventListener('click', open);
+          wrap.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
+          });
+          cardsGrid.appendChild(wrap);
         });
       }
     }
 
-    if (itemsContainer) {
-      itemsContainer.innerHTML = '';
-      if (invoiceItems.length === 0) {
-        itemsContainer.innerHTML = '<li style="padding:15px; color:#888;">Nenhum lançamento nesta fatura para o mês selecionado.</li>';
-      } else {
-        invoiceItems.forEach(item => {
-          const cardObj = state.creditCards.find(c => String(c.ID) === String(item.IdCartao || item.CartaoID));
-          const cardName = cardObj ? cardObj.Nome : 'Cartão';
-          const safeId = escapeHTML(item.ID);
-          const safeCat = escapeHTML(item.Categoria);
-          const safeDesc = escapeHTML(item.Descricao || '');
-          const safeCardName = escapeHTML(cardName);
-          const safeDate = escapeHTML(formatDateBR(item.Data) || item.Data || '');
+    if (state.ccDrawerCardId) renderCCDrawer();
+  }
 
-          const li = document.createElement('li');
-          li.className = 'transaction-item';
-          li.innerHTML = `
-              <div class="item-details" style="flex: 1; min-width: 0;">
-                <strong>${safeCat}${safeDesc ? ' - ' + safeDesc : ''}</strong><br>
-                <small style="color: #888;">${safeCardName} • ${safeDate}</small>
-              </div>
-              <div style="width: 170px; min-width: 170px; display: flex; justify-content: flex-end; margin-right: 15px; flex-shrink: 0;">
-                <div class="item-value text-red" style="text-align: right;">
-                  ${currencyFormatter.format(item.Valor)}
-                </div>
-              </div>
-              <div style="flex-shrink: 0;">
-                <button class="btn-delete" onclick="AppController.deleteCreditTransaction('${safeId}')" title="Excluir"><i class="fas fa-trash"></i></button>
-              </div>`;
-          itemsContainer.appendChild(li);
-        });
-      }
+  // --- DRAWER LATERAL DO CARTÃO (LANÇAMENTOS + PAGAR FATURA) ---
+  function openCCDrawer(cardId) {
+    state.ccDrawerCardId = String(cardId);
+    renderCCDrawer();
+    document.getElementById('cc-drawer-overlay').classList.add('open');
+    document.getElementById('cc-drawer').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeCCDrawer() {
+    state.ccDrawerCardId = null;
+    const overlay = document.getElementById('cc-drawer-overlay');
+    const drawer = document.getElementById('cc-drawer');
+    if (overlay) overlay.classList.remove('open');
+    if (drawer) drawer.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  async function deleteCreditCard(cardId) {
+    const card = state.creditCards.find(c => String(c.ID) === String(cardId));
+    if (!card) return;
+    const cardTxns = state.creditTransactions.filter(ct => String(ct.IdCartao || ct.CartaoID) === String(cardId));
+    if (!await confirmDialog({
+      title: 'Excluir cartão?',
+      message: cardTxns.length > 0
+        ? `Os ${cardTxns.length} lançamento(s) deste cartão também serão excluídos. Esta ação não pode ser desfeita.`
+        : 'Esta ação não pode ser desfeita.',
+      detail: card.Nome,
+      confirmLabel: 'Excluir cartão'
+    })) return;
+
+    try {
+      await Promise.all(cardTxns.map(ct => deleteDoc(doc(db, "TransacoesCartao", ct.ID))));
+      await deleteDoc(doc(db, "Cartoes", cardId));
+      closeCCDrawer();
+      showToast('Cartão excluído com sucesso!', 'success');
+      loadCreditData();
+    } catch (error) {
+      showToast('Erro ao excluir cartão: ' + error.message, 'error');
+    }
+  }
+
+  function renderCCDrawer() {
+    const card = state.creditCards.find(c => String(c.ID) === String(state.ccDrawerCardId));
+    const body = document.getElementById('cc-drawer-body');
+    const footer = document.getElementById('cc-drawer-footer');
+    if (!card || !body || !footer) { closeCCDrawer(); return; }
+
+    const selectedYYYYMM = getSelectedYYYYMM();
+    const monthLabelEl = document.getElementById('selected-month-label');
+    const monthLabel = monthLabelEl ? monthLabelEl.innerText : selectedYYYYMM;
+    const limitVal = parseFloat(card.Limite) || 0;
+    const cardTxns = state.creditTransactions.filter(ct => String(ct.IdCartao || ct.CartaoID) === String(card.ID));
+    const usedLimit = cardTxns.filter(ct => ct.Status !== 'Pago').reduce((sum, i) => sum + (parseFloat(i.Valor) || 0), 0);
+    const available = limitVal - usedLimit;
+
+    const invoiceItems = cardTxns
+      .filter(ct => ct.MesFatura && String(ct.MesFatura).startsWith(selectedYYYYMM))
+      .sort((a, b) => String(b.Data).localeCompare(String(a.Data)));
+    const invoiceTotal = invoiceItems.reduce((sum, i) => sum + (parseFloat(i.Valor) || 0), 0);
+    const pendingTotal = invoiceItems.filter(i => i.Status !== 'Pago').reduce((sum, i) => sum + (parseFloat(i.Valor) || 0), 0);
+    const hasPending = pendingTotal > 0;
+
+    document.getElementById('cc-drawer-title').innerText = card.Nome;
+
+    const rows = invoiceItems.length === 0
+      ? '<li class="cc-drawer-empty">Nenhum lançamento neste cartão para o mês selecionado.</li>'
+      : invoiceItems.map(item => {
+        const safeId = escapeHTML(item.ID);
+        const desc = escapeHTML(item.Descricao || item.Categoria || 'Lançamento');
+        const cat = escapeHTML(item.Categoria || 'Outros');
+        const date = escapeHTML(formatDateBR(item.Data) || item.Data || '');
+        const paid = item.Status === 'Pago';
+        return `
+          <li class="cc-drawer-item">
+            <div class="cc-drawer-item-info">
+              <strong>${desc}</strong>
+              <small>${date} · ${cat}${paid ? ' · <span class="text-green">Pago</span>' : ''}</small>
+            </div>
+            <div class="cc-drawer-item-value">${currencyFormatter.format(parseFloat(item.Valor) || 0)}</div>
+            <button class="btn-delete" onclick="AppController.deleteCreditTransaction('${safeId}')" title="Excluir"><i class="fas fa-trash"></i></button>
+          </li>`;
+      }).join('');
+
+    body.innerHTML = `
+      <div class="tx-drawer-hero">
+        <div class="tx-drawer-amount-label">Fatura de ${escapeHTML(monthLabel)}</div>
+        <div class="tx-drawer-amount ${hasPending ? 'text-red' : 'text-green'}">${currencyFormatter.format(invoiceTotal)}</div>
+        <div class="tx-drawer-meta-pills">
+          <span class="goal-pill ${hasPending ? 'goal-pill-warning' : 'goal-pill-success'}">
+            <i class="fas ${hasPending ? 'fa-hourglass-half' : 'fa-check'}"></i> ${hasPending ? 'Em aberto' : 'Paga ou vazia'}
+          </span>
+          <span class="goal-pill goal-pill-neutral"><i class="fas fa-calendar-alt"></i> Vence dia ${escapeHTML(card.DiaVencimento || '--')}</span>
+          <span class="goal-pill goal-pill-neutral"><i class="fas fa-lock"></i> Fecha dia ${escapeHTML(card.DiaFechamento || '--')}</span>
+        </div>
+      </div>
+      <div class="cc-drawer-limit">
+        <div><small>Limite disponível</small><strong class="${available < 0 ? 'text-red' : ''}">${currencyFormatter.format(available)}</strong></div>
+        <div><small>Limite total</small><strong>${currencyFormatter.format(limitVal)}</strong></div>
+      </div>
+      <h3 class="cc-drawer-section-title">Lançamentos da fatura <span>${invoiceItems.length} registro(s)</span></h3>
+      <ul class="cc-drawer-list">${rows}</ul>`;
+
+    footer.innerHTML = `
+      <button type="button" class="btn-danger-outline" id="cc-drawer-delete-btn"><i class="fas fa-trash"></i> Excluir cartão</button>
+      ${hasPending
+        ? `<button type="button" class="btn-primary" id="cc-drawer-pay-btn" style="flex:1; margin:0;"><i class="fas fa-check-circle"></i> Pagar fatura (${currencyFormatter.format(pendingTotal)})</button>`
+        : `<span class="text-green" style="font-weight:600;"><i class="fas fa-check-double"></i> Sem fatura pendente</span>`}`;
+
+    document.getElementById('cc-drawer-delete-btn').addEventListener('click', () => deleteCreditCard(card.ID));
+
+    const payBtn = document.getElementById('cc-drawer-pay-btn');
+    if (payBtn) {
+      payBtn.addEventListener('click', () => {
+        const id = card.ID;
+        closeCCDrawer();
+        openPayInvoiceModal(id);
+      });
     }
   }
 
@@ -2654,7 +3963,7 @@ const AppController = (function () {
     const balances = {};
     state.accounts.forEach(acc => { balances[acc.Nome] = parseFloat(acc.SaldoInicial) || 0; });
 
-    state.transactions.forEach(t => {
+    activeTransactions().forEach(t => {
       const tDate = parseLocalDate(t.Data);
       if (tDate > today) return;
 
@@ -2666,7 +3975,7 @@ const AppController = (function () {
     });
 
     const baseBalance = state.accounts.reduce((acc, currentAcc) => acc + (parseFloat(currentAcc.SaldoInicial) || 0), 0);
-    const globalSummary = state.transactions.reduce((acc, current) => {
+    const globalSummary = activeTransactions().reduce((acc, current) => {
       const tDate = parseLocalDate(current.Data);
       if (tDate <= today) {
         const amount = parseFloat(current.Valor) || 0;
@@ -2705,8 +4014,8 @@ const AppController = (function () {
       gridContainer.appendChild(newAccountCard);
       if (state.accounts.length > 0) {
         state.accounts.forEach(acc => {
-          const bal = balances[acc.Nome];
-          const bClass = bal < 0 ? 'text-red' : 'text-green';
+          const bal = roundCents(balances[acc.Nome]);
+          const bClass = balanceClass(bal);
           const card = document.createElement('div');
           card.className = 'summary-card';
           card.style.flexDirection = 'column';
@@ -2796,7 +4105,7 @@ const AppController = (function () {
     if (dashSavingsPctEl) dashSavingsPctEl.innerText = `${savingsPct.toFixed(2)}%`;
 
     // --- Cruza dados do planejamento com TODAS as transações reais do mês ---
-    const monthlyTransactions = state.transactions.filter(t => {
+    const monthlyTransactions = activeTransactions().filter(t => {
       if (!t.Data) return false;
       const tDate = parseLocalDate(t.Data);
       const tMonth = String(tDate.getMonth() + 1).padStart(2, '0');
@@ -2870,7 +4179,7 @@ const AppController = (function () {
         totalPaid += paid;
         totalPending += pending;
 
-        const catStyle = getCategoryStyleGlobal(catName);
+        const catStyle = getCategoryStyle(catName);
         const spentClass = totalSpent > limitValue ? 'text-red' : '';
 
         const tr = document.createElement('tr');
@@ -2878,10 +4187,10 @@ const AppController = (function () {
         tr.innerHTML = `
             <td class="tx-td">
               <div class="cat-badge-container">
-                <div class="cat-icon-circle" style="background-color: ${catStyle.color};">
-                  <i class="fas ${catStyle.icon}"></i>
+                <div class="cat-icon-circle" style="background-color: ${catStyle.color}; color: ${catStyle.ink};">
+                  ${categoryIconHTML(catStyle)}
                 </div>
-                <span>${catName}</span>
+                <span>${escapeHTML(catName)}</span>
               </div>
             </td>
             <td class="tx-td" style="font-weight: 600;">${currencyFormatter.format(limitValue)}</td>
@@ -2923,26 +4232,6 @@ const AppController = (function () {
 
     const dashPctPendingEl = document.getElementById('dash-pct-pending');
     if (dashPctPendingEl) dashPctPendingEl.innerText = `${pctPending.toFixed(1)}%`;
-  }
-
-  // Função auxiliar global para estilos de categoria (reutilizada no planning dashboard)
-  function getCategoryStyleGlobal(cat) {
-    const styles = {
-      'Alimentação': { icon: 'fa-utensils', color: '#E91E63' },
-      'Salário': { icon: 'fa-money-bill-wave', color: '#F44336' },
-      'Investimentos': { icon: 'fa-chart-line', color: '#8BC34A' },
-      'Moradia / Contas': { icon: 'fa-home', color: '#3F51B5' },
-      'Transporte': { icon: 'fa-car', color: '#FF9800' },
-      'Lazer': { icon: 'fa-cocktail', color: '#9C27B0' },
-      'Saúde': { icon: 'fa-heartbeat', color: '#00BCD4' },
-      'Educação': { icon: 'fa-book', color: '#607D8B' },
-      'Supermercado': { icon: 'fa-shopping-cart', color: '#795548' },
-      'Bar / Restaurante': { icon: 'fa-wine-glass-alt', color: '#BA68C8' },
-      'Eletrônicos': { icon: 'fa-laptop', color: '#607D8B' },
-      'Roupas': { icon: 'fa-tshirt', color: '#FF5722' },
-      'Outros': { icon: 'fa-tag', color: '#9e9e9e' }
-    };
-    return styles[cat] || { icon: 'fa-tag', color: '#9e9e9e' };
   }
 
   // --- LÓGICA DO WIZARD DE PLANEJAMENTO ---
@@ -3062,40 +4351,32 @@ const AppController = (function () {
   // Define a variável "categories" no objeto wizardState existente
   wizardState.categories = {};
 
-  const defaultCategories = [
-    { name: 'Moradia / Contas', icon: 'fa-home', color: '#3F51B5' },
-    { name: 'Alimentação', icon: 'fa-utensils', color: '#E91E63' },
-    { name: 'Transporte', icon: 'fa-car', color: '#FF9800' },
-    { name: 'Saúde', icon: 'fa-heartbeat', color: '#00BCD4' },
-    { name: 'Educação', icon: 'fa-book', color: '#607D8B' },
-    { name: 'Lazer', icon: 'fa-cocktail', color: '#9C27B0' },
-    { name: 'Supermercado', icon: 'fa-shopping-cart', color: '#795548' },
-    { name: 'Bar / Restaurante', icon: 'fa-wine-glass-alt', color: '#BA68C8' },
-    { name: 'Eletrônicos', icon: 'fa-laptop', color: '#607D8B' },
-    { name: 'Roupas', icon: 'fa-tshirt', color: '#FF5722' },
-    { name: 'Outros', icon: 'fa-tag', color: '#9e9e9e' }
-  ];
+  // Categorias de despesa do usuário (principais e subcategorias) para definir limites
+  const wizardCategories = () => [...state.categories]
+    .filter(c => c.Tipo === 'DESPESA')
+    .sort((x, y) => x.Ordem - y.Ordem)
+    .map(c => ({ name: c.Nome, icon: c.Icone, color: c.Cor, ink: inkFor(c.Cor) }));
 
   function renderWizardCategories() {
     const container = document.getElementById('wizard-categories-list');
     if (!container) return;
     container.innerHTML = '';
 
-    defaultCategories.forEach(cat => {
+    wizardCategories().forEach(cat => {
       const val = wizardState.categories[cat.name] || 0;
 
       const card = document.createElement('div');
       card.className = 'wiz-cat-card';
       card.innerHTML = `
           <div style="display: flex; align-items: center; gap: 15px;">
-            <div class="wiz-cat-icon" style="background-color: ${cat.color};">
-              <i class="fas ${cat.icon}"></i>
+            <div class="wiz-cat-icon" style="background-color: ${cat.color}; color: ${cat.ink};">
+              ${categoryIconHTML(cat, 20)}
             </div>
-            <strong style="font-size: 16px; color: #333;">${cat.name}</strong>
+            <strong style="font-size: 16px; color: #333;">${escapeHTML(cat.name)}</strong>
           </div>
           <div class="wiz-cat-input-group">
             <label>Total</label>
-            <input type="text" class="wiz-cat-input" data-category="${cat.name}" value="R$ ${val.toFixed(2).replace('.', ',')}" oninput="AppController.maskCurrency(this); AppController.calculateWizardCategoryTotals()">
+            <input type="text" class="wiz-cat-input" data-category="${escapeHTML(cat.name)}" value="R$ ${val.toFixed(2).replace('.', ',')}" oninput="AppController.maskCurrency(this); AppController.calculateWizardCategoryTotals()">
           </div>
         `;
       container.appendChild(card);
@@ -3278,6 +4559,7 @@ const AppController = (function () {
     e.preventDefault();
     document.getElementById('main-dashboard-content').style.display = 'none';
     document.getElementById('profile-view').style.display = 'block';
+    requestAnimationFrame(() => moveSegPill('prof-seg', false));
 
     // Fecha o menu dropdown após clicar
     const userDropdown = document.getElementById('user-dropdown');
@@ -3388,40 +4670,29 @@ const AppController = (function () {
 
   // Alternar as abas internas da Tela de Perfil
   function switchProfileTab(tabName) {
-    const overviewBtn = document.getElementById('tab-prof-overview');
-    const regBtn = document.getElementById('tab-prof-registration');
+    const panes = {
+      overview: document.getElementById('prof-content-overview'),
+      registration: document.getElementById('prof-content-registration')
+    };
+    const buttons = {
+      overview: document.getElementById('tab-prof-overview'),
+      registration: document.getElementById('tab-prof-registration')
+    };
 
-    const overviewContent = document.getElementById('prof-content-overview');
-    const regContent = document.getElementById('prof-content-registration');
-
-    // Reseta o estilo visual dos botões
-    if (overviewBtn && regBtn) {
-      overviewBtn.style.background = 'none';
-      overviewBtn.style.color = 'var(--text-muted)';
-
-      regBtn.style.background = 'none';
-      regBtn.style.color = 'var(--text-muted)';
-    }
-
-    // Esconde todos os conteúdos
-    if (overviewContent) overviewContent.style.display = 'none';
-    if (regContent) regContent.style.display = 'none';
-
-    // Ativa apenas a aba clicada
-    if (tabName === 'overview') {
-      if (overviewBtn) {
-        overviewBtn.style.background = 'var(--primary-color)';
-        overviewBtn.style.color = 'white';
+    Object.keys(panes).forEach(key => {
+      const active = key === tabName;
+      if (buttons[key]) buttons[key].classList.toggle('active', active);
+      if (panes[key]) {
+        panes[key].style.display = active ? 'block' : 'none';
+        panes[key].classList.remove('tab-pane-enter');
+        if (active) {
+          void panes[key].offsetWidth;
+          panes[key].classList.add('tab-pane-enter');
+        }
       }
-      if (overviewContent) overviewContent.style.display = 'block';
-    }
-    else if (tabName === 'registration') {
-      if (regBtn) {
-        regBtn.style.background = 'var(--primary-color)';
-        regBtn.style.color = 'white';
-      }
-      if (regContent) regContent.style.display = 'block';
-    }
+    });
+
+    moveSegPill('prof-seg');
   }
 
   // Retornar ao Dashboard clicando no Logotipo
@@ -3432,6 +4703,14 @@ const AppController = (function () {
   });
 
   // --- MODO ESCURO (THEME) ---
+  // Mantém todos os seletores de tema (Perfil e Configurações) iguais ao tema ativo
+  function syncThemeSelectors(theme) {
+    document.querySelectorAll('#theme-selector-settings, #theme-selector').forEach(el => {
+      el.value = theme;
+      if (el.choicesInstance) el.choicesInstance.setChoiceByValue(theme);
+    });
+  }
+
   function changeTheme(theme) {
     if (theme === 'dark') {
       document.body.classList.add('dark-mode');
@@ -3440,6 +4719,7 @@ const AppController = (function () {
       document.body.classList.remove('dark-mode');
       localStorage.setItem('nexo_theme', 'light');
     }
+    syncThemeSelectors(theme === 'dark' ? 'dark' : 'light');
   }
 
   function loadTheme() {
@@ -3447,10 +4727,9 @@ const AppController = (function () {
 
     // Atualiza os selects visuais
     const selector = document.getElementById('theme-selector');
-    const selectorSettings = document.getElementById('theme-selector-settings');
 
     if (selector) selector.value = savedTheme;
-    if (selectorSettings) selectorSettings.value = savedTheme;
+    document.querySelectorAll('#theme-selector-settings').forEach(el => { el.value = savedTheme; });
 
     changeTheme(savedTheme);
   }
@@ -3458,10 +4737,12 @@ const AppController = (function () {
   // Salvar Preferências (Tema, Idioma e Moeda)
   // Salvar Preferências (Tema, Idioma e Moeda)
   // Salvar Preferências (Tema, Idioma e Moeda)
-  function savePreferences() {
-    const themeSelector = document.getElementById('theme-selector-settings');
-    const langSelector = document.getElementById('lang-selector-settings');
-    const currencySelector = document.getElementById('currency-selector-settings');
+  function savePreferences(trigger) {
+    // Há dois formulários com os mesmos ids (Perfil e Configurações): usa o do botão clicado
+    const scope = (trigger && trigger.closest('#profile-view, #view-settings')) || document;
+    const themeSelector = scope.querySelector('#theme-selector-settings');
+    const langSelector = scope.querySelector('#lang-selector-settings');
+    const currencySelector = scope.querySelector('#currency-selector-settings');
 
     // 1. Aplica o Tema escolhido
     if (themeSelector) {
@@ -3497,6 +4778,15 @@ const AppController = (function () {
 
       const bannerEmail = document.querySelector('#prof-content-overview p');
       if (bannerEmail) bannerEmail.innerText = user.email;
+
+      // Limpa o perfil anterior e usa um nome provisório até haver cadastro salvo
+      ['edit-nome', 'edit-apelido', 'edit-telefone', 'edit-cep', 'edit-estado', 'edit-cidade', 'edit-nascimento', 'edit-cpf']
+        .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      const provisionalName = user.displayName || (user.email || 'Usuário').split('@')[0];
+      const provisionalTrigger = document.querySelector('#user-menu-trigger span');
+      if (provisionalTrigger) provisionalTrigger.innerText = provisionalName;
+      const provisionalBanner = document.querySelector('#prof-content-overview h3');
+      if (provisionalBanner) provisionalBanner.innerText = provisionalName;
 
       // Se o usuário já salvou o perfil no banco, preenche o restante:
       if (docSnap.exists()) {
@@ -3609,7 +4899,7 @@ const AppController = (function () {
     } else if (monthly < 0) {
       box.innerHTML = `<i class="fas fa-info-circle" style="color: #2196F3; font-size: 20px; margin-top: 2px;"></i><div style="font-size: 13px; color: #555;">Edite o objetivo e defina uma <strong>Data Limite</strong> para calcular sua meta mensal.</div>`;
     } else {
-      box.innerHTML = `<i class="fas fa-chess-board" style="color: ${g.Cor || '#0d253f'}; font-size: 20px; margin-top: 2px;"></i><div style="font-size: 13px; color: #555;">Para atingir seu objetivo a tempo, você precisa poupar a cada mês <strong style="color: #111;">${currencyFormatter.format(monthly)}</strong></div>`;
+      box.innerHTML = `<i class="fas fa-chess-board" style="color: ${g.Cor || '#36454f'}; font-size: 20px; margin-top: 2px;"></i><div style="font-size: 13px; color: #555;">Para atingir seu objetivo a tempo, você precisa poupar a cada mês <strong style="color: #111;">${currencyFormatter.format(monthly)}</strong></div>`;
     }
 
     renderGoalChart(pct, g.Cor || '#00BCD4');
@@ -3767,22 +5057,61 @@ const AppController = (function () {
   }
 
   // Alterna entre a aba Em Andamento e Concluídos
+  // ── Pílula deslizante dos seletores segmentados ──
+  const segPillTimers = {};
+
+  function moveSegPill(containerId, animate = true) {
+    const container = document.getElementById(containerId);
+    const pill = container && container.querySelector('.seg-pill');
+    const btn = container && container.querySelector('.seg-btn.active');
+    if (!pill || !btn || btn.offsetParent === null) return;
+
+    const newLeft = btn.offsetLeft;
+    const newWidth = btn.offsetWidth;
+    clearTimeout(segPillTimers[containerId]);
+
+    const first = !pill.classList.contains('ready');
+    if (first || !animate || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      pill.classList.add('no-anim');
+      pill.style.left = `${newLeft}px`;
+      pill.style.width = `${newWidth}px`;
+      void pill.offsetWidth;
+      pill.classList.remove('no-anim');
+      pill.classList.add('ready');
+      return;
+    }
+
+    // Estica cobrindo origem e destino, depois encolhe no destino
+    const oldLeft = parseFloat(pill.style.left) || 0;
+    const oldWidth = parseFloat(pill.style.width) || 0;
+    const start = Math.min(oldLeft, newLeft);
+    const end = Math.max(oldLeft + oldWidth, newLeft + newWidth);
+    pill.style.left = `${start}px`;
+    pill.style.width = `${end - start}px`;
+    segPillTimers[containerId] = setTimeout(() => {
+      pill.style.left = `${newLeft}px`;
+      pill.style.width = `${newWidth}px`;
+    }, 240);
+  }
+
+  function moveGoalsPill(animate = true) {
+    moveSegPill('goals-seg', animate);
+  }
+
+  window.addEventListener('resize', () => {
+    moveGoalsPill(false);
+    moveSegPill('prof-seg', false);
+    moveSegPill('set-seg', false);
+    moveSegPill('cat-seg', false);
+  });
+
   function switchGoalsTab(tabName) {
     state.goalsTab = tabName;
     const btnAndamento = document.getElementById('btn-goal-andamento');
     const btnConcluidos = document.getElementById('btn-goal-concluidos');
-
-    if (tabName === 'ANDAMENTO') {
-      btnAndamento.style.background = 'var(--primary-color)';
-      btnAndamento.style.color = 'white';
-      btnConcluidos.style.background = 'transparent';
-      btnConcluidos.style.color = '#666';
-    } else {
-      btnConcluidos.style.background = 'var(--primary-color)';
-      btnConcluidos.style.color = 'white';
-      btnAndamento.style.background = 'transparent';
-      btnAndamento.style.color = '#666';
-    }
+    btnAndamento.classList.toggle('active', tabName === 'ANDAMENTO');
+    btnConcluidos.classList.toggle('active', tabName !== 'ANDAMENTO');
+    moveGoalsPill();
 
     renderGoalsPage();
   }
@@ -3857,9 +5186,8 @@ const AppController = (function () {
     // Remove o Toast automaticamente após 3.5 segundos
     setTimeout(() => {
       toast.classList.add('hiding');
-      toast.addEventListener('animationend', () => {
-        toast.remove();
-      });
+      toast.addEventListener('animationend', () => toast.remove());
+      setTimeout(() => toast.remove(), 600);
     }, 3500);
   }
 
@@ -3873,7 +5201,7 @@ const AppController = (function () {
     today.setHours(23, 59, 59, 999);
 
     // 1. Filtra as transações normais do mês selecionado
-    const monthlyTransactions = (state.transactions || []).filter(t => {
+    const monthlyTransactions = activeTransactions().filter(t => {
       if (!t.Data) return false;
       const tDate = parseLocalDate(t.Data);
       const tMonth = String(tDate.getMonth() + 1).padStart(2, '0');
@@ -3923,7 +5251,7 @@ const AppController = (function () {
 
     // 4. Saldo Atual Global (A matemática exata do Dashboard)
     const baseBalance = (state.accounts || []).reduce((acc, currentAcc) => acc + (parseFloat(currentAcc.SaldoInicial) || 0), 0);
-    const globalSummary = (state.transactions || []).reduce((acc, current) => {
+    const globalSummary = activeTransactions().reduce((acc, current) => {
       const tDate = parseLocalDate(current.Data);
       if (tDate <= today) {
         const amount = parseFloat(current.Valor) || 0;
@@ -3971,26 +5299,23 @@ const AppController = (function () {
   }
 
   function switchSettingsTab(tabName) {
-    const tabs = ['pref', 'alerts', 'dash', 'sec'];
-
-    tabs.forEach(t => {
+    ['pref', 'alerts', 'dash', 'sec'].forEach(t => {
       const btn = document.getElementById(`tab-set-${t}`);
       const content = document.getElementById(`set-content-${t}`);
+      const active = t === tabName;
 
-      if (t === tabName) {
-        if (btn) {
-          btn.style.background = 'var(--primary-color)';
-          btn.style.color = 'white';
+      if (btn) btn.classList.toggle('active', active);
+      if (content) {
+        content.classList.toggle('hidden', !active);
+        content.classList.remove('tab-pane-enter');
+        if (active) {
+          void content.offsetWidth;
+          content.classList.add('tab-pane-enter');
         }
-        if (content) content.classList.remove('hidden');
-      } else {
-        if (btn) {
-          btn.style.background = 'transparent';
-          btn.style.color = '#666';
-        }
-        if (content) content.classList.add('hidden');
       }
     });
+
+    moveSegPill('set-seg');
   }
 
   // Lógica de Seleção de Dispositivos
@@ -4068,10 +5393,10 @@ const AppController = (function () {
   }
 
   return {
-    init, switchTab, setTransactionFilter, renderCreditCardsPage, renderFixedCostsPage, renderGoalsPage, renderAccountsPage, renderPlanningView, openMonthPicker, closeMonthPicker, changePickerYear, selectCurrentMonth, openModal, closeModal, submitTransaction, editTransaction, deleteTransaction, openAccountModal, closeAccountModal, submitAccount, openTransferModal, closeTransferModal, submitTransfer,
+    init, claimLegacyData, switchTab, toggleTxDetails, toggleTxRepeat, setTxDateShortcut, openTxDatePicker, validateTxAmount, calPrev, calNext, calToday, openEventModal, closeEventModal, submitEvent, deleteEventFromModal, setEventType, toggleEventAllDay, setTransactionFilter, renderCreditCardsPage, renderFixedCostsPage, renderGoalsPage, renderAccountsPage, renderPlanningView, openMonthPicker, closeMonthPicker, changePickerYear, selectCurrentMonth, openModal, closeModal, submitTransaction, editTransaction, deleteTransaction, openAccountModal, closeAccountModal, submitAccount, openTransferModal, closeTransferModal, submitTransfer,
     openGoalTypeModal, openGoalForm, closeGoalModal, submitGoal, editGoal, deleteGoal, openGoalDepositModal, closeGoalDepositModal, submitGoalDeposit,
-    openGoalDetails, closeGoalDetails, editGoalFromDetails, deleteGoalDeposit, editGoalDeposit, toggleGoalOptions, openCurrentGoalDepositModal, deleteCurrentGoal, switchGoalsTab, markGoalAsCompleted, toggleGoalsSortDropdown, setGoalsSortOrder, openFixedCostModal, closeFixedCostModal, submitFixedCost, editFixedCost, deleteFixedCost, markFixedCostPaid, unmarkFixedCostPaid, openFCPayModal, closeFCPayModal, openCCModal, closeCCModal, submitCC, openCCTransModal, closeCCTransModal, submitCCTrans, openCCInvoiceModal, closeCCInvoiceModal, deleteCreditTransaction, toggleFabMenu, closeFabMenu, openNewTransaction, openNewCCTransaction, openNewTransfer, startPlanningWizard, cancelPlanningWizard, copyPreviousPlanning, maskCurrency, calculateWizardBudget, prevWizardStep, nextWizardStep, calculateWizardCategoryTotals, renderWizardCategories, selectCardPreference, finishPlanningWizard, closeFixedCostPayModal, submitFixedCostPay, logout, switchProfileTab, maskCPF, maskPhone, maskCEP, changeTheme, loadUserProfile, openPayInvoiceModal, closePayInvoiceModal, submitPayInvoice, showToast, openCurrentGoalWithdrawModal, updateTransactionSummary, switchSettingsTab, toggleAllDevices, checkDeviceSelection, disconnectSelectedDevices, savePreferences, changeTxPage, changeTxItemsPerPage, setTransactionSort, proceedEditFixedCost, closeFCEditScopeModal, parseCurrencyMask,
-    openTxDrawer, closeTxDrawer, submitTxDrawer, deleteTxFromDrawer, renderDashboardInsights
+    openGoalDetails, closeGoalDetails, editGoalFromDetails, deleteGoalDeposit, editGoalDeposit, toggleGoalOptions, openCurrentGoalDepositModal, deleteCurrentGoal, switchGoalsTab, markGoalAsCompleted, toggleGoalsSortDropdown, setGoalsSortOrder, openFixedCostModal, closeFixedCostModal, submitFixedCost, editFixedCost, deleteFixedCost, markFixedCostPaid, unmarkFixedCostPaid, openFCPayModal, closeFCPayModal, openCCModal, closeCCModal, submitCC, openCCTransModal, closeCCTransModal, submitCCTrans, openCCInvoiceModal, closeCCInvoiceModal, deleteCreditTransaction, toggleFabMenu, closeFabMenu, openNewTransaction, openNewCCTransaction, openNewTransfer, startPlanningWizard, cancelPlanningWizard, copyPreviousPlanning, maskCurrency, calculateWizardBudget, prevWizardStep, nextWizardStep, calculateWizardCategoryTotals, renderWizardCategories, selectCardPreference, finishPlanningWizard, closeFixedCostPayModal, submitFixedCostPay, logout, switchProfileTab, maskCPF, maskPhone, maskCEP, changeTheme, loadUserProfile, openPayInvoiceModal, closePayInvoiceModal, submitPayInvoice, showToast, openCurrentGoalWithdrawModal, updateTransactionSummary, switchSettingsTab, toggleAllDevices, checkDeviceSelection, disconnectSelectedDevices, savePreferences, openCategoryModal, closeCategoryModal, submitCategory, deleteCategory, setCategoryKind, setCategoryFormKind, updateCategoryPreview, onCategoryParentChange, filterCategoryIcons: renderIconGrid, pickCategoryIcon, pickCategoryColor, changeTxPage, changeTxItemsPerPage, setTransactionSort, proceedEditFixedCost, closeFCEditScopeModal, parseCurrencyMask,
+    openTxDrawer, closeTxDrawer, openCCDrawer, closeCCDrawer, submitTxDrawer, deleteTxFromDrawer, renderDashboardInsights
   };
 })();
 

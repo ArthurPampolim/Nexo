@@ -11,18 +11,14 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    // Documentos sem userId NÃO são mais aceitos. Antes de publicar estas regras,
+    // rode AppController.claimLegacyData() na conta dona dos dados antigos.
     function isDocumentOwner() {
-      return isAuthenticated() && (
-        resource.data.userId == request.auth.uid ||
-        !('userId' in resource.data)
-      );
+      return isAuthenticated() && resource.data.userId == request.auth.uid;
     }
 
     function isCreatingForSelf() {
-      return isAuthenticated() && (
-        request.resource.data.userId == request.auth.uid ||
-        !('userId' in request.resource.data)
-      );
+      return isAuthenticated() && request.resource.data.userId == request.auth.uid;
     }
 
     // Perfil do Usuário (ID do documento = UID do auth)
@@ -67,13 +63,25 @@ service cloud.firestore {
       allow update: if isDocumentOwner() && isCreatingForSelf();
     }
 
-    match /Custos Fixos/{docId} {
+    match /CustosFixos/{docId} {
       allow read, delete: if isDocumentOwner();
       allow create: if isCreatingForSelf();
       allow update: if isDocumentOwner() && isCreatingForSelf();
     }
 
     match /Planejamento/{docId} {
+      allow read, delete: if isDocumentOwner();
+      allow create: if isCreatingForSelf();
+      allow update: if isDocumentOwner() && isCreatingForSelf();
+    }
+
+    match /Eventos/{docId} {
+      allow read, delete: if isDocumentOwner();
+      allow create: if isCreatingForSelf();
+      allow update: if isDocumentOwner() && isCreatingForSelf();
+    }
+
+    match /Categorias/{docId} {
       allow read, delete: if isDocumentOwner();
       allow create: if isCreatingForSelf();
       allow update: if isDocumentOwner() && isCreatingForSelf();

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 112 112" width="112" height="112">
+  <title>Nexo</title>
+  <style>@media (prefers-color-scheme: dark) { g { fill: #F4F7F6; } }</style>
+  <g fill="#212B31">
+    <circle cx="8" cy="8" r="5"/><circle cx="24" cy="8" r="3.5"/><circle cx="40" cy="8" r="2"/><circle cx="72" cy="8" r="2"/><circle cx="88" cy="8" r="3.5"/><circle cx="104" cy="8" r="5"/>
+    <circle cx="8" cy="24" r="3.5"/><circle cx="24" cy="24" r="5"/><circle cx="40" cy="24" r="3.5"/><circle cx="56" cy="24" r="2"/><circle cx="72" cy="24" r="3.5"/><circle cx="88" cy="24" r="5"/><circle cx="104" cy="24" r="3.5"/>
+    <circle cx="8" cy="40" r="2"/><circle cx="24" cy="40" r="3.5"/><circle cx="40" cy="40" r="5"/><circle cx="56" cy="40" r="3.5"/><circle cx="72" cy="40" r="5"/><circle cx="88" cy="40" r="3.5"/><circle cx="104" cy="40" r="2"/>
+    <circle cx="24" cy="56" r="2"/><circle cx="40" cy="56" r="3.5"/><circle cx="56" cy="56" r="5"/><circle cx="72" cy="56" r="3.5"/><circle cx="88" cy="56" r="2"/>
+    <circle cx="8" cy="72" r="2"/><circle cx="24" cy="72" r="3.5"/><circle cx="40" cy="72" r="5"/><circle cx="56" cy="72" r="3.5"/><circle cx="72" cy="72" r="5"/><circle cx="88" cy="72" r="3.5"/><circle cx="104" cy="72" r="2"/>
+    <circle cx="8" cy="88" r="3.5"/><circle cx="24" cy="88" r="5"/><circle cx="40" cy="88" r="3.5"/><circle cx="56" cy="88" r="2"/><circle cx="72" cy="88" r="3.5"/><circle cx="88" cy="88" r="5"/><circle cx="104" cy="88" r="3.5"/>
+    <circle cx="8" cy="104" r="5"/><circle cx="24" cy="104" r="3.5"/><circle cx="40" cy="104" r="2"/><circle cx="72" cy="104" r="2"/><circle cx="88" cy="104" r="3.5"/><circle cx="104" cy="104" r="5"/>
+  </g>
+</svg>

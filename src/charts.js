@@ -14,8 +14,8 @@ export const ChartManager = {
     updateDashboardCharts: function (allTransactions, selectedYYYYMM) {
         if (typeof Chart !== 'undefined') {
             const isDark = document.body.classList.contains('dark-mode');
-            Chart.defaults.color = isDark ? '#94a3b8' : '#64748b';
-            Chart.defaults.borderColor = isDark ? '#1e293b' : '#e2e8f0';
+            Chart.defaults.color = isDark ? '#9db5b4' : '#5b6d79';
+            Chart.defaults.borderColor = isDark ? '#36454f' : '#dbe5e5';
             Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
         }
         this.renderExpensesChart(allTransactions, selectedYYYYMM);
@@ -51,7 +51,7 @@ export const ChartManager = {
                 datasets: [{
                     data: dataValues.length > 0 ? dataValues : [1],
                     backgroundColor: labels.length > 0 ?
-                        ['#0d253f', '#174665', '#00c985', '#0284c7', '#d97706', '#e11d48', '#0891b2', '#475569'] :
+                        ['#36454f', '#6fa9a8', '#8fbcbb', '#4b5f6d', '#d97706', '#e11d48', '#afcfce', '#0284c7'] :
                         ['#e2e8f0'],
                     borderWidth: 0
                 }]
@@ -94,7 +94,7 @@ export const ChartManager = {
                 labels: ['Receitas', 'Despesas'],
                 datasets: [{
                     data: [receitas, despesas],
-                    backgroundColor: ['#00c985', '#e11d48'], // Verde Esmeralda e Rubi
+                    backgroundColor: ['#6fa9a8', '#e11d48'], // Verde Esmeralda e Rubi
                     borderRadius: 6,
                     barPercentage: 0.6
                 }]
@@ -157,8 +157,8 @@ export const ChartManager = {
                     {
                         label: 'Receitas',
                         data: histReceitas,
-                        borderColor: '#00c985',
-                        backgroundColor: 'rgba(0, 201, 133, 0.1)',
+                        borderColor: '#6fa9a8',
+                        backgroundColor: 'rgba(111, 169, 168, 0.18)',
                         borderWidth: 3,
                         tension: 0.4, // Curva suave
                         fill: true
