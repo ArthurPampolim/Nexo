@@ -4,10 +4,11 @@ import { auth } from './firebase.js';
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail, updatePassword } from "firebase/auth";
 import { ChartManager } from './charts.js';
 import { isSettled, settledTotals, accountBalances, monthSummary, roundCents, parseCurrencyMask, isTransferTransaction, parseLocalDate, txLocalISO, txAddMonths } from './finance.js';
-import { state, OWNED_COLLECTIONS, currencyFormatter, escapeHTML, formatDateBR, balanceClass, getCurrentUserId, fetchUserScopedDocs } from './core.js';
+import { state, elements, activeTransactions, OWNED_COLLECTIONS, currencyFormatter, escapeHTML, formatDateBR, balanceClass, getCurrentUserId, fetchUserScopedDocs } from './core.js';
 import { app } from './app.js';
 import { categoryIconHTML, closeCategoryModal, deleteCategory, getCategoryStyle, loadCategories, onCategoryParentChange, openCategoryModal, pickCategoryColor, pickCategoryIcon, populateCategorySelects, rebuildCategorySelect, renderCategoriesPage, renderIconGrid, safeId, setCategoryFormKind, setCategoryKind, setCategorySelectValue, submitCategory, updateCategoryPreview } from './screens/categories.js';
 import { calNext, calPrev, calToday, closeEventModal, deleteEventFromModal, loadEvents, openEventModal, renderCalendar, setEventType, submitEvent, toggleEventAllDay } from './screens/calendar.js';
+import { closeAccountModal, closeTransferModal, loadAccounts, openAccountModal, openTransferModal, renderAccountBalances, renderAccountsPage, submitAccount, submitTransfer } from './screens/accounts.js';
 import { ICON_LIST, COLOR_PALETTE, DEFAULT_CATEGORIES, iconSvg, inkFor, isHexColor, isValidIcon } from './categories.js';
 
 
@@ -43,9 +44,6 @@ const AppController = (function () {
     showToast(`${total} registro(s) vinculados à sua conta.`, 'success');
     init();
   }
-
-  // Transações marcadas como "Ignorar" não entram em totais, saldos, gráficos nem planejamento
-  const activeTransactions = () => state.transactions.filter(t => !t.Ignorar);
 
 
   state.txSortCol = 'Data';
@@ -240,16 +238,6 @@ const AppController = (function () {
     renderAccountsPage();
     renderPlanningView();
   }
-
-  // 3. ELEMENTOS E FORMATADORES
-  const elements = {
-    totalBalance: document.getElementById('total-balance'), totalIncome: document.getElementById('total-income'), totalExpense: document.getElementById('total-expense'), totalCreditCard: document.getElementById('total-credit-card'),
-    transactionsContainer: document.getElementById('transactions-container'), modal: document.getElementById('transaction-modal'), form: document.getElementById('transaction-form'), submitBtn: document.getElementById('submit-btn'), accountSelect: document.getElementById('conta'),
-    accountModal: document.getElementById('account-modal'), accountForm: document.getElementById('account-form'), submitAccountBtn: document.getElementById('submit-acc-btn'),
-    goalsContainer: document.getElementById('goals-container'), goalModal: document.getElementById('goal-modal'), goalForm: document.getElementById('goal-form'), submitGoalBtn: document.getElementById('submit-goal-btn'),
-    fixedCostsContainer: document.getElementById('fixed-costs-container'), fixedCostModal: document.getElementById('fixed-cost-modal'), fixedCostForm: document.getElementById('fixed-cost-form'), submitFixedCostBtn: document.getElementById('submit-fc-btn'),
-    ccModal: document.getElementById('cc-modal'), ccForm: document.getElementById('cc-form'), submitCCBtn: document.getElementById('submit-cc-btn'), ccTransModal: document.getElementById('cc-trans-modal'), ccTransForm: document.getElementById('cc-trans-form'), submitCCTransBtn: document.getElementById('submit-cct-btn'), cctCartaoSelect: document.getElementById('cct-cartao')
-  };
 
   // Sincroniza selects nativos com a interface do Choices.js
   function upgradeSelects() {
@@ -536,126 +524,6 @@ const AppController = (function () {
       btn.innerText = 'Enviar Link';
     }
   });
-
-  // --- CONTAS BANCÁRIAS E TRANSFERÊNCIAS ---
-  async function loadAccounts() {
-    try {
-      const data = await fetchUserScopedDocs("Contas");
-      state.accounts = data;
-      populateAccountsDropdown();
-      loadTransactions();
-    } catch (error) {
-      console.error("Erro ao carregar contas:", error);
-    }
-  }
-  function populateAccountsDropdown() {
-    if (!elements.accountSelect) return;
-    elements.accountSelect.innerHTML = '<option value="" disabled selected>Selecione uma conta...</option>';
-    state.accounts.forEach(acc => {
-      const opt = document.createElement('option');
-      opt.value = acc.Nome;
-      opt.text = acc.Nome;
-      elements.accountSelect.appendChild(opt);
-    });
-    upgradeSelects();
-  }
-  function renderAccountBalances(transactions) {
-    const container = document.getElementById('accounts-container'); if (!container) return;
-    container.innerHTML = '';
-    if (state.accounts.length === 0) { container.innerHTML = '<div style="color:#888; padding:15px; font-size:14px;">Nenhuma conta.</div>'; return; }
-    const balances = accountBalances(state.accounts, transactions);
-
-    const today = new Date();
-    today.setHours(23, 59, 59, 999);
-
-
-    state.accounts.forEach(acc => {
-      const card = document.createElement('div'); card.className = 'account-mini-card';
-      const bal = roundCents(balances[acc.Nome]); const bClass = balanceClass(bal);
-      card.innerHTML = `<div class="acc-name"><i class="fas fa-wallet" style="margin-right: 8px; color: #aaa;"></i>${escapeHTML(acc.Nome)}</div><div class="acc-balance ${bClass}">${currencyFormatter.format(bal)}</div>`;
-      container.appendChild(card);
-    });
-  }
-  function openAccountModal() { elements.accountModal.classList.remove('hidden'); }
-  function closeAccountModal() { elements.accountModal.classList.add('hidden'); elements.accountForm.reset(); }
-  async function submitAccount(event) {
-    event.preventDefault();
-    elements.submitAccountBtn.disabled = true;
-    elements.submitAccountBtn.innerHTML = 'Salvando...';
-
-    const formDados = Object.fromEntries(new FormData(elements.accountForm).entries());
-
-    try {
-      await addDoc(collection(db, "Contas"), {
-        userId: getCurrentUserId(),
-        Nome: formDados.nome,
-        SaldoInicial: parseFloat(formDados.saldoInicial) || 0,
-        Status: 'Ativo'
-      });
-      closeAccountModal();
-      loadAccounts();
-    } catch (error) {
-      AppController.showToast("Erro ao salvar conta: " + error.message, 'error');
-    } finally {
-      elements.submitAccountBtn.disabled = false;
-      elements.submitAccountBtn.innerText = 'Salvar';
-    }
-  }
-
-  function openTransferModal() {
-    const orig = document.getElementById('transfer-origem');
-    const dest = document.getElementById('transfer-destino');
-    if (orig && dest) {
-      orig.innerHTML = '<option value="" disabled selected>Selecione a origem...</option>';
-      dest.innerHTML = '<option value="" disabled selected>Selecione o destino...</option>';
-      state.accounts.forEach(acc => {
-        const safeName = escapeHTML(acc.Nome);
-        orig.innerHTML += `<option value="${safeName}">${safeName}</option>`;
-        dest.innerHTML += `<option value="${safeName}">${safeName}</option>`;
-      });
-      upgradeSelects();
-    }
-    document.getElementById('transfer-modal').classList.remove('hidden');
-  }
-  function closeTransferModal() {
-    document.getElementById('transfer-modal').classList.add('hidden');
-    document.getElementById('transfer-form').reset();
-  }
-  async function submitTransfer(event) {
-    event.preventDefault();
-    const btn = document.getElementById('submit-transfer-btn');
-    btn.disabled = true;
-    btn.innerText = 'Transferindo...';
-
-    const formDados = Object.fromEntries(new FormData(document.getElementById('transfer-form')).entries());
-    const valorTransf = parseCurrencyMask(formDados.valor);
-    const localISO = formDados.dataTransacao;
-    const uid = getCurrentUserId();
-
-    try {
-      if (formDados.tipoTransferencia === 'OBJETIVO') {
-        const goal = state.goals.find(g => String(g.ID) === String(formDados.origem));
-        if (!goal) throw new Error("Objetivo não encontrado.");
-        if (valorTransf > (parseFloat(goal.ValorAtual) || 0)) throw new Error("Saldo insuficiente no objetivo.");
-
-        await updateDoc(doc(db, "Objetivos", goal.ID), { ValorAtual: (parseFloat(goal.ValorAtual) || 0) - valorTransf });
-        await addDoc(collection(db, "Transacoes"), { userId: uid, Tipo: 'RECEITA', Categoria: 'Investimentos', Valor: valorTransf, Descricao: `Resgate de Objetivo: ${goal.Nome}`, Conta: formDados.destino, Data: localISO });
-      } else {
-        if (formDados.origem === formDados.destino) throw new Error("Origem e destino devem ser diferentes.");
-        await addDoc(collection(db, "Transacoes"), { userId: uid, Tipo: 'DESPESA', Categoria: 'Transferência', Valor: valorTransf, Descricao: `Transf. para ${formDados.destino}`, Conta: formDados.origem, Data: localISO });
-        await addDoc(collection(db, "Transacoes"), { userId: uid, Tipo: 'RECEITA', Categoria: 'Transferência', Valor: valorTransf, Descricao: `Transf. de ${formDados.origem}`, Conta: formDados.destino, Data: localISO });
-      }
-
-      closeTransferModal();
-      loadTransactions();
-      if (formDados.tipoTransferencia === 'OBJETIVO') loadGoals();
-    } catch (error) {
-      AppController.showToast("Erro na transferência: " + error.message, 'error');
-    } finally {
-      btn.disabled = false;
-      btn.innerText = 'Realizar Transferência';
-    }
-  }
 
   // --- TRANSAÇÕES GERAIS ---
   async function loadTransactions() {
@@ -3279,78 +3147,6 @@ const AppController = (function () {
     }
   }
 
-  // --- RENDERIZAÇÃO DA ABA DEDICADA: MINHAS CONTAS ---
-  function renderAccountsPage() {
-    const totalElem = document.getElementById('acc-page-total-balance');
-    const countBadge = document.getElementById('acc-count-badge');
-    const gridContainer = document.getElementById('acc-page-grid');
-
-    const today = new Date();
-    today.setHours(23, 59, 59, 999);
-
-    const balances = accountBalances(state.accounts, activeTransactions());
-
-
-    const baseBalance = state.accounts.reduce((acc, currentAcc) => acc + (parseFloat(currentAcc.SaldoInicial) || 0), 0);
-    const globalSummary = settledTotals(activeTransactions());
-
-    const currentGlobalBalance = baseBalance + globalSummary.income - globalSummary.expense;
-    if (totalElem) totalElem.innerText = currencyFormatter.format(currentGlobalBalance);
-    if (countBadge) countBadge.innerText = `${state.accounts.length} conta(s)`;
-
-    if (gridContainer) {
-      gridContainer.innerHTML = '';
-      //Injeta o Cartão Fixo de "Nova Conta" idêntico à sua referência
-      const newAccountCard = document.createElement('div');
-      newAccountCard.className = 'summary-card new-account-card';
-      newAccountCard.style.flexDirection = 'column';
-      newAccountCard.style.alignItems = 'center';
-      newAccountCard.style.justifyContent = 'center';
-      newAccountCard.style.padding = '30px 20px';
-      newAccountCard.style.cursor = 'pointer';
-      newAccountCard.style.border = '2px dashed var(--primary-color)'; // Borda tracejada
-      newAccountCard.style.backgroundColor = 'transparent';
-      newAccountCard.style.boxShadow = 'none';
-      newAccountCard.style.minHeight = '145px';
-      newAccountCard.onclick = AppController.openAccountModal;
-
-      newAccountCard.innerHTML = `
-        <div style="width: 48px; height: 48px; border-radius: 50%; border: 2px solid var(--primary-color); display: flex; justify-content: center; align-items: center; color: var(--primary-color); font-size: 18px; margin-bottom: 12px; transition: transform 0.2s;">
-          <i class="fas fa-plus"></i>
-        </div>
-        <strong style="color: var(--primary-color); font-size: 15px; font-weight: 600;">Nova conta</strong>
-      `;
-      gridContainer.appendChild(newAccountCard);
-      if (state.accounts.length > 0) {
-        state.accounts.forEach(acc => {
-          const bal = roundCents(balances[acc.Nome]);
-          const bClass = balanceClass(bal);
-          const card = document.createElement('div');
-          card.className = 'summary-card';
-          card.style.flexDirection = 'column';
-          card.style.alignItems = 'flex-start';
-          card.style.gap = '10px';
-          card.style.padding = '20px';
-
-          const safeAccNome = escapeHTML(acc.Nome);
-          card.innerHTML = `
-              <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
-                <strong style="font-size:16px; color:#333;"><i class="fas fa-university" style="color:#2196F3; margin-right:8px;"></i>${safeAccNome}</strong>
-                <span style="font-size:12px; color:#666; background:#e3f2fd; padding:2px 8px; border-radius:10px;">Ativa</span>
-              </div>
-              <div style="margin-top:5px;">
-                <div style="font-size:12px; color:#888;">Saldo Atual</div>
-                <div class="acc-balance ${bClass}" style="font-size:20px; font-weight:bold;">${currencyFormatter.format(bal)}</div>
-              </div>
-              <div style="font-size:12px; color:#888; border-top:1px solid #f0f0f0; width:100%; padding-top:8px; margin-top:4px;">
-                Saldo Inicial: <strong>${currencyFormatter.format(parseFloat(acc.SaldoInicial) || 0)}</strong>
-              </div>`;
-          gridContainer.appendChild(card);
-        });
-      }
-    }
-  }
-
   // --- CÁLCULO E RENDERIZAÇÃO DO DASHBOARD DE PLANEJAMENTO ---
   async function loadPlanning() {
     try {
@@ -4691,7 +4487,7 @@ const AppController = (function () {
     renderTransactions();
   }
 
-  Object.assign(app, { showToast, confirmDialog, moveSegPill, renderTransactions, switchTab });
+  Object.assign(app, { showToast, confirmDialog, moveSegPill, renderTransactions, switchTab, loadGoals, loadTransactions, upgradeSelects });
 
   return {
     init, claimLegacyData, exportTransactionsCSV, exportTransactionsPDF, toggleTxStatus, handleReceiptFile, clearReceipt, handleDrawerReceipt, switchTab, toggleTxDetails, toggleTxRepeat, setTxDateShortcut, openTxDatePicker, validateTxAmount, calPrev, calNext, calToday, openEventModal, closeEventModal, submitEvent, deleteEventFromModal, setEventType, toggleEventAllDay, setTransactionFilter, renderCreditCardsPage, renderFixedCostsPage, renderGoalsPage, renderAccountsPage, renderPlanningView, openMonthPicker, closeMonthPicker, changePickerYear, selectCurrentMonth, openModal, closeModal, submitTransaction, editTransaction, deleteTransaction, openAccountModal, closeAccountModal, submitAccount, openTransferModal, closeTransferModal, submitTransfer,

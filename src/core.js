@@ -79,3 +79,16 @@ function syncScrollLock() {
 new MutationObserver(syncScrollLock).observe(document.body, {
   subtree: true, childList: true, attributes: true, attributeFilter: ['class']
 });
+
+// ── Elementos da página ──
+export const elements = {
+  totalBalance: document.getElementById('total-balance'), totalIncome: document.getElementById('total-income'), totalExpense: document.getElementById('total-expense'), totalCreditCard: document.getElementById('total-credit-card'),
+  transactionsContainer: document.getElementById('transactions-container'), modal: document.getElementById('transaction-modal'), form: document.getElementById('transaction-form'), submitBtn: document.getElementById('submit-btn'), accountSelect: document.getElementById('conta'),
+  accountModal: document.getElementById('account-modal'), accountForm: document.getElementById('account-form'), submitAccountBtn: document.getElementById('submit-acc-btn'),
+  goalsContainer: document.getElementById('goals-container'), goalModal: document.getElementById('goal-modal'), goalForm: document.getElementById('goal-form'), submitGoalBtn: document.getElementById('submit-goal-btn'),
+  fixedCostsContainer: document.getElementById('fixed-costs-container'), fixedCostModal: document.getElementById('fixed-cost-modal'), fixedCostForm: document.getElementById('fixed-cost-form'), submitFixedCostBtn: document.getElementById('submit-fc-btn'),
+  ccModal: document.getElementById('cc-modal'), ccForm: document.getElementById('cc-form'), submitCCBtn: document.getElementById('submit-cc-btn'), ccTransModal: document.getElementById('cc-trans-modal'), ccTransForm: document.getElementById('cc-trans-form'), submitCCTransBtn: document.getElementById('submit-cct-btn'), cctCartaoSelect: document.getElementById('cct-cartao')
+};
+
+// Transações marcadas como "Ignorar" não entram em totais, saldos, gráficos nem planejamento
+export const activeTransactions = () => state.transactions.filter(t => !t.Ignorar);
