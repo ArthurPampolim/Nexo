@@ -437,6 +437,10 @@
             <div class="section-header" style="margin-bottom: 10px;">
               <h3 style="margin: 0; font-size: 18px; color: #333;">Lançamentos do Mês</h3>
               <span id="tx-count-badge" style="font-size: 13px; color: #777; font-weight: 500;"></span>
+              <div class="tx-export">
+                <button type="button" class="tx-export-btn" onclick="AppController.exportTransactionsCSV()"><i class="fas fa-file-csv"></i> CSV</button>
+                <button type="button" class="tx-export-btn" onclick="AppController.exportTransactionsPDF()"><i class="fas fa-file-pdf"></i> PDF</button>
+              </div>
             </div>
             <!-- FILTROS DE TRANSAÇÕES -->
             <div class="tx-filter-pills">
@@ -1586,6 +1590,8 @@
             <div class="tx-drawer-status-box" id="tx-drawer-status-display">
               <i class="fas fa-check-circle text-green"></i> Efetivado
             </div>
+            <button type="button" class="tx-status-btn hidden" id="tx-drawer-status-btn"
+              onclick="AppController.toggleTxStatus()">Marcar como agendado</button>
           </div>
 
           <div class="form-group" id="tx-drawer-receipt-group">
@@ -1671,6 +1677,12 @@
                 <input type="file" id="tx-file" class="hidden" accept="image/*,application/pdf"
                   onchange="AppController.handleReceiptFile(this)">
               </div>
+
+              <label class="tx-row tx-toggle-row">
+                <i class="fas fa-check-circle tx-icon"></i>
+                <span>Efetivado (pago / recebido)</span>
+                <input type="checkbox" name="efetivado" class="tx-switch" checked>
+              </label>
 
               <label class="tx-row tx-toggle-row">
                 <i class="fas fa-info-circle tx-icon"></i>

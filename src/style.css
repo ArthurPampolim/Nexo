@@ -4994,3 +4994,53 @@ html.modal-open {
   box-shadow: var(--shadow-md);
   cursor: pointer;
 }
+
+/* ── Situação da transação ── */
+.status-toggle {
+  cursor: pointer;
+}
+
+.status-toggle:hover {
+  filter: brightness(0.92);
+}
+
+.tx-status-btn {
+  margin-top: 8px;
+  padding: 8px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg-subtle);
+  color: var(--text-main);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tx-status-btn:hover {
+  background: var(--border-color);
+}
+
+/* ── Exportação ── */
+.tx-export {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.tx-export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg-subtle);
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tx-export-btn:hover {
+  background: var(--border-color);
+}

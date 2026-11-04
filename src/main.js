@@ -104,6 +104,14 @@ const AppController = (function () {
   // Transações marcadas como "Ignorar" não entram em totais, saldos, gráficos nem planejamento
   const activeTransactions = () => state.transactions.filter(t => !t.Ignorar);
 
+  // Efetivado (pago/recebido) entra no saldo; agendado não. Sem o campo, vale a data (legado).
+  function isSettled(t) {
+    if (typeof t.Efetivado === 'boolean') return t.Efetivado;
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+    return parseLocalDate(t.Data) <= end;
+  }
+
   // Arredonda para centavos e elimina o -0 gerado por erros de ponto flutuante
   function roundCents(value) {
     return Math.round((parseFloat(value) || 0) * 100) / 100 + 0;
@@ -1548,8 +1556,7 @@ const AppController = (function () {
     today.setHours(23, 59, 59, 999);
 
     transactions.forEach(t => {
-      const tDate = parseLocalDate(t.Data);
-      if (tDate > today) return;
+      if (!isSettled(t)) return;
 
       if (t.Conta && balances[t.Conta] !== undefined) {
         const amount = parseFloat(t.Valor) || 0;
@@ -1729,6 +1736,13 @@ const AppController = (function () {
       return String(b.ID || '').localeCompare(String(a.ID || ''));
     });
 
+    state.txExport = {
+      rows: displayTransactions,
+      month: selectedYYYYMM,
+      label: new Date(+selectedYYYYMM.slice(0, 4), +selectedYYYYMM.slice(5, 7) - 1, 1)
+        .toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+    };
+
     // 4. LÓGICA DO SALDO DO FINAL DO DIA
     const baseBalance = state.accounts.reduce((acc, currentAcc) => acc + (parseFloat(currentAcc.SaldoInicial) || 0), 0);
     const allSortedChronologically = [...activeTransactions()].sort((a, b) => {
@@ -1768,8 +1782,7 @@ const AppController = (function () {
 
     // Resumos Superiores
     const globalSummary = activeTransactions().reduce((acc, current) => {
-      const tDate = parseLocalDate(current.Data);
-      if (tDate <= today) {
+      if (isSettled(current)) {
         const amount = parseFloat(current.Valor) || 0;
         if (current.Tipo === 'RECEITA') acc.income += amount;
         else if (current.Tipo === 'DESPESA') acc.expense += amount;
@@ -1841,7 +1854,7 @@ const AppController = (function () {
       const isTransf = isTransferTransaction(t);
       const isExp = t.Tipo === 'DESPESA';
       const tDate = parseLocalDate(t.Data);
-      const isPending = t.isCreditCard ? (t.Status !== 'Pago') : (!isTransf && tDate > today);
+      const isPending = t.isCreditCard ? (t.Status !== 'Pago') : (!isTransf && !isSettled(t));
 
       let valClass = '';
       let sign = '';
@@ -1857,9 +1870,13 @@ const AppController = (function () {
         sign = '+';
       }
 
+      const canToggle = !t.isCreditCard && !isTransf;
+      const toggleAttr = canToggle
+        ? ` role="button" tabindex="0" onclick="event.stopPropagation();AppController.toggleTxStatus('${escapeHTML(String(t.ID))}')"`
+        : '';
       const statusHtml = isPending
-        ? `<div class="status-icon status-pending" title="Agendado/Pendente"><i class="fas fa-hourglass-half"></i></div>`
-        : `<div class="status-icon status-paid" title="Efetivado"><i class="fas fa-check"></i></div>`;
+        ? `<div class="status-icon status-pending${canToggle ? ' status-toggle' : ''}" title="${canToggle ? 'Agendado: clique para marcar como efetivado' : 'Agendado/Pendente'}"${toggleAttr}><i class="fas fa-hourglass-half"></i></div>`
+        : `<div class="status-icon status-paid${canToggle ? ' status-toggle' : ''}" title="${canToggle ? 'Efetivado: clique para marcar como agendado' : 'Efetivado'}"${toggleAttr}><i class="fas fa-check"></i></div>`;
 
       const catStyle = getCategoryStyle(t.Categoria);
       let mainDesc = t.Descricao || t.Categoria;
@@ -2132,6 +2149,98 @@ const AppController = (function () {
     }
   }
 
+  // ── Exportação (CSV / PDF) ──
+
+  // Linhas do mês e filtro atuais, guardadas a cada renderização da lista
+  function txExportRows() {
+    return (state.txExport && state.txExport.rows) || [];
+  }
+
+  function txRowStatus(t) {
+    if (t.Ignorar) return 'Ignorada';
+    if (isTransferTransaction(t)) return 'Transferência';
+    const settled = t.isCreditCard ? t.Status === 'Pago' : isSettled(t);
+    return settled ? 'Efetivado' : 'Agendado';
+  }
+
+  // Células que o Excel leria como fórmula ganham aspa na frente
+  function csvCell(v) {
+    let s = String(v ?? '');
+    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+    return `"${s.replace(/"/g, '""')}"`;
+  }
+
+  function downloadFile(name, mime, content) {
+    const url = URL.createObjectURL(new Blob([content], { type: mime }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function exportTransactionsCSV() {
+    const rows = txExportRows();
+    if (!rows.length) return AppController.showToast('Nada para exportar neste mês.', 'error');
+    const head = ['Data', 'Descrição', 'Categoria', 'Conta', 'Tipo', 'Situação', 'Valor'];
+    const lines = rows.map(t => {
+      const signed = t.Tipo === 'DESPESA' ? -(parseFloat(t.Valor) || 0) : (parseFloat(t.Valor) || 0);
+      return [formatDateBR(t.Data), t.Descricao || '', t.Categoria || '', t.Conta || '', t.Tipo || '',
+        txRowStatus(t)].map(csvCell).concat(String(signed.toFixed(2)).replace('.', ',')).join(';');
+    });
+    // BOM + ";" para o Excel pt-BR abrir com acentos e colunas certas
+    downloadFile(`nexo-${state.txExport.month}.csv`, 'text/csv;charset=utf-8',
+      '\ufeff' + [head.map(csvCell).join(';'), ...lines].join('\r\n'));
+  }
+
+  function exportTransactionsPDF() {
+    const rows = txExportRows();
+    if (!rows.length) return AppController.showToast('Nada para exportar neste mês.', 'error');
+    const fmt = v => currencyFormatter.format(v);
+    let income = 0, expense = 0;
+    rows.forEach(t => {
+      if (t.Ignorar || isTransferTransaction(t)) return;
+      const v = parseFloat(t.Valor) || 0;
+      if (t.Tipo === 'RECEITA') income += v; else if (t.Tipo === 'DESPESA') expense += v;
+    });
+    const body = rows.map(t => {
+      const v = parseFloat(t.Valor) || 0;
+      const neg = t.Tipo === 'DESPESA';
+      return `<tr><td>${escapeHTML(formatDateBR(t.Data))}</td><td>${escapeHTML(t.Descricao || '')}</td>
+        <td>${escapeHTML(t.Categoria || '')}</td><td>${escapeHTML(t.Conta || '')}</td>
+        <td>${escapeHTML(txRowStatus(t))}</td>
+        <td class="num ${neg ? 'neg' : 'pos'}">${neg ? '-' : ''}${escapeHTML(fmt(v))}</td></tr>`;
+    }).join('');
+    const win = window.open('', '_blank');
+    if (!win) return AppController.showToast('Permita pop-ups para gerar o PDF.', 'error');
+    win.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+      <title>Nexo - ${escapeHTML(state.txExport.label)}</title>
+      <style>
+        body{font-family:Arial,sans-serif;color:#212b31;margin:32px}
+        h1{font-size:20px;margin:0 0 4px}
+        .sub{color:#667;font-size:12px;margin-bottom:16px}
+        .sum{display:flex;gap:24px;margin-bottom:16px;font-size:13px}
+        .sum b{display:block;font-size:16px}
+        table{width:100%;border-collapse:collapse;font-size:12px}
+        th,td{padding:6px 8px;border-bottom:1px solid #dde;text-align:left}
+        th{background:#f1f4f5}
+        .num{text-align:right;white-space:nowrap}
+        .neg{color:#e11d48}.pos{color:#059669}
+        tr{page-break-inside:avoid}
+      </style></head><body>
+      <h1>Nexo · Lançamentos de ${escapeHTML(state.txExport.label)}</h1>
+      <div class="sub">Gerado em ${escapeHTML(new Date().toLocaleDateString('pt-BR'))} · ${rows.length} registro(s)</div>
+      <div class="sum"><div>Receitas<b>${escapeHTML(fmt(income))}</b></div>
+        <div>Despesas<b>${escapeHTML(fmt(expense))}</b></div>
+        <div>Resultado<b>${escapeHTML(fmt(income - expense))}</b></div></div>
+      <table><thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Conta</th><th>Situação</th>
+        <th class="num">Valor</th></tr></thead><tbody>${body}</tbody></table>
+      <script>window.onload=function(){window.print()}<\/script></body></html>`);
+    win.document.close();
+  }
+
   // ── Modal de lançamento ──
   const txLocalISO = (d = new Date()) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -2170,6 +2279,8 @@ const AppController = (function () {
     const other = document.getElementById('tx-chip-other');
     other.classList.toggle('active', !isToday && !isYesterday);
     other.innerText = (!isToday && !isYesterday) ? formatDateBR(iso) : 'Outros…';
+    // Data futura sugere agendado; passado/hoje sugere efetivado. O usuário pode trocar depois.
+    elements.form.elements.efetivado.checked = iso <= txLocalISO();
   }
 
   function setTxDateShortcut(offsetDays) {
@@ -2377,6 +2488,7 @@ const AppController = (function () {
     elements.form.elements.observacao.value = t.Observacao || '';
     elements.form.elements.tags.value = Array.isArray(t.Tags) ? t.Tags.join(', ') : '';
     elements.form.elements.ignorar.checked = Boolean(t.Ignorar);
+    elements.form.elements.efetivado.checked = isSettled(t);
     resetReceipt(t.ComprovanteId ? { Id: t.ComprovanteId, Nome: t.ComprovanteNome } : null);
 
     // Edição: sem repetição e sem "salvar e criar nova"
@@ -2420,7 +2532,8 @@ const AppController = (function () {
       Descricao: formDados.descricao || '',
       Observacao: (formDados.observacao || '').trim(),
       Tags: (formDados.tags || '').split(',').map(s => s.trim()).filter(Boolean),
-      Ignorar: formDados.ignorar === 'on'
+      Ignorar: formDados.ignorar === 'on',
+      Efetivado: formDados.efetivado === 'on'
     };
     const repeat = !editing && document.getElementById('tx-repeat').checked
       ? Math.max(2, Math.min(parseInt(formDados.repeticoes) || 2, 60))
@@ -2435,6 +2548,8 @@ const AppController = (function () {
           const newRef = await addDoc(collection(db, "Transacoes"), {
             ...base,
             Data: i === 0 ? base.Data : txAddMonths(base.Data, i),
+            // Parcelas seguintes só nascem efetivadas se a data já passou
+            Efetivado: i === 0 ? base.Efetivado : txAddMonths(base.Data, i) <= txLocalISO(),
             Descricao: repeat > 1 ? `${base.Descricao} (${i + 1}/${repeat})`.trim() : base.Descricao
           });
           // Em lançamentos repetidos, o comprovante fica só no primeiro
@@ -2644,7 +2759,7 @@ const AppController = (function () {
     const tDate = parseLocalDate(t.Data);
     const today = new Date();
     today.setHours(23, 59, 59, 999);
-    const isPending = isCreditCard ? (t.Status !== 'Pago') : (!isTransf && tDate > today);
+    const isPending = isCreditCard ? (t.Status !== 'Pago') : (!isTransf && !isSettled(t));
 
     if (heroPills) {
       heroPills.innerHTML = `
@@ -2664,11 +2779,31 @@ const AppController = (function () {
         : `<i class="fas fa-check-circle" style="color: #059669;"></i> Lançamento Efetivado`;
     }
 
+    const statusBtn = document.getElementById('tx-drawer-status-btn');
+    if (statusBtn) {
+      statusBtn.classList.toggle('hidden', isCreditCard || isTransf);
+      statusBtn.innerText = isPending ? 'Marcar como efetivado' : 'Marcar como agendado';
+    }
+
     renderDrawerReceipt();
 
     overlay.classList.add('open');
     drawer.classList.add('open');
     document.body.style.overflow = 'hidden';
+  }
+
+  async function toggleTxStatus(id) {
+    const t = state.transactions.find(x => String(x.ID) === String(id || (state.drawerTx && state.drawerTx.ID)));
+    if (!t) return;
+    const next = !isSettled(t);
+    try {
+      await updateDoc(doc(db, "Transacoes", t.ID), { Efetivado: next });
+      closeTxDrawer();
+      AppController.showToast(next ? 'Marcada como efetivada.' : 'Marcada como agendada.', 'success');
+      loadTransactions();
+    } catch (error) {
+      AppController.showToast("Erro ao atualizar situação: " + error.message, 'error');
+    }
   }
 
   function closeTxDrawer() {
@@ -4177,8 +4312,7 @@ const AppController = (function () {
     state.accounts.forEach(acc => { balances[acc.Nome] = parseFloat(acc.SaldoInicial) || 0; });
 
     activeTransactions().forEach(t => {
-      const tDate = parseLocalDate(t.Data);
-      if (tDate > today) return;
+      if (!isSettled(t)) return;
 
       if (t.Conta && balances[t.Conta] !== undefined) {
         const amount = parseFloat(t.Valor) || 0;
@@ -4189,8 +4323,7 @@ const AppController = (function () {
 
     const baseBalance = state.accounts.reduce((acc, currentAcc) => acc + (parseFloat(currentAcc.SaldoInicial) || 0), 0);
     const globalSummary = activeTransactions().reduce((acc, current) => {
-      const tDate = parseLocalDate(current.Data);
-      if (tDate <= today) {
+      if (isSettled(current)) {
         const amount = parseFloat(current.Valor) || 0;
         if (current.Tipo === 'RECEITA') acc.income += amount;
         else if (current.Tipo === 'DESPESA') acc.expense += amount;
@@ -4364,8 +4497,7 @@ const AppController = (function () {
       if (t.isCreditCard) {
         isPaid = (t.Status === 'Pago');
       } else {
-        const tDate = parseLocalDate(t.Data);
-        isPaid = (tDate <= today);
+        isPaid = isSettled(t);
       }
 
       if (isPaid) {
@@ -5447,8 +5579,7 @@ const AppController = (function () {
       if (t.isCreditCard) {
         isPaid = (t.Status === 'Pago');
       } else {
-        const tDate = parseLocalDate(t.Data);
-        isPaid = (tDate <= today);
+        isPaid = isSettled(t);
       }
 
       if (t.Tipo === 'RECEITA') {
@@ -5465,8 +5596,7 @@ const AppController = (function () {
     // 4. Saldo Atual Global (A matemática exata do Dashboard)
     const baseBalance = (state.accounts || []).reduce((acc, currentAcc) => acc + (parseFloat(currentAcc.SaldoInicial) || 0), 0);
     const globalSummary = activeTransactions().reduce((acc, current) => {
-      const tDate = parseLocalDate(current.Data);
-      if (tDate <= today) {
+      if (isSettled(current)) {
         const amount = parseFloat(current.Valor) || 0;
         if (current.Tipo === 'RECEITA') acc.income += amount;
         else if (current.Tipo === 'DESPESA') acc.expense += amount;
@@ -5606,7 +5736,7 @@ const AppController = (function () {
   }
 
   return {
-    init, claimLegacyData, handleReceiptFile, clearReceipt, handleDrawerReceipt, switchTab, toggleTxDetails, toggleTxRepeat, setTxDateShortcut, openTxDatePicker, validateTxAmount, calPrev, calNext, calToday, openEventModal, closeEventModal, submitEvent, deleteEventFromModal, setEventType, toggleEventAllDay, setTransactionFilter, renderCreditCardsPage, renderFixedCostsPage, renderGoalsPage, renderAccountsPage, renderPlanningView, openMonthPicker, closeMonthPicker, changePickerYear, selectCurrentMonth, openModal, closeModal, submitTransaction, editTransaction, deleteTransaction, openAccountModal, closeAccountModal, submitAccount, openTransferModal, closeTransferModal, submitTransfer,
+    init, claimLegacyData, exportTransactionsCSV, exportTransactionsPDF, toggleTxStatus, handleReceiptFile, clearReceipt, handleDrawerReceipt, switchTab, toggleTxDetails, toggleTxRepeat, setTxDateShortcut, openTxDatePicker, validateTxAmount, calPrev, calNext, calToday, openEventModal, closeEventModal, submitEvent, deleteEventFromModal, setEventType, toggleEventAllDay, setTransactionFilter, renderCreditCardsPage, renderFixedCostsPage, renderGoalsPage, renderAccountsPage, renderPlanningView, openMonthPicker, closeMonthPicker, changePickerYear, selectCurrentMonth, openModal, closeModal, submitTransaction, editTransaction, deleteTransaction, openAccountModal, closeAccountModal, submitAccount, openTransferModal, closeTransferModal, submitTransfer,
     openGoalTypeModal, openGoalForm, closeGoalModal, submitGoal, editGoal, deleteGoal, openGoalDepositModal, closeGoalDepositModal, submitGoalDeposit,
     openGoalDetails, closeGoalDetails, editGoalFromDetails, deleteGoalDeposit, editGoalDeposit, toggleGoalOptions, openCurrentGoalDepositModal, deleteCurrentGoal, switchGoalsTab, markGoalAsCompleted, toggleGoalsSortDropdown, setGoalsSortOrder, openFixedCostModal, closeFixedCostModal, submitFixedCost, editFixedCost, deleteFixedCost, markFixedCostPaid, unmarkFixedCostPaid, openFCPayModal, closeFCPayModal, openCCModal, closeCCModal, submitCC, openCCTransModal, closeCCTransModal, submitCCTrans, openCCInvoiceModal, closeCCInvoiceModal, deleteCreditTransaction, toggleFabMenu, closeFabMenu, openNewTransaction, openNewCCTransaction, openNewTransfer, startPlanningWizard, cancelPlanningWizard, copyPreviousPlanning, maskCurrency, calculateWizardBudget, prevWizardStep, nextWizardStep, calculateWizardCategoryTotals, renderWizardCategories, selectCardPreference, finishPlanningWizard, closeFixedCostPayModal, submitFixedCostPay, logout, switchProfileTab, maskCPF, maskPhone, maskCEP, changeTheme, loadUserProfile, openPayInvoiceModal, closePayInvoiceModal, submitPayInvoice, showToast, openCurrentGoalWithdrawModal, updateTransactionSummary, switchSettingsTab, toggleAllDevices, checkDeviceSelection, disconnectSelectedDevices, savePreferences, openCategoryModal, closeCategoryModal, submitCategory, deleteCategory, setCategoryKind, setCategoryFormKind, updateCategoryPreview, onCategoryParentChange, filterCategoryIcons: renderIconGrid, pickCategoryIcon, pickCategoryColor, changeTxPage, changeTxItemsPerPage, setTransactionSort, proceedEditFixedCost, closeFCEditScopeModal, parseCurrencyMask,
     openTxDrawer, closeTxDrawer, openCCDrawer, closeCCDrawer, submitTxDrawer, deleteTxFromDrawer, renderDashboardInsights
