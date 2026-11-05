@@ -92,3 +92,25 @@ export const elements = {
 
 // Transações marcadas como "Ignorar" não entram em totais, saldos, gráficos nem planejamento
 export const activeTransactions = () => state.transactions.filter(t => !t.Ignorar);
+
+// ── Seletor de mês ──
+export const monthPickerState = {
+  viewYear: new Date().getFullYear(),
+  selectedYear: new Date().getFullYear(),
+  selectedMonth: new Date().getMonth() + 1 // 1-12
+};
+
+export const monthLabels = [
+  { number: 1, label: 'JAN', full: 'Janeiro' },
+  { number: 2, label: 'FEV', full: 'Fevereiro' },
+  { number: 3, label: 'MAR', full: 'Março' },
+  { number: 4, label: 'ABR', full: 'Abril' },
+  { number: 5, label: 'MAI', full: 'Maio' },
+  { number: 6, label: 'JUN', full: 'Junho' },
+  { number: 7, label: 'JUL', full: 'Julho' },
+  { number: 8, label: 'AGO', full: 'Agosto' },
+  { number: 9, label: 'SET', full: 'Setembro' },
+  { number: 10, label: 'OUT', full: 'Outubro' },
+  { number: 11, label: 'NOV', full: 'Novembro' },
+  { number: 12, label: 'DEZ', full: 'Dezembro' }
+];
