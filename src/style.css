@@ -5044,3 +5044,64 @@ html.modal-open {
 .tx-export-btn:hover {
   background: var(--border-color);
 }
+
+/* ── Modais de objetivo ── */
+.goal-modal-sub {
+  margin: -18px 0 20px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.goal-type-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  color: var(--text-main);
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.goal-type-item:hover,
+.goal-type-item:focus-visible {
+  border-color: var(--accent-color);
+  background: var(--accent-subtle);
+  transform: translateX(2px);
+  outline: none;
+}
+
+.gt-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  color: #fff;
+  font-size: 18px;
+}
+
+.gt-arrow {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.goal-floating-input > label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.goal-floating-input:focus-within > div {
+  border-bottom-color: var(--accent-color) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .goal-type-item { transition: none; transform: none !important; }
+}

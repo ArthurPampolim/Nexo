@@ -233,7 +233,12 @@ export function editGoal(id) {
 }
 
 export async function deleteGoal(id) {
-  if (!confirm("Tem certeza que deseja excluir este objetivo?")) return;
+  const goal = state.goals.find(g => String(g.ID) === String(id));
+  if (!await app.confirmDialog({
+    title: 'Excluir este objetivo?',
+    message: 'O objetivo e todos os seus aportes serão removidos. Essa ação não pode ser desfeita.',
+    detail: goal ? goal.Nome : ''
+  })) return;
   try {
     await deleteDoc(doc(db, "Objetivos", id));
     loadGoals();
@@ -474,7 +479,11 @@ function renderGoalDeposits() {
 }
 
 export async function deleteGoalDeposit(idAporte, idObjetivo, valorAporte) {
-  if (!confirm("Excluir este depósito? O valor será subtraído do progresso do objetivo.")) return;
+  if (!await app.confirmDialog({
+    title: 'Excluir este depósito?',
+    message: 'O valor será subtraído do progresso do objetivo.',
+    detail: currencyFormatter.format(parseFloat(valorAporte) || 0)
+  })) return;
   try {
     await deleteDoc(doc(db, "AportesObjetivo", idAporte));
 
@@ -548,7 +557,12 @@ export function openCurrentGoalWithdrawModal() {
 // Apagar o objetivo que está aberto na tela
 export async function deleteCurrentGoal() {
   if (!state.currentGoalId) return;
-  if (!confirm("Tem certeza que deseja excluir este objetivo completamente?")) return;
+  const goal = state.goals.find(g => String(g.ID) === String(state.currentGoalId));
+  if (!await app.confirmDialog({
+    title: 'Excluir este objetivo?',
+    message: 'O objetivo e todos os seus aportes serão removidos. Essa ação não pode ser desfeita.',
+    detail: goal ? goal.Nome : ''
+  })) return;
 
   try {
     await deleteDoc(doc(db, "Objetivos", state.currentGoalId));
@@ -574,7 +588,12 @@ export function switchGoalsTab(tabName) {
 // Marca o objetivo atual como Concluído
 export async function markGoalAsCompleted() {
   if (!state.currentGoalId) return;
-  if (!confirm("Deseja marcar este objetivo como concluído? Ele será movido para a aba 'Concluídos'.")) return;
+  if (!await app.confirmDialog({
+    title: 'Marcar como concluído?',
+    message: "Ele será movido para a aba 'Concluídos'.",
+    confirmLabel: 'Concluir',
+    danger: false
+  })) return;
 
   try {
     await updateDoc(doc(db, "Objetivos", state.currentGoalId), { Status: 'Concluido' });
