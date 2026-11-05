@@ -56,7 +56,7 @@ export async function submitAccount(event) {
     await addDoc(collection(db, "Contas"), {
       userId: getCurrentUserId(),
       Nome: formDados.nome,
-      SaldoInicial: parseFloat(formDados.saldoInicial) || 0,
+      SaldoInicial: parseCurrencyMask(formDados.saldoInicial),
       Status: 'Ativo'
     });
     closeAccountModal();

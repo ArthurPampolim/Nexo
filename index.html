@@ -1395,7 +1395,7 @@
               <option value="Carteira (Dinheiro Físico)">Carteira (Dinheiro)</option>
             </select>
           </div>
-          <div class="form-group"><label>Saldo Atual</label><input type="number" name="saldoInicial" step="0.01"
+          <div class="form-group"><label>Saldo Atual</label><input type="text" inputmode="numeric" name="saldoInicial" placeholder="R$ 0,00" oninput="AppController.maskCurrency(this)"
               required>
           </div>
           <button type="submit" id="submit-acc-btn" class="btn-primary">Salvar</button>
@@ -1421,8 +1421,8 @@
           <div class="form-group"><label>Conta Destino</label><select id="transfer-destino" name="destino" required>
               <option disabled selected>Carregando...</option>
             </select></div>
-          <div class="form-group"><label>Valor (R$)</label><input type="number" name="valor" step="0.01" min="0.01"
-              required placeholder="0.00"></div>
+          <div class="form-group"><label>Valor (R$)</label><input type="text" inputmode="numeric" name="valor" oninput="AppController.maskCurrency(this)"
+              required placeholder="R$ 0,00"></div>
           <button type="submit" id="submit-transfer-btn" class="btn-primary">Realizar Transferência</button>
         </form>
       </div>
@@ -1437,7 +1437,7 @@
         </div>
         <form id="cc-form" onsubmit="AppController.submitCC(event)">
           <div class="form-group"><label>Nome do Cartão</label><input type="text" name="nome" required></div>
-          <div class="form-group"><label>Limite Total</label><input type="number" name="limite" step="0.01" required>
+          <div class="form-group"><label>Limite Total</label><input type="text" inputmode="numeric" name="limite" placeholder="R$ 0,00" oninput="AppController.maskCurrency(this)" required>
           </div>
           <div style="display: flex; gap: 15px;">
             <div class="form-group" style="flex: 1;"><label>Dia Fechamento</label><input type="number"
