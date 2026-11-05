@@ -3,6 +3,7 @@ import { collection, addDoc, deleteDoc, doc } from 'firebase/firestore';
 import { state, currencyFormatter, escapeHTML, getCurrentUserId, fetchUserScopedDocs, activeTransactions, monthPickerState, monthLabels } from '../core.js';
 import { inkFor } from '../categories.js';
 import { isSettled, isTransferTransaction, parseLocalDate } from '../finance.js';
+import { getCategoryStyle, categoryIconHTML } from './categories.js';
 import { app } from '../app.js';
 
 // --- CÁLCULO E RENDERIZAÇÃO DO DASHBOARD DE PLANEJAMENTO ---

@@ -2,6 +2,7 @@ import { db } from '../firebase.js';
 import { collection, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import { state, currencyFormatter, escapeHTML, getCurrentUserId, fetchUserScopedDocs, elements } from '../core.js';
 import { parseCurrencyMask } from '../finance.js';
+import { loadCreditData } from './cards.js';
 import { app } from '../app.js';
 
 // --- CUSTOS FIXOS ---
