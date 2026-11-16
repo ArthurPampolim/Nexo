@@ -5105,3 +5105,11 @@ html.modal-open {
 @media (prefers-reduced-motion: reduce) {
   .goal-type-item { transition: none; transform: none !important; }
 }
+
+/* ── Seleção em lote de transações ── */
+.tx-bulk-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 0 12px; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-light); }
+.tx-bulk-bar.hidden { display: none; }
+.tx-bulk-count { font-weight: 600; margin-right: auto; }
+.tx-bulk-del { color: #e53935; }
+.tx-bulk-note { color: var(--text-muted, #888); font-size: 12.5px; margin: 0 0 10px; display: block; }
+.tx-bulk-note.hidden { display: none; }

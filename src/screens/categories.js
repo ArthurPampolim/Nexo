@@ -1,7 +1,7 @@
 import { db } from '../firebase.js';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where } from 'firebase/firestore';
 import { state, escapeHTML, getCurrentUserId } from '../core.js';
-import { ICON_LIST, COLOR_PALETTE, DEFAULT_CATEGORIES, iconSvg, inkFor, isHexColor, isValidIcon } from '../categories.js';
+import { ICON_LIST, COLOR_PALETTE, DEFAULT_CATEGORIES, iconSvg, inkFor, isHexColor, isValidIcon } from '../categoryCatalog.js';
 import { app } from '../app.js';
 
 // ── Categorias ──

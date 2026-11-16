@@ -1,20 +1,17 @@
-import { db } from './firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, setDoc, getDoc, query, where } from 'firebase/firestore';
-import { auth } from './firebase.js';
+import { db, auth } from './firebase.js';
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail, updatePassword } from "firebase/auth";
-import { ChartManager } from './charts.js';
-import { isSettled, settledTotals, accountBalances, monthSummary, roundCents, parseCurrencyMask, isTransferTransaction, parseLocalDate, txLocalISO, txAddMonths } from './finance.js';
-import { state, monthPickerState, monthLabels, elements, activeTransactions, OWNED_COLLECTIONS, currencyFormatter, escapeHTML, formatDateBR, balanceClass, getCurrentUserId, fetchUserScopedDocs } from './core.js';
+import { isSettled, settledTotals, isTransferTransaction, parseLocalDate } from './finance.js';
+import { state, monthPickerState, monthLabels, elements, activeTransactions, OWNED_COLLECTIONS, currencyFormatter, escapeHTML, getCurrentUserId } from './core.js';
 import { app } from './app.js';
-import { categoryIconHTML, closeCategoryModal, deleteCategory, getCategoryStyle, loadCategories, onCategoryParentChange, openCategoryModal, pickCategoryColor, pickCategoryIcon, populateCategorySelects, rebuildCategorySelect, renderCategoriesPage, renderIconGrid, safeId, setCategoryFormKind, setCategoryKind, setCategorySelectValue, submitCategory, updateCategoryPreview } from './screens/categories.js';
+import { closeCategoryModal, deleteCategory, loadCategories, onCategoryParentChange, openCategoryModal, pickCategoryColor, pickCategoryIcon, populateCategorySelects, renderCategoriesPage, renderIconGrid, setCategoryFormKind, setCategoryKind, submitCategory, updateCategoryPreview } from './screens/categories.js';
 import { calNext, calPrev, calToday, closeEventModal, deleteEventFromModal, loadEvents, openEventModal, renderCalendar, setEventType, submitEvent, toggleEventAllDay } from './screens/calendar.js';
-import { closeAccountModal, closeTransferModal, loadAccounts, openAccountModal, openTransferModal, renderAccountBalances, renderAccountsPage, submitAccount, submitTransfer } from './screens/accounts.js';
-import { calculateInvoiceSum, closeCCDrawer, closeCCInvoiceModal, closeCCModal, closeCCTransModal, deleteCreditTransaction, loadCreditData, loadCreditTransactions, openCCDrawer, openCCInvoiceModal, openCCModal, openCCTransModal, renderCreditCardsPage, renderInvoiceItems, submitCC, submitCCTrans } from './screens/cards.js';
-import { closeFCEditScopeModal, closeFCPayModal, closeFixedCostModal, closeFixedCostPayModal, closePayInvoiceModal, deleteFixedCost, editFixedCost, loadFixedCosts, markFixedCostPaid, openFCPayModal, openFixedCostModal, openPayInvoiceModal, proceedEditFixedCost, renderFixedCosts, renderFixedCostsPage, submitFixedCost, submitFixedCostPay, submitPayInvoice, unmarkFixedCostPaid } from './screens/fixedCosts.js';
-import { closeGoalDepositModal, closeGoalDetails, closeGoalModal, deleteCurrentGoal, deleteGoal, deleteGoalDeposit, editGoal, editGoalDeposit, editGoalFromDetails, loadGoals, markGoalAsCompleted, openCurrentGoalDepositModal, openCurrentGoalWithdrawModal, openGoalDepositModal, openGoalDetails, openGoalForm, openGoalTypeModal, renderGoalsPage, setGoalsSortOrder, submitGoal, submitGoalDeposit, switchGoalsTab, toggleGoalOptions, toggleGoalsSortDropdown } from './screens/goals.js';
-import { calculateWizardBudget, calculateWizardCategoryTotals, cancelPlanningWizard, copyPreviousPlanning, finishPlanningWizard, loadPlanning, nextWizardStep, prevWizardStep, renderPlanningView, renderWizardCategories, selectCardPreference, startPlanningWizard } from './screens/planning.js';
-import { clearReceipt, closeModal, closeTxDrawer, deleteTransaction, deleteTxFromDrawer, describeTx, editTransaction, exportTransactionsCSV, exportTransactionsPDF, handleDrawerReceipt, handleReceiptFile, loadTransactions, openModal, openTxDatePicker, openTxDrawer, renderTransactions, setTxDateShortcut, setTxType, submitTransaction, submitTxDrawer, toggleTxDetails, toggleTxRepeat, toggleTxStatus, validateTxAmount } from './screens/transactions.js';
-import { ICON_LIST, COLOR_PALETTE, DEFAULT_CATEGORIES, iconSvg, inkFor, isHexColor, isValidIcon } from './categories.js';
+import { closeAccountModal, closeTransferModal, loadAccounts, openAccountModal, openTransferModal, renderAccountsPage, submitAccount, submitTransfer } from './screens/accounts.js';
+import { calculateInvoiceSum, closeCCDrawer, closeCCInvoiceModal, closeCCModal, closeCCTransModal, deleteCreditTransaction, loadCreditData, openCCInvoiceModal, openCCModal, openCCTransModal, renderCreditCardsPage, submitCC, submitCCTrans } from './screens/cards.js';
+import { closeFCEditScopeModal, closeFCPayModal, closeFixedCostModal, closePayInvoiceModal, deleteFixedCost, editFixedCost, loadFixedCosts, markFixedCostPaid, openFixedCostModal, openPayInvoiceModal, proceedEditFixedCost, renderFixedCosts, renderFixedCostsPage, submitFixedCost, submitFixedCostPay, submitPayInvoice, unmarkFixedCostPaid } from './screens/fixedCosts.js';
+import { closeGoalDepositModal, closeGoalDetails, closeGoalModal, deleteCurrentGoal, deleteGoalDeposit, editGoalDeposit, editGoalFromDetails, loadGoals, markGoalAsCompleted, openCurrentGoalDepositModal, openCurrentGoalWithdrawModal, openGoalDetails, openGoalForm, openGoalTypeModal, renderGoalsPage, setGoalsSortOrder, submitGoal, submitGoalDeposit, switchGoalsTab, toggleGoalOptions, toggleGoalsSortDropdown } from './screens/goals.js';
+import { calculateWizardBudget, calculateWizardCategoryTotals, cancelPlanningWizard, copyPreviousPlanning, finishPlanningWizard, loadPlanning, nextWizardStep, prevWizardStep, renderPlanningView, selectCardPreference, startPlanningWizard } from './screens/planning.js';
+import { clearReceipt, clearTxSelection, closeTxBulkEdit, deleteTxBulk, openTxBulkEdit, submitTxBulkEdit, toggleTxSelect, toggleTxSelectAll, closeModal, closeTxDrawer, deleteTransaction, deleteTxFromDrawer, describeTx, exportTransactionsCSV, exportTransactionsPDF, handleDrawerReceipt, handleReceiptFile, loadTransactions, openModal, openTxDatePicker, openTxDrawer, renderTransactions, setTxDateShortcut, setTxType, submitTransaction, submitTxDrawer, toggleTxDetails, toggleTxRepeat, toggleTxStatus, validateTxAmount } from './screens/transactions.js';
 
 
 const AppController = (function () {
@@ -370,24 +367,6 @@ const AppController = (function () {
   setupPasswordToggle('toggle-password-btn', 'login-password', 'eye-icon');
   setupPasswordToggle('toggle-reg-password-btn', 'reg-password', 'reg-eye-icon');
   setupPasswordToggle('toggle-reg-confirm-password-btn', 'reg-confirm-password', 'reg-confirm-eye-icon');
-
-  // Ação de Criar Conta
-  document.getElementById('create-account-btn')?.addEventListener('click', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('login-email').value;
-    const pass = document.getElementById('login-password').value;
-    const errorMsg = document.getElementById('login-error');
-
-    if (!email || !pass) return alert("Preencha e-mail e senha no formulário para criar a conta.");
-
-    try {
-      await createUserWithEmailAndPassword(auth, email, pass);
-      AppController.showToast("Conta criada com sucesso! O sistema fará o login automático.", 'success');
-    } catch (error) {
-      errorMsg.innerText = "Erro ao criar: A senha deve ter no mínimo 6 caracteres.";
-      errorMsg.style.display = 'block';
-    }
-  });
 
   // Alternar entre as telas de Login e Cadastro
   document.getElementById('show-register-btn')?.addEventListener('click', (e) => {
@@ -1041,7 +1020,7 @@ const AppController = (function () {
   // --- MODO ESCURO (THEME) ---
   // Mantém todos os seletores de tema (Perfil e Configurações) iguais ao tema ativo
   function syncThemeSelectors(theme) {
-    document.querySelectorAll('#theme-selector-settings, #theme-selector').forEach(el => {
+    document.querySelectorAll('#theme-selector-settings').forEach(el => {
       el.value = theme;
       if (el.choicesInstance) el.choicesInstance.setChoiceByValue(theme);
     });
@@ -1062,16 +1041,11 @@ const AppController = (function () {
     const savedTheme = localStorage.getItem('nexo_theme') || 'light';
 
     // Atualiza os selects visuais
-    const selector = document.getElementById('theme-selector');
-
-    if (selector) selector.value = savedTheme;
     document.querySelectorAll('#theme-selector-settings').forEach(el => { el.value = savedTheme; });
 
     changeTheme(savedTheme);
   }
 
-  // Salvar Preferências (Tema, Idioma e Moeda)
-  // Salvar Preferências (Tema, Idioma e Moeda)
   // Salvar Preferências (Tema, Idioma e Moeda)
   function savePreferences(trigger) {
     // Há dois formulários com os mesmos ids (Perfil e Configurações): usa o do botão clicado
@@ -1386,10 +1360,11 @@ const AppController = (function () {
   Object.assign(app, { showToast, confirmDialog, moveSegPill, renderTransactions, switchTab, loadGoals, loadTransactions, upgradeSelects, describeTx, getSelectedYYYYMM, openPayInvoiceModal, moveGoalsPill, renderDashboardInsights, updateTransactionSummary });
 
   return {
-    init, claimLegacyData, exportTransactionsCSV, exportTransactionsPDF, toggleTxStatus, handleReceiptFile, clearReceipt, handleDrawerReceipt, switchTab, toggleTxDetails, toggleTxRepeat, setTxDateShortcut, openTxDatePicker, validateTxAmount, calPrev, calNext, calToday, openEventModal, closeEventModal, submitEvent, deleteEventFromModal, setEventType, toggleEventAllDay, setTransactionFilter, renderCreditCardsPage, renderFixedCostsPage, renderGoalsPage, renderAccountsPage, renderPlanningView, openMonthPicker, closeMonthPicker, changePickerYear, selectCurrentMonth, openModal, closeModal, submitTransaction, editTransaction, deleteTransaction, openAccountModal, closeAccountModal, submitAccount, openTransferModal, closeTransferModal, submitTransfer,
-    openGoalTypeModal, openGoalForm, closeGoalModal, submitGoal, editGoal, deleteGoal, openGoalDepositModal, closeGoalDepositModal, submitGoalDeposit,
-    openGoalDetails, closeGoalDetails, editGoalFromDetails, deleteGoalDeposit, editGoalDeposit, toggleGoalOptions, openCurrentGoalDepositModal, deleteCurrentGoal, switchGoalsTab, markGoalAsCompleted, toggleGoalsSortDropdown, setGoalsSortOrder, openFixedCostModal, closeFixedCostModal, submitFixedCost, editFixedCost, deleteFixedCost, markFixedCostPaid, unmarkFixedCostPaid, openFCPayModal, closeFCPayModal, openCCModal, closeCCModal, submitCC, openCCTransModal, closeCCTransModal, submitCCTrans, openCCInvoiceModal, closeCCInvoiceModal, deleteCreditTransaction, toggleFabMenu, closeFabMenu, openNewTransaction, openNewCCTransaction, openNewTransfer, startPlanningWizard, cancelPlanningWizard, copyPreviousPlanning, maskCurrency, calculateWizardBudget, prevWizardStep, nextWizardStep, calculateWizardCategoryTotals, renderWizardCategories, selectCardPreference, finishPlanningWizard, closeFixedCostPayModal, submitFixedCostPay, logout, switchProfileTab, maskCPF, maskPhone, maskCEP, changeTheme, loadUserProfile, openPayInvoiceModal, closePayInvoiceModal, submitPayInvoice, showToast, openCurrentGoalWithdrawModal, updateTransactionSummary, switchSettingsTab, toggleAllDevices, checkDeviceSelection, disconnectSelectedDevices, savePreferences, openCategoryModal, closeCategoryModal, submitCategory, deleteCategory, setCategoryKind, setCategoryFormKind, updateCategoryPreview, onCategoryParentChange, filterCategoryIcons: renderIconGrid, pickCategoryIcon, pickCategoryColor, changeTxPage, changeTxItemsPerPage, setTransactionSort, proceedEditFixedCost, closeFCEditScopeModal, parseCurrencyMask,
-    openTxDrawer, closeTxDrawer, openCCDrawer, closeCCDrawer, submitTxDrawer, deleteTxFromDrawer, renderDashboardInsights
+    init, claimLegacyData, exportTransactionsCSV, exportTransactionsPDF, toggleTxStatus, handleReceiptFile, clearReceipt, handleDrawerReceipt, switchTab, toggleTxDetails, toggleTxRepeat, setTxDateShortcut, openTxDatePicker, validateTxAmount, calPrev, calNext, calToday, openEventModal, closeEventModal, submitEvent, deleteEventFromModal, setEventType, toggleEventAllDay, setTransactionFilter, openMonthPicker, closeMonthPicker, changePickerYear, selectCurrentMonth, closeModal, submitTransaction, deleteTransaction, openAccountModal, closeAccountModal, submitAccount, closeTransferModal, submitTransfer,
+    openGoalTypeModal, openGoalForm, closeGoalModal, submitGoal, closeGoalDepositModal, submitGoalDeposit,
+    openGoalDetails, closeGoalDetails, editGoalFromDetails, deleteGoalDeposit, editGoalDeposit, toggleGoalOptions, openCurrentGoalDepositModal, deleteCurrentGoal, switchGoalsTab, markGoalAsCompleted, toggleGoalsSortDropdown, setGoalsSortOrder, openFixedCostModal, closeFixedCostModal, submitFixedCost, editFixedCost, deleteFixedCost, markFixedCostPaid, unmarkFixedCostPaid, closeFCPayModal, openCCModal, closeCCModal, submitCC, openCCTransModal, closeCCTransModal, submitCCTrans, openCCInvoiceModal, closeCCInvoiceModal, deleteCreditTransaction, toggleFabMenu, openNewTransaction, openNewCCTransaction, openNewTransfer, startPlanningWizard, cancelPlanningWizard, copyPreviousPlanning, maskCurrency, calculateWizardBudget, prevWizardStep, nextWizardStep, calculateWizardCategoryTotals, selectCardPreference, finishPlanningWizard, submitFixedCostPay, logout, switchProfileTab, maskCPF, maskPhone, maskCEP, closePayInvoiceModal, submitPayInvoice, showToast, openCurrentGoalWithdrawModal, switchSettingsTab, toggleAllDevices, checkDeviceSelection, disconnectSelectedDevices, savePreferences, openCategoryModal, closeCategoryModal, submitCategory, deleteCategory, setCategoryKind, setCategoryFormKind, updateCategoryPreview, onCategoryParentChange, filterCategoryIcons: renderIconGrid, pickCategoryIcon, pickCategoryColor, changeTxPage, changeTxItemsPerPage, setTransactionSort, proceedEditFixedCost, closeFCEditScopeModal, 
+    openTxDrawer, closeTxDrawer, closeCCDrawer, submitTxDrawer, deleteTxFromDrawer, 
+    toggleTxSelect, toggleTxSelectAll, clearTxSelection, openTxBulkEdit, closeTxBulkEdit, submitTxBulkEdit, deleteTxBulk
   };
 })();
 

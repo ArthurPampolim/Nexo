@@ -92,6 +92,11 @@ export function renderTransactions() {
     return String(b.ID || '').localeCompare(String(a.ID || ''));
   });
 
+  // Seleção em lote: descarta o que saiu da lista (outro mês/filtro, item excluído)
+  state.txSelected = state.txSelected || new Set();
+  const visibleIds = new Set(displayTransactions.filter(t => !t.isCreditCard).map(t => String(t.ID)));
+  state.txSelected.forEach(id => { if (!visibleIds.has(id)) state.txSelected.delete(id); });
+
   state.txExport = {
     rows: displayTransactions,
     month: selectedYYYYMM,
@@ -178,10 +183,14 @@ export function renderTransactions() {
       if (btn) btn.disabled = true;
     });
 
+    state.txPageIds = [];
+    syncTxSelection();
     ChartManager.updateDashboardCharts(activeTransactions(), selectedYYYYMM);
     app.renderDashboardInsights(selectedYYYYMM);
     return;
   }
+
+  state.txPageIds = paginatedTransactions.filter(t => !t.isCreditCard).map(t => String(t.ID));
 
   // DESENHAR LINHAS PAGINADAS
   paginatedTransactions.forEach((t, index) => {
@@ -233,7 +242,7 @@ export function renderTransactions() {
          <button class="btn-delete" onclick="event.stopPropagation(); AppController.deleteTransaction('${safeId}')" title="Excluir"><i class="fas fa-trash"></i></button>`;
 
     tr.innerHTML = `
-        <td class="tx-td" style="text-align: center;"><input type="checkbox" class="tx-checkbox" ${!isPending ? 'checked' : ''} disabled></td>
+        <td class="tx-td" style="text-align: center;" onclick="event.stopPropagation()"><input type="checkbox" class="tx-checkbox" ${t.isCreditCard ? 'disabled title="Lançamentos de cartão não entram na edição em lote"' : `onchange="AppController.toggleTxSelect('${safeId}', this.checked)"`} ${state.txSelected.has(String(t.ID)) ? 'checked' : ''}></td>
         <td class="tx-td" style="text-align: center;">${statusHtml}</td>
         <td class="tx-td" style="${isPending ? 'opacity:0.6;' : ''}">${escapeHTML(currentDateStr)}</td>
         <td class="tx-td" style="${isPending ? 'opacity:0.6;' : ''}; font-weight: 500;">${escapeHTML(mainDesc)}${t.ComprovanteId ? ' <i class="fas fa-paperclip tx-clip" title="Comprovante anexado"></i>' : ''}</td>
@@ -288,6 +297,7 @@ export function renderTransactions() {
   if (btnNext) btnNext.disabled = state.txCurrentPage === totalPages || totalPages === 0;
   if (btnLast) btnLast.disabled = state.txCurrentPage === totalPages || totalPages === 0;
 
+  syncTxSelection();
   ChartManager.updateDashboardCharts(activeTransactions(), selectedYYYYMM);
   app.renderDashboardInsights(selectedYYYYMM);
 }
@@ -889,6 +899,124 @@ export async function deleteTransaction(id) {
     loadTransactions();
   } catch (error) {
     AppController.showToast("Erro ao excluir: " + error.message, 'error');
+  }
+}
+
+// ── Seleção e edição/exclusão em lote ──
+const selectedTxs = () => state.transactions.filter(t => state.txSelected.has(String(t.ID)));
+
+function syncTxSelection() {
+  const n = state.txSelected.size;
+  const bar = document.getElementById('tx-bulk-bar');
+  if (bar) bar.classList.toggle('hidden', n === 0);
+  const count = document.getElementById('tx-bulk-count');
+  if (count) count.innerText = `${n} selecionada${n === 1 ? '' : 's'}`;
+  const all = document.getElementById('tx-select-all');
+  if (all) {
+    const onPage = (state.txPageIds || []).filter(id => state.txSelected.has(id)).length;
+    all.checked = onPage > 0 && onPage === state.txPageIds.length;
+    all.indeterminate = onPage > 0 && onPage < state.txPageIds.length;
+  }
+}
+
+export function toggleTxSelect(id, on) {
+  if (on) state.txSelected.add(String(id)); else state.txSelected.delete(String(id));
+  syncTxSelection();
+}
+
+export function toggleTxSelectAll(on) {
+  (state.txPageIds || []).forEach(id => { if (on) state.txSelected.add(id); else state.txSelected.delete(id); });
+  renderTransactions();
+}
+
+export function clearTxSelection() {
+  state.txSelected.clear();
+  renderTransactions();
+}
+
+export function openTxBulkEdit() {
+  const list = selectedTxs();
+  if (!list.length) return;
+  if (list.some(isTransferTransaction)) {
+    AppController.showToast('Transferências não podem ser editadas em lote. Desmarque-as ou use Excluir.', 'error');
+    return;
+  }
+  document.getElementById('tx-bulk-title').innerText = `Editar ${list.length} transaç${list.length === 1 ? 'ão' : 'ões'}`;
+  document.getElementById('tx-bulk-desc').value = '';
+
+  const cat = document.getElementById('tx-bulk-cat');
+  const tipos = new Set(list.map(t => t.Tipo));
+  cat.dataset.categoryKind = tipos.size === 1 ? [...tipos][0] : '';
+  rebuildCategorySelect(cat);
+
+  const acc = document.getElementById('tx-bulk-account');
+  acc.innerHTML = '<option value="" disabled selected>Manter atual</option>' +
+    state.accounts.map(a => `<option value="${escapeHTML(a.Nome)}">🏦 ${escapeHTML(a.Nome)}</option>`).join('');
+  app.upgradeSelects();
+
+  const dates = new Set(list.map(t => txLocalISO(parseLocalDate(t.Data))));
+  const dateInput = document.getElementById('tx-bulk-date');
+  const sameDay = dates.size === 1;
+  dateInput.value = sameDay ? [...dates][0] : '';
+  dateInput.disabled = !sameDay;
+  document.getElementById('tx-bulk-date-hint').classList.toggle('hidden', sameDay);
+
+  document.getElementById('tx-bulk-modal').classList.remove('hidden');
+}
+
+export function closeTxBulkEdit() {
+  document.getElementById('tx-bulk-modal').classList.add('hidden');
+}
+
+export async function submitTxBulkEdit(e) {
+  e.preventDefault();
+  const list = selectedTxs();
+  const desc = document.getElementById('tx-bulk-desc').value.trim();
+  const cat = document.getElementById('tx-bulk-cat').value;
+  const conta = document.getElementById('tx-bulk-account').value;
+  const dateInput = document.getElementById('tx-bulk-date');
+  const newDate = dateInput.disabled ? '' : dateInput.value;
+
+  const changes = {};
+  if (desc) changes.Descricao = desc;
+  if (cat) changes.Categoria = cat;
+  if (conta) changes.Conta = conta;
+  if (newDate && list.length && newDate !== txLocalISO(parseLocalDate(list[0].Data))) changes.Data = newDate;
+  if (!Object.keys(changes).length) {
+    AppController.showToast('Nenhum campo alterado.', 'error');
+    return;
+  }
+
+  try {
+    await Promise.all(list.map(t => updateDoc(doc(db, "Transacoes", t.ID), changes)));
+    closeTxBulkEdit();
+    state.txSelected.clear();
+    await loadTransactions();
+    AppController.showToast(`${list.length} transaç${list.length === 1 ? 'ão atualizada' : 'ões atualizadas'}.`);
+  } catch (error) {
+    AppController.showToast("Erro ao editar em lote: " + error.message, 'error');
+  }
+}
+
+export async function deleteTxBulk() {
+  const list = selectedTxs();
+  if (!list.length) return;
+  if (!await app.confirmDialog({
+    title: `Excluir ${list.length} transaç${list.length === 1 ? 'ão' : 'ões'}?`,
+    message: 'Esta ação não pode ser desfeita.',
+    detail: list.slice(0, 5).map(describeTx).join('\n') + (list.length > 5 ? `\n… e mais ${list.length - 5}` : '')
+  })) return;
+  try {
+    await Promise.all(list.map(async t => {
+      await deleteReceiptDoc(t);
+      await deleteDoc(doc(db, "Transacoes", t.ID));
+    }));
+    state.txSelected.clear();
+    await loadTransactions();
+    AppController.showToast(`${list.length} transaç${list.length === 1 ? 'ão excluída' : 'ões excluídas'}.`);
+  } catch (error) {
+    await loadTransactions();
+    AppController.showToast("Erro ao excluir em lote: " + error.message, 'error');
   }
 }
 

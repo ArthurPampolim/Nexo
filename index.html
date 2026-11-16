@@ -461,13 +461,20 @@
                 <i class="fas fa-exchange-alt" style="color: #2196F3;"></i> Transferências
               </button>
             </div>
+            <div id="tx-bulk-bar" class="tx-bulk-bar hidden">
+              <span id="tx-bulk-count" class="tx-bulk-count"></span>
+              <button type="button" class="tx-export-btn" onclick="AppController.openTxBulkEdit()"><i class="fas fa-pen"></i> Editar</button>
+              <button type="button" class="tx-export-btn tx-bulk-del" onclick="AppController.deleteTxBulk()"><i class="fas fa-trash"></i> Excluir</button>
+              <button type="button" class="tx-export-btn" onclick="AppController.clearTxSelection()">Limpar seleção</button>
+            </div>
             <!-- TABELA DE DADOS -->
             <div class="tx-table-container">
               <table class="tx-table">
                 <thead>
                   <tr>
-                    <th class="tx-th" style="width: 40px; text-align: center;"><input type="checkbox"
-                        class="tx-checkbox" disabled></th>
+                    <th class="tx-th" style="width: 40px; text-align: center;"><input type="checkbox" id="tx-select-all"
+                        class="tx-checkbox" title="Selecionar todas desta página"
+                        onchange="AppController.toggleTxSelectAll(this.checked)"></th>
                     <th class="tx-th" style="width: 60px; text-align: center;">Situação</th>
                     <th class="tx-th sortable-th" onclick="AppController.setTransactionSort('Data')">Data <span
                         id="sort-icon-Data"></span></th>
@@ -1366,6 +1373,36 @@
     <!-- ============================================== -->
 
     <!-- MODAL: NOVA CONTA -->
+    <div id="tx-bulk-modal" class="modal-overlay hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="tx-bulk-title">Editar transações</h2><button type="button" class="close-btn" onclick="AppController.closeTxBulkEdit()"><i
+              class="fas fa-times"></i></button>
+        </div>
+        <form id="tx-bulk-form" onsubmit="AppController.submitTxBulkEdit(event)">
+          <p class="tx-bulk-note">Só os campos preenchidos serão alterados.</p>
+          <div class="form-group">
+            <label for="tx-bulk-desc">Descrição</label>
+            <input type="text" id="tx-bulk-desc" placeholder="Manter atual">
+          </div>
+          <div class="form-group">
+            <label for="tx-bulk-cat">Categoria</label>
+            <select id="tx-bulk-cat" data-category-select data-placeholder="Manter atual"></select>
+          </div>
+          <div class="form-group">
+            <label for="tx-bulk-account">Conta</label>
+            <select id="tx-bulk-account"></select>
+          </div>
+          <div class="form-group">
+            <label for="tx-bulk-date">Data</label>
+            <input type="date" id="tx-bulk-date">
+            <small id="tx-bulk-date-hint" class="tx-bulk-note hidden">Datas diferentes: a data só pode ser alterada quando todas forem do mesmo dia.</small>
+          </div>
+          <button type="submit" class="btn-primary">Aplicar às selecionadas</button>
+        </form>
+      </div>
+    </div>
+
     <div id="account-modal" class="modal-overlay hidden">
       <div class="modal-content">
         <div class="modal-header">

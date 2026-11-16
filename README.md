@@ -94,23 +94,42 @@ firebase deploy --only firestore:rules
 
 ```
 src/
-├── main.js          # Lógica da aplicação e módulos de tela
-├── charts.js        # Gráficos do dashboard
-├── categories.js    # Categorias padrão, ícones e cores
-├── firebase.js      # Inicialização do Firebase (via variáveis de ambiente)
-├── style.css        # Design system e estilos
-└── assets/          # Logotipos
-firestore.rules      # Regras de segurança do banco
-DESIGN.md            # Documentação do design system
+├── main.js            # Inicialização, login, navegação, dashboard, tema e perfil
+├── core.js            # Estado compartilhado, utilitários e acesso ao Firestore
+├── app.js             # Ponte entre main.js e os módulos de tela
+├── finance.js         # Cálculos financeiros puros (saldos, resumos, datas)
+├── finance.test.js    # Testes dos cálculos (Vitest)
+├── charts.js          # Gráficos do dashboard
+├── categoryCatalog.js # Categorias padrão, ícones e cores
+├── firebase.js        # Inicialização do Firebase (via variáveis de ambiente)
+├── style.css          # Design system e estilos
+├── assets/            # Logotipos usados pelo app
+└── screens/           # Um módulo por tela
+    ├── transactions.js   # Lançamentos, comprovantes, exportação e edição em lote
+    ├── accounts.js       # Contas e transferências
+    ├── cards.js          # Cartões de crédito e faturas
+    ├── fixedCosts.js     # Custos fixos e pagamento de fatura
+    ├── goals.js          # Objetivos e aportes
+    ├── planning.js       # Planejamento mensal
+    ├── categories.js     # Categorias
+    └── calendar.js       # Calendário
+docs/
+├── screenshots/       # Imagens do README
+└── brand/             # Arquivos-fonte da marca (não usados pelo app)
+firestore.rules        # Regras de segurança do banco
+DESIGN.md              # Documentação do design system
+```
+
+## Testes
+
+```bash
+npm test
 ```
 
 ## Próximos passos
 
-- Anexar comprovantes às transações
-- Marcar despesas como pagas ou agendadas, com efeito nos saldos
-- Relatórios exportáveis (PDF e CSV)
-- Testes automatizados para os cálculos financeiros
-- Separar `main.js` em módulos por tela
+- Separar o restante do `main.js` (dashboard, perfil, tema e navegação) em módulos
+- Testes de interface para os fluxos principais
 
 ## Autor
 
