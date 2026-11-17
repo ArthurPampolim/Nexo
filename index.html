@@ -193,6 +193,24 @@
 
         <p class="login-center"><a href="#" id="back-to-login-forgot-btn">← Voltar para o Login</a></p>
       </div>
+
+      <!-- 4. Confirmação de E-mail (aparece para conta logada ainda não confirmada) -->
+      <div id="verify-email-view" class="login-box" style="display: none;">
+        <div class="login-brand">
+          <img class="brand-logo brand-logo-light" src="src/assets/nexo-logo-pontos-claro.svg" alt="Nexo" />
+          <img class="brand-logo brand-logo-dark" src="src/assets/nexo-logo-pontos-escuro.svg" alt="Nexo" />
+        </div>
+        <h1>Confirme seu e-mail ✉️</h1>
+        <p class="login-sub">Enviamos um link de confirmação para <strong id="verify-email-address"></strong>. Abra o
+          link e depois volte aqui. Confira também a caixa de spam.</p>
+
+        <p id="verify-msg" role="status" style="margin-bottom: 15px; display: none; font-size: 14px;"></p>
+
+        <button type="button" id="verify-check-btn" class="login-btn">Já confirmei</button>
+
+        <p class="login-center"><a href="#" id="verify-resend-btn">Reenviar e-mail</a></p>
+        <p class="login-center"><a href="#" id="verify-logout-btn">← Sair e usar outra conta</a></p>
+      </div>
     </main>
 
     <!-- Lado Direito: Arte -->

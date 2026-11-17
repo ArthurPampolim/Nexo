@@ -1,6 +1,6 @@
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, setDoc, getDoc, query, where } from 'firebase/firestore';
 import { db, auth } from './firebase.js';
-import { signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail, updatePassword } from "firebase/auth";
+import { signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification, updatePassword } from "firebase/auth";
 import { isSettled, settledTotals, isTransferTransaction, parseLocalDate } from './finance.js';
 import { state, monthPickerState, monthLabels, elements, activeTransactions, OWNED_COLLECTIONS, currencyFormatter, escapeHTML, getCurrentUserId } from './core.js';
 import { app } from './app.js';
@@ -243,17 +243,38 @@ const AppController = (function () {
   }
 
   // Monitor de Sessão: Tranca ou destranca a tela
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      // Esconde o Login e MOSTRA o Sistema
-      document.getElementById('login-screen').style.display = 'none';
-      document.getElementById('app-container').style.display = 'block';
-      requestAnimationFrame(() => moveTabIndicator(false));
+  function entrarNoSistema() {
+    // Esconde o Login e MOSTRA o Sistema
+    document.getElementById('verify-email-view').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app-container').style.display = 'block';
+    requestAnimationFrame(() => moveTabIndicator(false));
 
-      definirMesAtual();
-      init();
-      loadUserProfile();
+    definirMesAtual();
+    init();
+    loadUserProfile();
+  }
+
+  function mostrarAvisoVerificacao(texto, cor) {
+    const msg = document.getElementById('verify-msg');
+    msg.innerText = texto;
+    msg.style.color = cor;
+    msg.style.display = 'block';
+  }
+
+  onAuthStateChanged(auth, (user) => {
+    if (user && !user.emailVerified) {
+      // shortcut: bloqueio só na tela; para valer no servidor, exigir request.auth.token.email_verified em firestore.rules
+      document.getElementById('login-screen').style.display = 'grid';
+      document.getElementById('app-container').style.display = 'none';
+      ['login-view', 'register-view', 'forgot-pass-view'].forEach(id => { document.getElementById(id).style.display = 'none'; });
+      document.getElementById('verify-email-address').innerText = user.email;
+      document.getElementById('verify-msg').style.display = 'none';
+      document.getElementById('verify-email-view').style.display = 'block';
+    } else if (user) {
+      entrarNoSistema();
     } else {
+      document.getElementById('verify-email-view').style.display = 'none';
       // Descarta os dados do usuário anterior da memória
       Object.assign(state, {
         accounts: [], creditCards: [], creditTransactions: [], transactions: [],
@@ -422,15 +443,45 @@ const AppController = (function () {
         apelido: nome,
         nascimento
       }, { merge: true });
-      loadUserProfile();
 
-      AppController.showToast(`Conta criada com sucesso, ${nome}! O login será feito automaticamente.`, 'success');
+      // Se o envio falhar, a tela de confirmação tem o botão de reenviar
+      await sendEmailVerification(credential.user).catch(() => undefined);
+      AppController.showToast(`Conta criada, ${nome}! Confirme seu e-mail para entrar.`, 'success');
     } catch (error) {
       errorMsg.innerText = "Erro ao criar conta: " + error.message;
       errorMsg.style.display = 'block';
+    } finally {
       btn.disabled = false;
       btn.innerText = 'Confirmar Cadastro';
     }
+  });
+
+  // --- CONFIRMAÇÃO DE E-MAIL ---
+  document.getElementById('verify-check-btn')?.addEventListener('click', async () => {
+    try {
+      await auth.currentUser.reload();
+      if (auth.currentUser.emailVerified) entrarNoSistema();
+      else mostrarAvisoVerificacao('Ainda não confirmado. Abra o link enviado para o seu e-mail.', '#F44336');
+    } catch (error) {
+      mostrarAvisoVerificacao('Erro ao verificar: ' + error.message, '#F44336');
+    }
+  });
+
+  document.getElementById('verify-resend-btn')?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    try {
+      await sendEmailVerification(auth.currentUser);
+      mostrarAvisoVerificacao('E-mail reenviado.', '#059669');
+    } catch (error) {
+      mostrarAvisoVerificacao(error.code === 'auth/too-many-requests'
+        ? 'Muitos envios seguidos. Aguarde alguns minutos e tente de novo.'
+        : 'Erro ao reenviar: ' + error.message, '#F44336');
+    }
+  });
+
+  document.getElementById('verify-logout-btn')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    signOut(auth);
   });
 
   // Ação de Esqueci a Senha
