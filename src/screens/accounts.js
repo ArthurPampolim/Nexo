@@ -10,7 +10,8 @@ export async function loadAccounts() {
     const data = await fetchUserScopedDocs("Contas");
     state.accounts = data;
     populateAccountsDropdown();
-    app.loadTransactions();
+    await app.loadTransactions();
+    renderAccountsPage();
   } catch (error) {
     console.error("Erro ao carregar contas:", error);
   }

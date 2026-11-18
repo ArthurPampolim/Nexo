@@ -656,7 +656,12 @@ export function toggleTxRepeat() {
 
 // Seletor de data em calendário (aberto por "Outros…")
 export function openTxDatePicker() {
-  const current = document.getElementById('dataTransacao').value || txLocalISO();
+  openDatePicker(document.getElementById('dataTransacao').value, setTxDate);
+}
+
+// Seletor reutilizado por outras telas: onPick recebe a data ISO escolhida
+export function openDatePicker(initialISO, onPick) {
+  const current = initialISO || txLocalISO();
   let selected = current;
   let [viewY, viewM] = current.split('-').map(Number);
   viewM -= 1;
@@ -722,7 +727,7 @@ export function openTxDatePicker() {
     const d = new Date(viewY, viewM + 1, 1); viewY = d.getFullYear(); viewM = d.getMonth(); render();
   });
   overlay.querySelector('#dp-cancel').addEventListener('click', close);
-  overlay.querySelector('#dp-ok').addEventListener('click', () => { setTxDate(selected); close(); });
+  overlay.querySelector('#dp-ok').addEventListener('click', () => { onPick(selected); close(); });
 
   document.addEventListener('keydown', onKey, true);
   document.body.appendChild(overlay);

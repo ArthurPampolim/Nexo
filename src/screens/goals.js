@@ -2,6 +2,7 @@ import { db } from '../firebase.js';
 import { collection, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import { state, currencyFormatter, escapeHTML, formatDateBR, getCurrentUserId, fetchUserScopedDocs, elements } from '../core.js';
 import { app } from '../app.js';
+import { openDatePicker } from './transactions.js';
 
 // --- OBJETIVOS E METAS COM APORTE ---
 state.currentGoalId = null;
@@ -162,6 +163,7 @@ export function openGoalForm(nome, icone, cor) {
   document.getElementById('goal-type-modal').classList.add('hidden');
   state.editingId = null;
   elements.goalForm.reset();
+  setGoalDate('');
 
   document.getElementById('goal-name-input').value = nome;
   document.getElementById('goal-icon-val').value = icone;
@@ -174,7 +176,20 @@ export function openGoalForm(nome, icone, cor) {
 export function closeGoalModal() {
   elements.goalModal.classList.add('hidden');
   elements.goalForm.reset();
+  setGoalDate('');
   state.editingId = null;
+}
+
+// ── Data de vencimento (mesmo calendário das transações) ──
+function setGoalDate(iso) {
+  document.getElementById('goal-date-val').value = iso;
+  const btn = document.getElementById('goal-date-btn');
+  btn.innerText = iso ? formatDateBR(iso) : 'Escolher data…';
+  btn.classList.toggle('active', !!iso);
+}
+
+export function openGoalDatePicker() {
+  openDatePicker(document.getElementById('goal-date-val').value, setGoalDate);
 }
 
 export async function submitGoal(event) {
@@ -225,8 +240,7 @@ export function editGoal(id) {
   document.getElementById('goal-color-val').value = g.Cor || '#36454f';
 
   const dateStr = g.DataLimite ? String(g.DataLimite).split('T')[0] : '';
-  const dateInput = document.querySelector(`#goal-form input[name="dataLimite"]`);
-  if (dateInput) dateInput.value = dateStr;
+  setGoalDate(dateStr);
 
   document.getElementById('submit-goal-btn').innerText = 'ATUALIZAR OBJETIVO';
   elements.goalModal.classList.remove('hidden');
