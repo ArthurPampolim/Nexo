@@ -1873,7 +1873,7 @@
             <div style="display: flex; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 5px;">
               <i class="far fa-calendar-alt" style="color: #999; margin-right: 10px; font-size: 18px;"></i>
               <input type="hidden" name="dataLimite" id="goal-date-val">
-              <button type="button" id="goal-date-btn" class="tx-chip" onclick="AppController.openGoalDatePicker()">Escolher data…</button>
+              <button type="button" id="goal-date-btn" class="tx-chip goal-date-chip" onclick="AppController.openGoalDatePicker()">Escolher data…</button>
             </div>
           </div>
 
@@ -2167,7 +2167,28 @@
             onclick="AppController.switchProfileTab('registration')">Meu cadastro</button>
           <button class="seg-btn" style="cursor: not-allowed; opacity: 0.5;" disabled
             title="Em breve">Assinatura</button>
+          <button id="tab-prof-privacy" class="seg-btn"
+            onclick="AppController.switchProfileTab('privacy')">Privacidade</button>
         </div>
+      </div>
+
+      <!-- CONTEÚDO 3: PRIVACIDADE -->
+      <div id="prof-content-privacy" class="privacy-grid" style="display: none;">
+        <section class="privacy-card">
+          <h3>Começar do zero</h3>
+          <p>Clicando abaixo você irá zerar todos os seus dados financeiros, preservando seu cadastro.</p>
+          <button type="button" class="btn-primary privacy-btn" onclick="AppController.openPrivacyModal('reset')">REINICIAR CONTA</button>
+        </section>
+        <section class="privacy-card">
+          <h3>Excluir cadastro</h3>
+          <p>Clicando no botão abaixo, você irá excluir o seu cadastro do Nexo, juntamente com todos os seus dados financeiros.</p>
+          <button type="button" class="btn-danger privacy-btn" onclick="AppController.openPrivacyModal('delete')">EXCLUIR CADASTRO</button>
+        </section>
+        <section class="privacy-card">
+          <h3>Exportar dados</h3>
+          <p>Você pode baixar suas informações a qualquer momento. Clique abaixo para exportar seus dados financeiros.</p>
+          <button type="button" class="btn-primary privacy-btn" onclick="AppController.openPrivacyModal('export')">EXPORTAR DADOS</button>
+        </section>
       </div>
 
       <!-- CONTEÚDO 1: PREFERÊNCIAS -->
@@ -2390,6 +2411,70 @@
           </form>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- MODAIS DE PRIVACIDADE (fora do app-container: a tela de perfil esconde o conteúdo principal) -->
+  <div id="privacy-reset-modal" class="modal-overlay hidden">
+    <div class="modal-content privacy-modal">
+      <div class="modal-header">
+        <h2>Você realmente deseja deletar os dados dessa conta?</h2>
+        <button type="button" class="close-btn" aria-label="Fechar" onclick="AppController.closePrivacyModal('reset')"><i class="fas fa-times"></i></button>
+      </div>
+      <form onsubmit="AppController.submitPrivacyReset(event)">
+        <p class="privacy-text">Você realmente deseja apagar todos os seus dados? Não conseguiremos recuperá-los no futuro!</p>
+        <div class="form-group">
+          <label for="privacy-reset-input">Digite "Deletar" para confirmar</label>
+          <input type="text" id="privacy-reset-input" placeholder="Deletar" autocomplete="off"
+            oninput="AppController.checkPrivacyConfirm('privacy-reset-input', 'privacy-reset-btn')">
+        </div>
+        <button type="submit" id="privacy-reset-btn" class="btn-primary" disabled>APAGAR TODOS OS DADOS E COMEÇAR DO ZERO</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="privacy-delete-modal" class="modal-overlay hidden">
+    <div class="modal-content privacy-modal">
+      <div class="modal-header">
+        <h2>Você tem certeza de que deseja excluir a sua conta?</h2>
+        <button type="button" class="close-btn" aria-label="Fechar" onclick="AppController.closePrivacyModal('delete')"><i class="fas fa-times"></i></button>
+      </div>
+      <form onsubmit="AppController.submitPrivacyDelete(event)">
+        <p class="privacy-text"><strong>Essa ação é irreversível!</strong></p>
+        <p class="privacy-text">Seu e-mail será desvinculado do Nexo permanentemente e todos os seus dados financeiros serão apagados.</p>
+        <p class="privacy-text">Por segurança, é preciso ter entrado há poucos minutos. Se não for o caso, você será desconectado para entrar de novo e repetir a exclusão.</p>
+        <div class="form-group">
+          <label for="privacy-delete-input">Digite "Deletar" para confirmar</label>
+          <input type="text" id="privacy-delete-input" placeholder="Deletar" autocomplete="off"
+            oninput="AppController.checkPrivacyConfirm('privacy-delete-input', 'privacy-delete-btn')">
+        </div>
+        <button type="submit" id="privacy-delete-btn" class="btn-danger" disabled>EXCLUIR CONTA</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="privacy-export-modal" class="modal-overlay hidden">
+    <div class="modal-content privacy-modal">
+      <div class="modal-header">
+        <h2>Exportar dados</h2>
+        <button type="button" class="close-btn" aria-label="Fechar" onclick="AppController.closePrivacyModal('export')"><i class="fas fa-times"></i></button>
+      </div>
+      <form onsubmit="AppController.submitPrivacyExport(event)">
+        <div class="privacy-dates">
+          <div class="form-group">
+            <label>De</label>
+            <input type="hidden" id="privacy-export-from">
+            <button type="button" id="privacy-export-from-btn" class="privacy-date-btn" onclick="AppController.pickPrivacyExportDate('from')"></button>
+          </div>
+          <div class="form-group">
+            <label>Até</label>
+            <input type="hidden" id="privacy-export-to">
+            <button type="button" id="privacy-export-to-btn" class="privacy-date-btn" onclick="AppController.pickPrivacyExportDate('to')"></button>
+          </div>
+        </div>
+        <p class="privacy-text">O arquivo (JSON) traz lançamentos, faturas e aportes do período, mais contas, cartões, objetivos, custos fixos, planejamento, categorias e eventos. Comprovantes anexados não entram.</p>
+        <button type="submit" id="privacy-export-btn" class="btn-primary">EXPORTAR DADOS</button>
+      </form>
     </div>
   </div>
 

@@ -4,6 +4,7 @@ import { signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWith
 import { isSettled, settledTotals, isTransferTransaction, parseLocalDate } from './finance.js';
 import { state, monthPickerState, monthLabels, elements, activeTransactions, OWNED_COLLECTIONS, currencyFormatter, escapeHTML, getCurrentUserId } from './core.js';
 import { app } from './app.js';
+import { checkPrivacyConfirm, closePrivacyModal, openPrivacyModal, pickPrivacyExportDate, submitPrivacyDelete, submitPrivacyExport, submitPrivacyReset } from './screens/privacy.js';
 import { closeCategoryModal, deleteCategory, loadCategories, onCategoryParentChange, openCategoryModal, pickCategoryColor, pickCategoryIcon, populateCategorySelects, renderCategoriesPage, renderIconGrid, setCategoryFormKind, setCategoryKind, submitCategory, updateCategoryPreview } from './screens/categories.js';
 import { calNext, calPrev, calToday, closeEventModal, deleteEventFromModal, loadEvents, openEventModal, renderCalendar, setEventType, submitEvent, toggleEventAllDay } from './screens/calendar.js';
 import { closeAccountModal, closeTransferModal, loadAccounts, openAccountModal, openTransferModal, renderAccountsPage, submitAccount, submitTransfer } from './screens/accounts.js';
@@ -1038,18 +1039,20 @@ const AppController = (function () {
   function switchProfileTab(tabName) {
     const panes = {
       overview: document.getElementById('prof-content-overview'),
-      registration: document.getElementById('prof-content-registration')
+      registration: document.getElementById('prof-content-registration'),
+      privacy: document.getElementById('prof-content-privacy')
     };
     const buttons = {
       overview: document.getElementById('tab-prof-overview'),
-      registration: document.getElementById('tab-prof-registration')
+      registration: document.getElementById('tab-prof-registration'),
+      privacy: document.getElementById('tab-prof-privacy')
     };
 
     Object.keys(panes).forEach(key => {
       const active = key === tabName;
       if (buttons[key]) buttons[key].classList.toggle('active', active);
       if (panes[key]) {
-        panes[key].style.display = active ? 'block' : 'none';
+        panes[key].style.display = active ? (key === 'privacy' ? 'grid' : 'block') : 'none';
         panes[key].classList.remove('tab-pane-enter');
         if (active) {
           void panes[key].offsetWidth;
@@ -1415,7 +1418,8 @@ const AppController = (function () {
     openGoalTypeModal, openGoalForm, openGoalDatePicker, closeGoalModal, submitGoal, closeGoalDepositModal, submitGoalDeposit,
     openGoalDetails, closeGoalDetails, editGoalFromDetails, deleteGoalDeposit, editGoalDeposit, toggleGoalOptions, openCurrentGoalDepositModal, deleteCurrentGoal, switchGoalsTab, markGoalAsCompleted, toggleGoalsSortDropdown, setGoalsSortOrder, openFixedCostModal, closeFixedCostModal, submitFixedCost, editFixedCost, deleteFixedCost, markFixedCostPaid, unmarkFixedCostPaid, closeFCPayModal, openCCModal, closeCCModal, submitCC, openCCTransModal, closeCCTransModal, submitCCTrans, openCCInvoiceModal, closeCCInvoiceModal, deleteCreditTransaction, toggleFabMenu, openNewTransaction, openNewCCTransaction, openNewTransfer, startPlanningWizard, cancelPlanningWizard, copyPreviousPlanning, maskCurrency, calculateWizardBudget, prevWizardStep, nextWizardStep, calculateWizardCategoryTotals, selectCardPreference, finishPlanningWizard, submitFixedCostPay, logout, switchProfileTab, maskCPF, maskPhone, maskCEP, closePayInvoiceModal, submitPayInvoice, showToast, openCurrentGoalWithdrawModal, switchSettingsTab, toggleAllDevices, checkDeviceSelection, disconnectSelectedDevices, savePreferences, openCategoryModal, closeCategoryModal, submitCategory, deleteCategory, setCategoryKind, setCategoryFormKind, updateCategoryPreview, onCategoryParentChange, filterCategoryIcons: renderIconGrid, pickCategoryIcon, pickCategoryColor, changeTxPage, changeTxItemsPerPage, setTransactionSort, proceedEditFixedCost, closeFCEditScopeModal, 
     openTxDrawer, closeTxDrawer, closeCCDrawer, submitTxDrawer, deleteTxFromDrawer, 
-    toggleTxSelect, toggleTxSelectAll, clearTxSelection, openTxBulkEdit, closeTxBulkEdit, submitTxBulkEdit, deleteTxBulk
+    toggleTxSelect, toggleTxSelectAll, clearTxSelection, openTxBulkEdit, closeTxBulkEdit, submitTxBulkEdit, deleteTxBulk,
+    openPrivacyModal, closePrivacyModal, checkPrivacyConfirm, pickPrivacyExportDate, submitPrivacyReset, submitPrivacyDelete, submitPrivacyExport
   };
 })();
 

@@ -5113,3 +5113,109 @@ html.modal-open {
 .tx-bulk-del { color: #e53935; }
 .tx-bulk-note { color: var(--text-muted, #888); font-size: 12.5px; margin: 0 0 10px; display: block; }
 .tx-bulk-note.hidden { display: none; }
+
+/* ── Data de vencimento do objetivo (fora do modal de transação, sem --tx-accent) ── */
+.goal-date-chip.active {
+  background: var(--primary-color);
+  color: #fff;
+}
+
+/* ── Perfil › Privacidade ── */
+.privacy-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.privacy-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+  padding: 32px;
+}
+
+.privacy-card h3 {
+  margin: 0 0 14px;
+  font-size: 17px;
+  color: var(--text-main);
+}
+
+.privacy-card p {
+  margin: 0 0 24px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.privacy-btn {
+  width: auto;
+  margin-top: 0;
+  padding: 12px 28px;
+  border-radius: 24px;
+}
+
+.btn-danger {
+  width: auto;
+  padding: 12px 28px;
+  border: 1px solid var(--danger-color);
+  border-radius: 24px;
+  background: var(--danger-color);
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: filter 0.2s ease, transform 0.18s ease;
+}
+
+.btn-danger:hover:not(:disabled) {
+  filter: brightness(0.92);
+  transform: translateY(-1px);
+}
+
+.btn-danger:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.privacy-modal {
+  max-width: 520px;
+}
+
+.privacy-text {
+  margin: 0 0 14px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+.privacy-modal form > button[type="submit"] {
+  display: block;
+  margin: 22px 0 0 auto;
+  width: auto;
+  border-radius: 24px;
+  padding: 12px 24px;
+}
+
+.privacy-dates {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 8px;
+}
+
+.privacy-date-btn {
+  width: 100%;
+  padding: 8px 0;
+  border: none;
+  border-bottom: 1px solid var(--border-strong);
+  background: transparent;
+  color: var(--text-main);
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+}
+
+@media (max-width: 760px) {
+  .privacy-grid { grid-template-columns: 1fr; }
+}

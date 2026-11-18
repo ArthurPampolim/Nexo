@@ -523,7 +523,7 @@ function csvCell(v) {
   return `"${s.replace(/"/g, '""')}"`;
 }
 
-function downloadFile(name, mime, content) {
+export function downloadFile(name, mime, content) {
   const url = URL.createObjectURL(new Blob([content], { type: mime }));
   const a = document.createElement('a');
   a.href = url;
