@@ -378,7 +378,7 @@
         </div>
 
         <!-- CARROSSEL DE CONTAS BANCÁRIAS -->
-        <div class="accounts-section">
+        <div class="accounts-section" data-dash-card="contas">
           <div class="accounts-heading">
             <h3>Minhas Contas</h3>
             <button type="button" class="accounts-link" onclick="AppController.switchTab('accounts')">Ver todas <i class="fas fa-arrow-right"></i></button>
@@ -394,7 +394,7 @@
           style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 1200px; margin: 24px auto 50px auto; padding: 0 15px;">
 
           <!-- Linha 1: Visão Geral de Longo Prazo -->
-          <div class="chart-card"
+          <div class="chart-card" data-dash-card="balanco-semestral"
             style="grid-column: span 2; background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
             <h3 style="color: var(--primary-color); font-size: 16px; margin-top: 0; margin-bottom: 20px;">Balanço
               (Receitas x Despesas) - Últimos 6 meses</h3>
@@ -405,7 +405,7 @@
           </div>
 
           <!-- Linha 2: Raio-X do Mês Atual -->
-          <div class="chart-card"
+          <div class="chart-card" data-dash-card="despesas-cat"
             style="background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
             <h3 style="color: var(--primary-color); font-size: 16px; margin-top: 0; margin-bottom: 20px;">Despesas por
               Categoria</h3>
@@ -415,7 +415,7 @@
             </div>
           </div>
 
-          <div class="chart-card"
+          <div class="chart-card" data-dash-card="balanco-mensal"
             style="background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
             <h3 style="color: var(--primary-color); font-size: 16px; margin-top: 0; margin-bottom: 20px;">Balanço do Mês
             </h3>
@@ -426,18 +426,66 @@
           </div>
 
           <!-- Linha 3: Metas e Orçamentos (Mantenha o conteúdo que você já tinha) -->
-          <div class="chart-card"
+          <div class="chart-card" data-dash-card="orcamento"
             style="background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
             <h3 style="color: var(--primary-color); font-size: 16px; margin-top: 0; margin-bottom: 20px;">Planejamento
               Mensal</h3>
             <div id="dash-planning-body"></div>
           </div>
 
-          <div class="chart-card"
+          <div class="chart-card" data-dash-card="objetivos"
             style="background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
             <h3 style="color: var(--primary-color); font-size: 16px; margin-top: 0; margin-bottom: 20px;">Meus Objetivos
             </h3>
             <div id="dash-goals-body"></div>
+          </div>
+
+          <div class="chart-card" data-dash-card="receitas-cat"
+            style="background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+            <h3 style="color: var(--primary-color); font-size: 16px; margin-top: 0; margin-bottom: 20px;">Receitas por Categoria</h3>
+            <div style="position: relative; height: 250px; width: 100%; display: flex; justify-content: center;">
+              <canvas id="incomeChart"></canvas>
+            </div>
+          </div>
+
+          <div class="chart-card" data-dash-card="frequencia"
+            style="background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+            <h3 style="color: var(--primary-color); font-size: 16px; margin-top: 0; margin-bottom: 20px;">Frequência de Gastos</h3>
+            <div style="position: relative; height: 250px; width: 100%; display: flex; justify-content: center;">
+              <canvas id="frequenciaChart"></canvas>
+            </div>
+          </div>
+
+          <div class="chart-card" data-dash-card="balanco-trimestral"
+            style="background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+            <h3 style="color: var(--primary-color); font-size: 16px; margin-top: 0; margin-bottom: 20px;">Balanço (Receitas x Despesas) - Últimos 3 meses</h3>
+            <div style="position: relative; height: 250px; width: 100%; display: flex; justify-content: center;">
+              <canvas id="trimestralChart"></canvas>
+            </div>
+          </div>
+
+          <div class="chart-card" data-dash-card="pendentes"
+            style="background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+            <h3 style="color: var(--primary-color); font-size: 16px; margin-top: 0; margin-bottom: 20px;">Transações Pendentes</h3>
+            <div id="dash-pending-body"></div>
+          </div>
+
+          <div class="chart-card" data-dash-card="economia"
+            style="background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+            <h3 style="color: var(--primary-color); font-size: 16px; margin-top: 0; margin-bottom: 20px;">Economia do Mês</h3>
+            <div id="dash-savings-body"></div>
+          </div>
+
+          <div class="chart-card" data-dash-card="cartoes"
+            style="background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+            <h3 style="color: var(--primary-color); font-size: 16px; margin-top: 0; margin-bottom: 20px;">Cartões de Crédito</h3>
+            <div id="dash-cards-body"></div>
+          </div>
+
+          <div class="chart-card" data-dash-card="perfil"
+            style="background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+            <h3 style="color: var(--primary-color); font-size: 16px; margin-top: 0; margin-bottom: 20px;">Meu Perfil</h3>
+            <div id="dash-profile-body"></div>
           </div>
 
         </div>
@@ -1263,10 +1311,8 @@
           </div>
 
           <!-- CONTEÚDO 3: DASHBOARD -->
-          <div id="set-content-dash" class="hidden"
-            style="background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #eaeaea; text-align: center; color: #888;">
-            <i class="fas fa-chart-pie" style="font-size: 40px; color: #ddd; margin-bottom: 15px;"></i>
-            <p>Configurações do Dashboard (Em breve)</p>
+          <div id="set-content-dash" class="hidden dset-panel">
+            <div id="dash-settings-body"></div>
           </div>
 
           <!-- CONTEÚDO 4: SEGURANÇA -->

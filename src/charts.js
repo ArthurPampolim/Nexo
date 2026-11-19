@@ -4,32 +4,41 @@
 const currencyFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
 // Variáveis para armazenar as instâncias dos gráficos e evitar sobreposição
-let expensesChartInstance = null;
-let historicoChartInstance = null;
-let balancoMesChartInstance = null;
+const instances = {};
+const PALETTE = ['#36454f', '#6fa9a8', '#8fbcbb', '#4b5f6d', '#d97706', '#e11d48', '#afcfce', '#0284c7'];
 
 export const ChartManager = {
 
     // Função principal que orquestra a atualização de todos os gráficos
     updateDashboardCharts: function (allTransactions, selectedYYYYMM) {
+        this.lastArgs = [allTransactions, selectedYYYYMM];
         if (typeof Chart !== 'undefined') {
             const isDark = document.body.classList.contains('dark-mode');
             Chart.defaults.color = isDark ? '#eef4f4' : '#5b6d79';
             Chart.defaults.borderColor = isDark ? '#36454f' : '#dbe5e5';
             Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
         }
-        this.renderExpensesChart(allTransactions, selectedYYYYMM);
+        this.renderCategoryChart('expensesChart', 'DESPESA', allTransactions, selectedYYYYMM);
+        this.renderCategoryChart('incomeChart', 'RECEITA', allTransactions, selectedYYYYMM);
         this.renderMonthlyBalanceChart(allTransactions, selectedYYYYMM);
         this.renderHistoricalChart(allTransactions);
+        this.renderHistoricalChart(allTransactions, 3, 'trimestralChart');
+        this.renderFrequencyChart(allTransactions, selectedYYYYMM);
     },
 
-    // 1. GRÁFICO DE ROSCA (Despesas por Categoria do Mês Atual)
-    renderExpensesChart: function (allTransactions, selectedYYYYMM) {
-        const canvas = document.getElementById('expensesChart');
+    // Redesenha com as cores do tema atual (chamado ao trocar claro/escuro)
+    refreshTheme: function () {
+        if (this.lastArgs) this.updateDashboardCharts(...this.lastArgs);
+    },
+
+    // 1. GRÁFICO DE ROSCA (Despesas ou Receitas por Categoria do mês)
+    renderCategoryChart: function (canvasId, tipo, allTransactions, selectedYYYYMM) {
+        const canvas = document.getElementById(canvasId);
         if (!canvas) return;
+        const emptyLabel = tipo === 'DESPESA' ? 'Sem despesas' : 'Sem receitas';
 
         const monthlyTx = allTransactions.filter(t => {
-            if (!t.Data || t.Tipo !== 'DESPESA' || (t.Categoria && t.Categoria.toLowerCase().includes('transfer'))) return false;
+            if (!t.Data || t.Tipo !== tipo || (t.Categoria && t.Categoria.toLowerCase().includes('transfer'))) return false;
             return String(t.Data).slice(0, 7) === selectedYYYYMM;
         });
 
@@ -42,17 +51,15 @@ export const ChartManager = {
         const labels = Object.keys(categoryTotals);
         const dataValues = Object.values(categoryTotals);
 
-        if (expensesChartInstance) expensesChartInstance.destroy();
+        if (instances[canvasId]) instances[canvasId].destroy();
 
-        expensesChartInstance = new Chart(canvas.getContext('2d'), {
+        instances[canvasId] = new Chart(canvas.getContext('2d'), {
             type: 'doughnut',
             data: {
-                labels: labels.length > 0 ? labels : ['Sem despesas'],
+                labels: labels.length > 0 ? labels : [emptyLabel],
                 datasets: [{
                     data: dataValues.length > 0 ? dataValues : [1],
-                    backgroundColor: labels.length > 0 ?
-                        ['#36454f', '#6fa9a8', '#8fbcbb', '#4b5f6d', '#d97706', '#e11d48', '#afcfce', '#0284c7'] :
-                        ['#e2e8f0'],
+                    backgroundColor: labels.length > 0 ? PALETTE : ['#e2e8f0'],
                     borderWidth: 0
                 }]
             },
@@ -86,9 +93,9 @@ export const ChartManager = {
             }
         });
 
-        if (balancoMesChartInstance) balancoMesChartInstance.destroy();
+        if (instances.balancoMesChart) instances.balancoMesChart.destroy();
 
-        balancoMesChartInstance = new Chart(canvas.getContext('2d'), {
+        instances.balancoMesChart = new Chart(canvas.getContext('2d'), {
             type: 'bar',
             data: {
                 labels: ['Receitas', 'Despesas'],
@@ -115,17 +122,17 @@ export const ChartManager = {
         });
     },
 
-    // 3. GRÁFICO HISTÓRICO (Últimos 6 meses)
-    renderHistoricalChart: function (allTransactions) {
-        const canvas = document.getElementById('historicoChart');
+    // 3. GRÁFICO HISTÓRICO (Últimos N meses: 6 = semestral, 3 = trimestral)
+    renderHistoricalChart: function (allTransactions, months = 6, canvasId = 'historicoChart') {
+        const canvas = document.getElementById(canvasId);
         if (!canvas) return;
 
-        // Gera os últimos 6 meses (ex: ['2026-04', '2026-05', '2026-06', '2026-07', '2026-08', '2026-09'])
+        // Gera os últimos meses (ex: ['2026-07', '2026-08', '2026-09'])
         const last6Months = [];
         const monthNames = [];
         const date = new Date();
 
-        for (let i = 5; i >= 0; i--) {
+        for (let i = months - 1; i >= 0; i--) {
             const d = new Date(date.getFullYear(), date.getMonth() - i, 1);
             const yyyy = d.getFullYear();
             const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -133,8 +140,8 @@ export const ChartManager = {
             monthNames.push(d.toLocaleDateString('pt-BR', { month: 'short' }).toUpperCase());
         }
 
-        const histReceitas = [0, 0, 0, 0, 0, 0];
-        const histDespesas = [0, 0, 0, 0, 0, 0];
+        const histReceitas = Array(months).fill(0);
+        const histDespesas = Array(months).fill(0);
 
         allTransactions.forEach(t => {
             if (!t.Data || (t.Categoria && t.Categoria.toLowerCase().includes('transfer'))) return;
@@ -147,9 +154,9 @@ export const ChartManager = {
             }
         });
 
-        if (historicoChartInstance) historicoChartInstance.destroy();
+        if (instances[canvasId]) instances[canvasId].destroy();
 
-        historicoChartInstance = new Chart(canvas.getContext('2d'), {
+        instances[canvasId] = new Chart(canvas.getContext('2d'), {
             type: 'line',
             data: {
                 labels: monthNames,
@@ -181,6 +188,41 @@ export const ChartManager = {
                 },
                 scales: {
                     y: { beginAtZero: true, grid: { borderDash: [5, 5] }, ticks: { callback: (val) => 'R$ ' + val } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    },
+
+    // 4. FREQUÊNCIA DE GASTOS (quantidade de despesas por dia da semana no mês)
+    renderFrequencyChart: function (allTransactions, selectedYYYYMM) {
+        const canvas = document.getElementById('frequenciaChart');
+        if (!canvas) return;
+
+        const counts = [0, 0, 0, 0, 0, 0, 0];
+        allTransactions.forEach(t => {
+            if (!t.Data || t.Tipo !== 'DESPESA' || t.Ignorar || (t.Categoria && t.Categoria.toLowerCase().includes('transfer'))) return;
+            if (String(t.Data).slice(0, 7) !== selectedYYYYMM) return;
+            const [y, m, d] = String(t.Data).slice(0, 10).split('-').map(Number);
+            counts[new Date(y, m - 1, d).getDay()]++;
+        });
+
+        if (instances.frequenciaChart) instances.frequenciaChart.destroy();
+
+        instances.frequenciaChart = new Chart(canvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
+                datasets: [{ data: counts, backgroundColor: '#6fa9a8', borderRadius: 6, barPercentage: 0.6 }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: (context) => ` ${context.raw} gasto(s)` } }
+                },
+                scales: {
+                    y: { beginAtZero: true, grid: { borderDash: [5, 5] }, ticks: { precision: 0 } },
                     x: { grid: { display: false } }
                 }
             }

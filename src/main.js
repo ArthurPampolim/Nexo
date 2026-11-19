@@ -6,6 +6,7 @@ import { state, monthPickerState, monthLabels, elements, activeTransactions, OWN
 import { app } from './app.js';
 import { renderPerformance } from './screens/performance.js';
 import { renderDashboardWidgets } from './screens/dashboardWidgets.js';
+import { ChartManager } from './charts.js';
 import { checkPrivacyConfirm, closePrivacyModal, openPrivacyModal, pickPrivacyExportDate, submitPrivacyDelete, submitPrivacyExport, submitPrivacyReset } from './screens/privacy.js';
 import { closeCategoryModal, deleteCategory, loadCategories, onCategoryParentChange, openCategoryModal, pickCategoryColor, pickCategoryIcon, populateCategorySelects, renderCategoriesPage, renderIconGrid, setCategoryFormKind, setCategoryKind, submitCategory, updateCategoryPreview } from './screens/categories.js';
 import { calNext, calPrev, calToday, closeEventModal, deleteEventFromModal, loadEvents, openEventModal, renderCalendar, setEventType, submitEvent, toggleEventAllDay } from './screens/calendar.js';
@@ -1083,6 +1084,7 @@ const AppController = (function () {
       localStorage.setItem('nexo_theme', 'light');
     }
     syncThemeSelectors(theme === 'dark' ? 'dark' : 'light');
+    ChartManager.refreshTheme();
   }
 
   function loadTheme() {
@@ -1181,6 +1183,7 @@ const AppController = (function () {
         const triggerName = document.querySelector('#user-menu-trigger span');
         if (triggerName) triggerName.innerText = data.apelido || data.nome || 'Usuário';
       }
+      renderDashboardWidgets();
     } catch (error) {
       console.error("Erro ao carregar dados do perfil:", error);
     }
