@@ -11,6 +11,7 @@ export async function loadPlanning() {
   try {
     state.planning = await fetchUserScopedDocs("Planejamento");
     renderPlanningDashboard();
+    app.renderDashboardInsights();
   } catch (error) {
     console.error("Erro ao carregar planejamento:", error);
   }

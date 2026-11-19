@@ -22,6 +22,7 @@ export async function loadGoals() {
     });
 
     renderGoalsPage();
+    app.renderDashboardInsights();
   } catch (error) {
     console.error("Erro ao carregar objetivos:", error);
   }

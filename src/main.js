@@ -5,6 +5,7 @@ import { isSettled, settledTotals, isTransferTransaction, parseLocalDate } from 
 import { state, monthPickerState, monthLabels, elements, activeTransactions, OWNED_COLLECTIONS, currencyFormatter, escapeHTML, getCurrentUserId } from './core.js';
 import { app } from './app.js';
 import { renderPerformance } from './screens/performance.js';
+import { renderDashboardWidgets } from './screens/dashboardWidgets.js';
 import { checkPrivacyConfirm, closePrivacyModal, openPrivacyModal, pickPrivacyExportDate, submitPrivacyDelete, submitPrivacyExport, submitPrivacyReset } from './screens/privacy.js';
 import { closeCategoryModal, deleteCategory, loadCategories, onCategoryParentChange, openCategoryModal, pickCategoryColor, pickCategoryIcon, populateCategorySelects, renderCategoriesPage, renderIconGrid, setCategoryFormKind, setCategoryKind, submitCategory, updateCategoryPreview } from './screens/categories.js';
 import { calNext, calPrev, calToday, closeEventModal, deleteEventFromModal, loadEvents, openEventModal, renderCalendar, setEventType, submitEvent, toggleEventAllDay } from './screens/calendar.js';
@@ -753,6 +754,7 @@ const AppController = (function () {
         </div>
       </div>
     `).join('');
+    renderDashboardWidgets();
   }
 
   // Tecla ESC fecha o Drawer de Transações

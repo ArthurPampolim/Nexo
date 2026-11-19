@@ -14,7 +14,7 @@ export const ChartManager = {
     updateDashboardCharts: function (allTransactions, selectedYYYYMM) {
         if (typeof Chart !== 'undefined') {
             const isDark = document.body.classList.contains('dark-mode');
-            Chart.defaults.color = isDark ? '#9db5b4' : '#5b6d79';
+            Chart.defaults.color = isDark ? '#eef4f4' : '#5b6d79';
             Chart.defaults.borderColor = isDark ? '#36454f' : '#dbe5e5';
             Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
         }

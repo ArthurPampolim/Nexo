@@ -5443,14 +5443,6 @@ html.modal-open {
   overflow: hidden;
   transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
 }
-.kpi-card::before {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 3px;
-  background: var(--kpi);
-  opacity: 0.85;
-}
 .kpi-card:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
@@ -5573,3 +5565,35 @@ body.dark-mode .kpi-bad { color: #fb7185; }
 .acc-share small { font-size: 11.5px; color: var(--text-muted); white-space: nowrap; }
 .acc-share-bar { flex: 1; height: 4px; border-radius: 4px; background: var(--border-color); overflow: hidden; }
 .acc-share-bar > span { display: block; height: 100%; border-radius: 4px; background: var(--info-color); }
+
+/* Títulos dos gráficos têm cor inline; no escuro ficam brancos para leitura confortável */
+body.dark-mode .chart-card h3 {
+  color: var(--text-main) !important;
+}
+
+/* ── Dashboard: widgets de planejamento e objetivos ── */
+.dw-bar { height: 8px; border-radius: 8px; background: var(--border-color); overflow: hidden; }
+.dw-bar > span { display: block; height: 100%; border-radius: 8px; background: var(--kpi-fill, var(--accent-color)); transition: width 0.4s ease; }
+.dw-good { --kpi-fill: var(--accent-color); }
+.dw-warn { --kpi-fill: #f59e0b; }
+.dw-bad { --kpi-fill: var(--danger-color); }
+.dw-warn-text { color: #f59e0b; }
+.dw-bad-text { color: var(--danger-color); }
+.dw-good-text { color: var(--text-secondary); }
+.dw-plan-top { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.dw-plan-top strong { font-size: 26px; font-weight: 700; color: var(--text-main); }
+.dw-plan-top span, .dw-plan-meta, .dw-plan-income { font-size: 13px; color: var(--text-muted); }
+.dw-plan-meta { display: flex; justify-content: space-between; margin-top: 10px; font-weight: 600; }
+.dw-plan-income { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-color); }
+.dw-plan-income strong { color: var(--text-main); }
+.dw-goals { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 16px; }
+.dw-goal-row { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 6px; font-size: 14px; }
+.dw-goal-row strong { color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dw-goal-row span { font-weight: 700; color: var(--text-secondary); }
+.dw-goals small { display: block; margin-top: 5px; font-size: 12px; color: var(--text-muted); }
+.dw-link { background: none; border: 0; font: inherit; font-size: 13px; font-weight: 600; color: var(--primary-color); cursor: pointer; padding: 10px 0 0; }
+.dw-link:hover { text-decoration: underline; }
+body.dark-mode .dw-link { color: var(--accent-color); }
+.dw-empty { text-align: center; padding: 12px 0 4px; color: var(--text-muted); }
+.dw-empty > i { font-size: 30px; color: var(--accent-color); opacity: 0.8; }
+.dw-empty p { margin: 10px 0 0; font-size: 13.5px; }
