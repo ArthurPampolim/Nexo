@@ -7,12 +7,12 @@ import { app } from './app.js';
 import { checkPrivacyConfirm, closePrivacyModal, openPrivacyModal, pickPrivacyExportDate, submitPrivacyDelete, submitPrivacyExport, submitPrivacyReset } from './screens/privacy.js';
 import { closeCategoryModal, deleteCategory, loadCategories, onCategoryParentChange, openCategoryModal, pickCategoryColor, pickCategoryIcon, populateCategorySelects, renderCategoriesPage, renderIconGrid, setCategoryFormKind, setCategoryKind, submitCategory, updateCategoryPreview } from './screens/categories.js';
 import { calNext, calPrev, calToday, closeEventModal, deleteEventFromModal, loadEvents, openEventModal, renderCalendar, setEventType, submitEvent, toggleEventAllDay } from './screens/calendar.js';
-import { closeAccountModal, closeTransferModal, loadAccounts, openAccountModal, openTransferModal, renderAccountsPage, submitAccount, submitTransfer } from './screens/accounts.js';
-import { calculateInvoiceSum, switchInvoiceTab, closeCCDrawer, closeCCInvoiceModal, closeCCModal, closeCCTransModal, deleteCreditTransaction, loadCreditData, openCCInvoiceModal, openCCModal, openCCTransModal, renderCreditCardsPage, submitCC, submitCCTrans } from './screens/cards.js';
+import { closeAccountModal, closeTransferModal, setTransferDateShortcut, openTransferDatePicker, loadAccounts, openAccountModal, openTransferModal, renderAccountsPage, submitAccount, submitTransfer } from './screens/accounts.js';
+import { calculateInvoiceSum, switchInvoiceTab, setCCDateShortcut, openCCDatePicker, closeCCDrawer, closeCCInvoiceModal, closeCCModal, closeCCTransModal, deleteCreditTransaction, loadCreditData, openCCInvoiceModal, openCCModal, openCCTransModal, renderCreditCardsPage, submitCC, submitCCTrans } from './screens/cards.js';
 import { closeFCEditScopeModal, closeFCPayModal, closeFixedCostModal, closePayInvoiceModal, deleteFixedCost, editFixedCost, loadFixedCosts, markFixedCostPaid, openFixedCostModal, openPayInvoiceModal, proceedEditFixedCost, renderFixedCosts, renderFixedCostsPage, submitFixedCost, submitFixedCostPay, submitPayInvoice, unmarkFixedCostPaid } from './screens/fixedCosts.js';
 import { closeGoalDepositModal, closeGoalDetails, closeGoalModal, deleteCurrentGoal, deleteGoalDeposit, editGoalDeposit, editGoalFromDetails, loadGoals, markGoalAsCompleted, openCurrentGoalDepositModal, openCurrentGoalWithdrawModal, openGoalDetails, openGoalDatePicker, openGoalForm, openGoalTypeModal, renderGoalsPage, setGoalsSortOrder, submitGoal, submitGoalDeposit, switchGoalsTab, toggleGoalOptions, toggleGoalsSortDropdown } from './screens/goals.js';
 import { calculateWizardBudget, calculateWizardCategoryTotals, cancelPlanningWizard, copyPreviousPlanning, finishPlanningWizard, loadPlanning, nextWizardStep, prevWizardStep, renderPlanningView, selectCardPreference, startPlanningWizard } from './screens/planning.js';
-import { clearReceipt, clearTxSelection, closeTxBulkEdit, deleteTxBulk, openTxBulkEdit, submitTxBulkEdit, toggleTxSelect, toggleTxSelectAll, closeModal, closeTxDrawer, deleteTransaction, deleteTxFromDrawer, describeTx, exportTransactionsCSV, exportTransactionsPDF, handleDrawerReceipt, handleReceiptFile, loadTransactions, openModal, openTxDatePicker, openTxDrawer, renderTransactions, setTxDateShortcut, setTxType, submitTransaction, submitTxDrawer, toggleTxDetails, toggleTxRepeat, toggleTxStatus, validateTxAmount } from './screens/transactions.js';
+import { clearReceipt, suggestTxDescription, txSuggestKey, hideTxSuggest, pickTxSuggestion, clearTxSelection, closeTxBulkEdit, deleteTxBulk, openTxBulkEdit, submitTxBulkEdit, toggleTxSelect, toggleTxSelectAll, closeModal, closeTxDrawer, deleteTransaction, deleteTxFromDrawer, describeTx, exportTransactionsCSV, exportTransactionsPDF, handleDrawerReceipt, handleReceiptFile, loadTransactions, openModal, openTxDatePicker, openTxDrawer, renderTransactions, setTxDateShortcut, setTxType, submitTransaction, submitTxDrawer, toggleTxDetails, toggleTxRepeat, toggleTxStatus, validateTxAmount } from './screens/transactions.js';
 
 
 const AppController = (function () {
@@ -563,25 +563,8 @@ const AppController = (function () {
     closeFabMenu();
     openTransferModal();
 
-    // 1. Pega a data atual no formato YYYY-MM-DD
-    const localISO = new Date(new Date().getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-
-    // 2. Pré-preenche o campo (compatibilidade com flatpickr e input normal)
-    const dateElement = document.getElementById('transfer-data');
-    if (dateElement && dateElement._flatpickr) {
-      dateElement._flatpickr.setDate(localISO);
-    } else if (dateElement) {
-      dateElement.value = localISO;
-    }
-
     const valueInput = document.querySelector('#transfer-form input[name="valor"]');
     if (valueInput) { valueInput.style.color = '#2196F3'; valueInput.style.borderBottomColor = '#2196F3'; }
-
-    const dateInput = dateElement && dateElement._flatpickr ? dateElement._flatpickr.altInput : null;
-    if (dateInput) {
-      dateInput.style.color = '#2196F3';
-      dateInput.style.fontWeight = '600';
-    }
   }
   // ── Diálogo de confirmação ──
   /**
@@ -1419,7 +1402,7 @@ const AppController = (function () {
     openGoalTypeModal, openGoalForm, openGoalDatePicker, closeGoalModal, submitGoal, closeGoalDepositModal, submitGoalDeposit,
     openGoalDetails, closeGoalDetails, editGoalFromDetails, deleteGoalDeposit, editGoalDeposit, toggleGoalOptions, openCurrentGoalDepositModal, deleteCurrentGoal, switchGoalsTab, markGoalAsCompleted, toggleGoalsSortDropdown, setGoalsSortOrder, openFixedCostModal, closeFixedCostModal, submitFixedCost, editFixedCost, deleteFixedCost, markFixedCostPaid, unmarkFixedCostPaid, closeFCPayModal, openCCModal, closeCCModal, submitCC, openCCTransModal, closeCCTransModal, submitCCTrans, openCCInvoiceModal, closeCCInvoiceModal, deleteCreditTransaction, toggleFabMenu, openNewTransaction, openNewCCTransaction, openNewTransfer, startPlanningWizard, cancelPlanningWizard, copyPreviousPlanning, maskCurrency, calculateWizardBudget, prevWizardStep, nextWizardStep, calculateWizardCategoryTotals, selectCardPreference, finishPlanningWizard, submitFixedCostPay, logout, switchProfileTab, maskCPF, maskPhone, maskCEP, closePayInvoiceModal, submitPayInvoice, showToast, openCurrentGoalWithdrawModal, switchSettingsTab, toggleAllDevices, checkDeviceSelection, disconnectSelectedDevices, savePreferences, openCategoryModal, closeCategoryModal, submitCategory, deleteCategory, setCategoryKind, setCategoryFormKind, updateCategoryPreview, onCategoryParentChange, filterCategoryIcons: renderIconGrid, pickCategoryIcon, pickCategoryColor, changeTxPage, changeTxItemsPerPage, setTransactionSort, proceedEditFixedCost, closeFCEditScopeModal, 
     openTxDrawer, closeTxDrawer, closeCCDrawer, submitTxDrawer, deleteTxFromDrawer, 
-    toggleTxSelect, toggleTxSelectAll, clearTxSelection, openTxBulkEdit, closeTxBulkEdit, submitTxBulkEdit, deleteTxBulk, switchInvoiceTab,
+    toggleTxSelect, toggleTxSelectAll, clearTxSelection, openTxBulkEdit, closeTxBulkEdit, submitTxBulkEdit, deleteTxBulk, switchInvoiceTab, setCCDateShortcut, openCCDatePicker, setTransferDateShortcut, openTransferDatePicker, suggestTxDescription, txSuggestKey, hideTxSuggest, pickTxSuggestion,
     openPrivacyModal, closePrivacyModal, checkPrivacyConfirm, pickPrivacyExportDate, submitPrivacyReset, submitPrivacyDelete, submitPrivacyExport
   };
 })();

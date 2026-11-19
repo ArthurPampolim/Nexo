@@ -1,7 +1,8 @@
 import { db } from '../firebase.js';
 import { collection, addDoc, deleteDoc, doc } from 'firebase/firestore';
 import { state, monthLabels, currencyFormatter, escapeHTML, formatDateBR, getCurrentUserId, fetchUserScopedDocs, elements } from '../core.js';
-import { parseCurrencyMask, isInvoiceClosed } from '../finance.js';
+import { parseCurrencyMask, isInvoiceClosed, txLocalISO } from '../finance.js';
+import { openDatePicker } from './transactions.js';
 import { app } from '../app.js';
 
 // --- CARTÃO DE CRÉDITO & FATURAS ---
@@ -85,11 +86,31 @@ export function openCCTransModal() {
   });
 
   elements.ccTransModal.classList.remove('hidden');
-  const localISO = new Date(new Date().getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+  setCCDate(txLocalISO());
+}
 
-  const dateInput = document.getElementById('cct-data');
-  if (dateInput && dateInput._flatpickr) dateInput._flatpickr.setDate(localISO);
-  else if (dateInput) dateInput.value = localISO;
+// ── Data da compra (mesmos atalhos e calendário do lançamento) ──
+function setCCDate(iso) {
+  document.getElementById('cct-data').value = iso;
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const isToday = iso === txLocalISO();
+  const isYesterday = iso === txLocalISO(yesterday);
+  document.getElementById('cct-chip-today').classList.toggle('active', isToday);
+  document.getElementById('cct-chip-yesterday').classList.toggle('active', isYesterday);
+  const other = document.getElementById('cct-chip-other');
+  other.classList.toggle('active', !isToday && !isYesterday);
+  other.innerText = (!isToday && !isYesterday) ? formatDateBR(iso) : 'Outros…';
+}
+
+export function setCCDateShortcut(offsetDays) {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  setCCDate(txLocalISO(d));
+}
+
+export function openCCDatePicker() {
+  openDatePicker(document.getElementById('cct-data').value, setCCDate);
 }
 export function closeCCTransModal() { elements.ccTransModal.classList.add('hidden'); elements.ccTransForm.reset(); }
 export async function submitCCTrans(event) {

@@ -5223,7 +5223,7 @@ html.modal-open {
 /* ── Cartões › lista de faturas ── */
 .inv-list {
   list-style: none;
-  margin: 16px 0 0;
+  margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
@@ -5260,4 +5260,89 @@ html.modal-open {
 .inv-row .inv-row-value {
   min-width: 110px;
   text-align: right;
+}
+
+/* ── Cartões › seletor compacto Abertas/Fechadas no cabeçalho ── */
+.inv-seg {
+  margin-bottom: 0;
+  padding: 4px;
+  box-shadow: var(--shadow-xs);
+}
+
+.inv-seg .seg-btn {
+  flex: none;
+  padding: 7px 18px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* ── Lançamento › sugestão de descrição ── */
+.tx-desc-row {
+  position: relative;
+}
+
+.tx-suggest {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin: 4px 0 0;
+  padding: 6px;
+  list-style: none;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+.tx-suggest li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.tx-suggest li:hover,
+.tx-suggest li.active {
+  background: var(--border-color);
+}
+
+.tx-suggest-dot {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+}
+
+.tx-suggest strong {
+  display: block;
+  font-size: 14px;
+  color: var(--text-main);
+}
+
+.tx-suggest small {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ── Cartão › data da compra (chips fora do .tx-modal, sem --tx-accent) ── */
+.cc-date-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-strong);
+}
+
+.cc-date-row > i {
+  color: var(--text-muted);
+}
+
+#cc-trans-modal .tx-chip.active,
+.cc-date-row .tx-chip.active {
+  background: var(--primary-color);
+  color: #fff;
 }

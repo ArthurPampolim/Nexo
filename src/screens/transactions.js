@@ -734,6 +734,72 @@ export function openDatePicker(initialISO, onPick) {
   render();
 }
 
+// ── Sugestão de descrição (a partir dos lançamentos já feitos) ──
+let txSuggestions = [];
+let txSuggestActive = -1;
+const plain = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+
+function renderTxSuggest() {
+  const list = document.getElementById('tx-desc-suggest');
+  list.classList.toggle('hidden', txSuggestions.length === 0);
+  list.innerHTML = txSuggestions.map((t, i) => `
+    <li role="option" class="${i === txSuggestActive ? 'active' : ''}"
+        onmousedown="event.preventDefault(); AppController.pickTxSuggestion(${i})">
+      <span class="tx-suggest-dot" style="background:${escapeHTML(getCategoryStyle(t.Categoria).color)}"></span>
+      <div><strong>${escapeHTML(t.Descricao)}</strong><small>${escapeHTML(t.Categoria || 'Sem categoria')} | ${escapeHTML(t.Conta || '')}</small></div>
+    </li>`).join('');
+}
+
+export function hideTxSuggest() {
+  txSuggestions = [];
+  txSuggestActive = -1;
+  const list = document.getElementById('tx-desc-suggest');
+  if (list) { list.classList.add('hidden'); list.innerHTML = ''; }
+}
+
+export function suggestTxDescription() {
+  const term = plain(elements.form.elements.descricao.value);
+  if (!term || state.editingId) return hideTxSuggest();
+
+  const tipo = document.getElementById('tx-modal-box').dataset.type;
+  const seen = new Set();
+  // Mais recentes primeiro; um item por descrição + categoria + conta
+  txSuggestions = state.transactions
+    .filter(t => t.Descricao && t.Tipo === tipo && !isTransferTransaction(t) && plain(t.Descricao).includes(term))
+    .sort((a, b) => String(b.Data).localeCompare(String(a.Data)))
+    .filter(t => { const k = plain(t.Descricao) + '|' + t.Categoria + '|' + t.Conta; return !seen.has(k) && seen.add(k); })
+    .slice(0, 5);
+  txSuggestActive = -1;
+  renderTxSuggest();
+}
+
+export function pickTxSuggestion(i) {
+  const t = txSuggestions[i];
+  if (!t) return;
+  elements.form.elements.descricao.value = t.Descricao;
+  setCategorySelectValue(elements.form.querySelector('select[name="categoria"]'), t.Categoria);
+  const conta = document.getElementById('conta');
+  if (conta.choicesInstance) conta.choicesInstance.setChoiceByValue(t.Conta);
+  else conta.value = t.Conta;
+  hideTxSuggest();
+}
+
+export function txSuggestKey(e) {
+  if (!txSuggestions.length) return;
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    const step = e.key === 'ArrowDown' ? 1 : -1;
+    txSuggestActive = (txSuggestActive + step + txSuggestions.length) % txSuggestions.length;
+    renderTxSuggest();
+  } else if (e.key === 'Enter' && txSuggestActive >= 0) {
+    e.preventDefault();
+    pickTxSuggestion(txSuggestActive);
+  } else if (e.key === 'Escape') {
+    e.stopPropagation();
+    hideTxSuggest();
+  }
+}
+
 function resetTxChoices() {
   elements.form.querySelectorAll('select:not(.no-choices)').forEach(s => {
     if (s.choicesInstance) {
@@ -744,6 +810,7 @@ function resetTxChoices() {
 }
 
 export function openModal() {
+  hideTxSuggest();
   state.editingId = null;
   state.editingType = null;
   elements.form.reset();
@@ -756,7 +823,7 @@ export function openModal() {
   setTxDetailsOpen(false);
   setTxType('DESPESA');
   setTxDate(txLocalISO());
-  validateTxAmount();
+  document.getElementById("tx-amount-hint").classList.add("hidden");
 
   elements.submitBtn.innerText = 'Salvar';
   elements.modal.classList.remove('hidden');
@@ -797,6 +864,7 @@ export function editTransaction(id) {
 }
 
 export function closeModal() {
+  hideTxSuggest();
   elements.modal.classList.add('hidden');
   elements.form.reset();
   state.editingId = null;
@@ -870,7 +938,7 @@ export async function submitTransaction(event, andNew = false) {
       document.getElementById('tx-repeat').checked = false;
       toggleTxRepeat();
       resetReceipt();
-      validateTxAmount();
+      document.getElementById("tx-amount-hint").classList.add("hidden");
       document.getElementById('tx-valor').focus();
     } else {
       closeModal();

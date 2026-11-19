@@ -549,7 +549,14 @@
       <div id="view-credit-cards" class="app-view hidden">
         <div class="dashboard-title-container">
           <h2>Cartões de Crédito e Faturas</h2>
-          <div>
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <div class="seg-control inv-seg" id="inv-seg">
+              <span class="seg-pill" id="inv-seg-pill" aria-hidden="true"></span>
+              <button id="btn-inv-abertas" class="seg-btn active"
+                onclick="AppController.switchInvoiceTab('ABERTAS')">Abertas</button>
+              <button id="btn-inv-fechadas" class="seg-btn"
+                onclick="AppController.switchInvoiceTab('FECHADAS')">Fechadas</button>
+            </div>
             <button class="btn-add-card" onclick="AppController.openCCModal()"><i
                 class="fas fa-plus"></i> Novo cartão</button>
           </div>
@@ -567,13 +574,6 @@
           <!-- Seção Faturas (abertas / fechadas) -->
           <div style="margin-bottom: 30px;">
             <h3 style="font-size: 18px; color: #333; margin-bottom: 15px;">Faturas</h3>
-            <div class="seg-control" id="inv-seg">
-              <span class="seg-pill" id="inv-seg-pill" aria-hidden="true"></span>
-              <button id="btn-inv-abertas" class="seg-btn active"
-                onclick="AppController.switchInvoiceTab('ABERTAS')">Abertas</button>
-              <button id="btn-inv-fechadas" class="seg-btn"
-                onclick="AppController.switchInvoiceTab('FECHADAS')">Fechadas</button>
-            </div>
             <ul id="cc-invoices-list" class="inv-list"></ul>
           </div>
         </div>
@@ -1481,7 +1481,15 @@
         <form id="transfer-form" onsubmit="AppController.submitTransfer(event)">
           <div class="form-group">
             <label>Data</label>
-            <input type="date" id="transfer-data" name="dataTransacao" required>
+            <div class="cc-date-row">
+              <i class="far fa-calendar-alt"></i>
+              <div class="tx-date-chips">
+                <button type="button" class="tx-chip" id="transfer-chip-today" onclick="AppController.setTransferDateShortcut(0)">Hoje</button>
+                <button type="button" class="tx-chip" id="transfer-chip-yesterday" onclick="AppController.setTransferDateShortcut(-1)">Ontem</button>
+                <button type="button" class="tx-chip" id="transfer-chip-other" onclick="AppController.openTransferDatePicker()">Outros…</button>
+              </div>
+            </div>
+            <input type="hidden" id="transfer-data" name="dataTransacao" required>
           </div>
           <div class="form-group"><label>Conta Origem</label><select id="transfer-origem" name="origem" required>
               <option disabled selected>Carregando...</option>
@@ -1529,8 +1537,17 @@
           <div class="form-group"><label>Cartão</label><select id="cct-cartao" name="idCartao" required>
               <option disabled selected>Carregando...</option>
             </select></div>
-          <div class="form-group"><label>Data da Compra</label><input type="date" id="cct-data" name="dataTransacao"
-              required></div>
+          <div class="form-group"><label>Data da Compra</label>
+            <div class="cc-date-row">
+              <i class="far fa-calendar-alt"></i>
+              <div class="tx-date-chips">
+                <button type="button" class="tx-chip" id="cct-chip-today" onclick="AppController.setCCDateShortcut(0)">Hoje</button>
+                <button type="button" class="tx-chip" id="cct-chip-yesterday" onclick="AppController.setCCDateShortcut(-1)">Ontem</button>
+                <button type="button" class="tx-chip" id="cct-chip-other" onclick="AppController.openCCDatePicker()">Outros…</button>
+              </div>
+            </div>
+            <input type="hidden" id="cct-data" name="dataTransacao" required>
+          </div>
           <div class="form-group"><label>Valor Total (R$)</label><input autocomplete="off" type="tel" name="valor" required
               autocomplete="off" oninput="AppController.maskCurrency(this)">
           </div>
@@ -1704,7 +1721,7 @@
                   oninput="AppController.maskCurrency(this); AppController.validateTxAmount()">
                 <span class="tx-currency">BRL</span>
               </div>
-              <div class="tx-hint" id="tx-amount-hint">Deve ter um valor diferente de 0</div>
+              <div class="tx-hint hidden" id="tx-amount-hint">Deve ter um valor diferente de 0</div>
 
               <div class="tx-row">
                 <i class="far fa-calendar-alt tx-icon"></i>
@@ -1716,9 +1733,12 @@
                 <input type="hidden" id="dataTransacao" name="dataTransacao" required>
               </div>
 
-              <div class="tx-row">
+              <div class="tx-row tx-desc-row">
                 <i class="far fa-file-alt tx-icon"></i>
-                <input type="text" name="descricao" placeholder="Descrição" maxlength="120" autocomplete="off">
+                <input type="text" name="descricao" placeholder="Descrição" maxlength="120" autocomplete="off"
+                  oninput="AppController.suggestTxDescription()" onkeydown="AppController.txSuggestKey(event)"
+                  onblur="AppController.hideTxSuggest()">
+                <ul id="tx-desc-suggest" class="tx-suggest hidden" role="listbox"></ul>
               </div>
 
               <div class="tx-row">

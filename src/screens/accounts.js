@@ -1,7 +1,8 @@
 import { db } from '../firebase.js';
 import { collection, addDoc, updateDoc, doc } from 'firebase/firestore';
-import { state, currencyFormatter, escapeHTML, balanceClass, getCurrentUserId, fetchUserScopedDocs, elements, activeTransactions } from '../core.js';
-import { settledTotals, accountBalances, roundCents, parseCurrencyMask } from '../finance.js';
+import { state, currencyFormatter, escapeHTML, formatDateBR, balanceClass, getCurrentUserId, fetchUserScopedDocs, elements, activeTransactions } from '../core.js';
+import { settledTotals, accountBalances, roundCents, parseCurrencyMask, txLocalISO } from '../finance.js';
+import { openDatePicker } from './transactions.js';
 import { app } from '../app.js';
 
 // --- CONTAS BANCÁRIAS E TRANSFERÊNCIAS ---
@@ -83,7 +84,32 @@ export function openTransferModal() {
     });
     app.upgradeSelects();
   }
+  setTransferDate(txLocalISO());
   document.getElementById('transfer-modal').classList.remove('hidden');
+}
+
+// ── Data da transferência (mesmos atalhos e calendário do lançamento) ──
+function setTransferDate(iso) {
+  document.getElementById('transfer-data').value = iso;
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const isToday = iso === txLocalISO();
+  const isYesterday = iso === txLocalISO(yesterday);
+  document.getElementById('transfer-chip-today').classList.toggle('active', isToday);
+  document.getElementById('transfer-chip-yesterday').classList.toggle('active', isYesterday);
+  const other = document.getElementById('transfer-chip-other');
+  other.classList.toggle('active', !isToday && !isYesterday);
+  other.innerText = (!isToday && !isYesterday) ? formatDateBR(iso) : 'Outros…';
+}
+
+export function setTransferDateShortcut(offsetDays) {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  setTransferDate(txLocalISO(d));
+}
+
+export function openTransferDatePicker() {
+  openDatePicker(document.getElementById('transfer-data').value, setTransferDate);
 }
 export function closeTransferModal() {
   document.getElementById('transfer-modal').classList.add('hidden');
