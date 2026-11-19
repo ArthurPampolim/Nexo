@@ -337,49 +337,51 @@
 
         <!-- 4 CARTÕES SUPERIORES -->
         <div class="summary-cards">
-          <div class="summary-card" onclick="AppController.switchTab('accounts')" style="cursor: pointer;"
-            title="Ir para Minhas Contas">
-            <div class="card-icon icon-blue"><i class="fas fa-university"></i></div>
-            <div class="card-info">
-              <div class="card-label">Saldo atual</div>
-              <h3 class="card-value" id="total-balance">R$ 0,00</h3>
-            </div>
-          </div>
-          <!-- Card de Receitas (Clicável) -->
-          <div class="summary-card"
-            onclick="AppController.switchTab('transactions'); AppController.setTransactionFilter('RECEITA');"
-            style="cursor: pointer;" title="Ver Receitas do Mês">
-            <div class="card-icon icon-green"><i class="fas fa-arrow-up"></i></div>
-            <div class="card-info">
-              <div class="card-label">Receitas</div>
-              <h3 class="card-value" id="total-income">R$ 0,00</h3>
-            </div>
-          </div>
-          <!-- Card de Despesas (Clicável) -->
-          <div class="summary-card"
-            onclick="AppController.switchTab('transactions'); AppController.setTransactionFilter('DESPESA');"
-            style="cursor: pointer;" title="Ver Despesas do Mês">
-            <div class="card-icon icon-red"><i class="fas fa-arrow-down"></i></div>
-            <div class="card-info">
-              <div class="card-label">Despesas</div>
-              <h3 class="card-value" id="total-expense">R$ 0,00</h3>
-            </div>
-          </div>
-          <div class="summary-card" onclick="AppController.openCCInvoiceModal()" title="Ver Detalhes da Fatura"
-            style="border-left: 4px solid #00796B; cursor: pointer;">
-            <div class="card-icon icon-dark-green"><i class="fas fa-credit-card"></i></div>
-            <div class="card-info">
-              <div class="card-label">Fatura do Mês</div>
-              <h3 class="card-value" id="total-credit-card">R$ 0,00</h3>
-            </div>
-            <i class="fas fa-list-ul" style="color: #00796B; font-size: 18px; margin-left: 10px;"></i>
-          </div>
+          <button type="button" class="kpi-card kpi-blue" onclick="AppController.switchTab('accounts')" title="Ir para Minhas Contas">
+            <span class="kpi-head">
+              <span class="kpi-icon"><i class="fas fa-university"></i></span>
+              <span class="kpi-label">Saldo atual</span>
+              <i class="fas fa-arrow-right kpi-go" aria-hidden="true"></i>
+            </span>
+            <span class="kpi-value" id="total-balance">R$ 0,00</span>
+            <span class="kpi-foot kpi-neutral" id="kpi-accounts-foot">Somando todas as contas</span>
+          </button>
+          <button type="button" class="kpi-card kpi-green"
+            onclick="AppController.switchTab('transactions'); AppController.setTransactionFilter('RECEITA');" title="Ver Receitas do Mês">
+            <span class="kpi-head">
+              <span class="kpi-icon"><i class="fas fa-arrow-up"></i></span>
+              <span class="kpi-label">Receitas</span>
+              <i class="fas fa-arrow-right kpi-go" aria-hidden="true"></i>
+            </span>
+            <span class="kpi-value" id="total-income">R$ 0,00</span>
+            <span class="kpi-foot kpi-neutral" id="kpi-income-foot"></span>
+          </button>
+          <button type="button" class="kpi-card kpi-red"
+            onclick="AppController.switchTab('transactions'); AppController.setTransactionFilter('DESPESA');" title="Ver Despesas do Mês">
+            <span class="kpi-head">
+              <span class="kpi-icon"><i class="fas fa-arrow-down"></i></span>
+              <span class="kpi-label">Despesas</span>
+              <i class="fas fa-arrow-right kpi-go" aria-hidden="true"></i>
+            </span>
+            <span class="kpi-value" id="total-expense">R$ 0,00</span>
+            <span class="kpi-foot kpi-neutral" id="kpi-expense-foot"></span>
+          </button>
+          <button type="button" class="kpi-card kpi-teal" onclick="AppController.openCCInvoiceModal()" title="Ver Detalhes da Fatura">
+            <span class="kpi-head">
+              <span class="kpi-icon"><i class="fas fa-credit-card"></i></span>
+              <span class="kpi-label">Fatura do mês</span>
+              <i class="fas fa-arrow-right kpi-go" aria-hidden="true"></i>
+            </span>
+            <span class="kpi-value" id="total-credit-card">R$ 0,00</span>
+            <span class="kpi-foot kpi-neutral">Ver lançamentos da fatura</span>
+          </button>
         </div>
 
         <!-- CARROSSEL DE CONTAS BANCÁRIAS -->
         <div class="accounts-section">
-          <div style="max-width: 1200px; margin: 0 auto 10px auto; padding: 0 15px;">
-            <h3 style="margin: 0; font-size: 16px; color: #777; font-weight: 500;">Minhas Contas</h3>
+          <div class="accounts-heading">
+            <h3>Minhas Contas</h3>
+            <button type="button" class="accounts-link" onclick="AppController.switchTab('accounts')">Ver todas <i class="fas fa-arrow-right"></i></button>
           </div>
           <div class="accounts-carousel" id="accounts-container">
             <div class="loading" style="padding: 15px;">Calculando saldos...</div>

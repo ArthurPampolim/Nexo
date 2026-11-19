@@ -5423,3 +5423,153 @@ html.modal-open {
 .wiz-tip strong {
   color: var(--text-main);
 }
+
+/* ── Dashboard: cards KPI e contas ── */
+.kpi-card {
+  --kpi: var(--info-color);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  padding: 18px 20px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+}
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: var(--kpi);
+  opacity: 0.85;
+}
+.kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--kpi);
+}
+.kpi-card:active { transform: translateY(0); }
+.kpi-card:focus-visible,
+.account-mini-card:focus-visible {
+  outline: 2px solid var(--kpi, var(--primary-color));
+  outline-offset: 2px;
+}
+.kpi-blue { --kpi: var(--info-color); }
+.kpi-green { --kpi: var(--success-color); }
+.kpi-red { --kpi: var(--danger-color); }
+.kpi-teal { --kpi: var(--accent-color); }
+.kpi-head { display: flex; align-items: center; gap: 10px; }
+.kpi-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  color: var(--kpi);
+  background: color-mix(in srgb, var(--kpi) 16%, transparent);
+  flex-shrink: 0;
+}
+.kpi-label {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.kpi-go {
+  font-size: 12px;
+  color: var(--text-muted);
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+}
+.kpi-card:hover .kpi-go,
+.kpi-card:focus-visible .kpi-go { opacity: 1; transform: none; }
+.kpi-value {
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--text-main);
+  overflow-wrap: anywhere;
+}
+.kpi-foot {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  min-height: 22px;
+}
+.kpi-foot:empty { display: none; }
+.kpi-neutral { color: var(--text-muted); background: color-mix(in srgb, var(--text-muted) 12%, transparent); }
+.kpi-good { color: var(--success-color); background: color-mix(in srgb, var(--success-color) 14%, transparent); }
+.kpi-bad { color: var(--danger-color); background: color-mix(in srgb, var(--danger-color) 14%, transparent); }
+body.dark-mode .kpi-good { color: #4ade80; }
+body.dark-mode .kpi-bad { color: #fb7185; }
+
+.accounts-heading {
+  max-width: 1200px;
+  margin: 0 auto 8px auto;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.accounts-heading h3 { margin: 0; font-size: 16px; font-weight: 600; color: var(--text-secondary); }
+.accounts-link {
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary-color);
+  cursor: pointer;
+  padding: 6px 4px;
+}
+.accounts-link:hover { text-decoration: underline; }
+
+.account-mini-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  min-width: 220px;
+  padding: 16px 18px;
+  border-left: 1px solid var(--border-color);
+}
+.account-mini-card:hover { border-color: var(--border-strong); }
+.account-mini-card .acc-top { display: flex; align-items: center; gap: 10px; }
+.account-mini-card .acc-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  color: var(--info-color);
+  background: color-mix(in srgb, var(--info-color) 16%, transparent);
+  flex-shrink: 0;
+}
+.account-mini-card .acc-name { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-mini-card .acc-balance { font-size: 20px; }
+.acc-share { display: flex; align-items: center; gap: 8px; }
+.acc-share small { font-size: 11.5px; color: var(--text-muted); white-space: nowrap; }
+.acc-share-bar { flex: 1; height: 4px; border-radius: 4px; background: var(--border-color); overflow: hidden; }
+.acc-share-bar > span { display: block; height: 100%; border-radius: 4px; background: var(--info-color); }

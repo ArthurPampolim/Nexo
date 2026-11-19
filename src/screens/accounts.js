@@ -34,14 +34,23 @@ export function renderAccountBalances(transactions) {
   if (state.accounts.length === 0) { container.innerHTML = '<div style="color:#888; padding:15px; font-size:14px;">Nenhuma conta.</div>'; return; }
   const balances = accountBalances(state.accounts, transactions);
 
-  const today = new Date();
-  today.setHours(23, 59, 59, 999);
-
+  const positiveTotal = state.accounts.reduce((sum, acc) => sum + Math.max(0, roundCents(balances[acc.Nome])), 0);
 
   state.accounts.forEach(acc => {
-    const card = document.createElement('div'); card.className = 'account-mini-card';
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'account-mini-card';
+    card.title = 'Ir para Minhas Contas';
+    card.onclick = () => app.switchTab('accounts');
     const bal = roundCents(balances[acc.Nome]); const bClass = balanceClass(bal);
-    card.innerHTML = `<div class="acc-name"><i class="fas fa-wallet" style="margin-right: 8px; color: #aaa;"></i>${escapeHTML(acc.Nome)}</div><div class="acc-balance ${bClass}">${currencyFormatter.format(bal)}</div>`;
+    const share = positiveTotal > 0 ? Math.round(Math.max(0, bal) / positiveTotal * 100) : 0;
+    card.innerHTML = `
+      <span class="acc-top">
+        <span class="acc-icon"><i class="fas fa-university"></i></span>
+        <span class="acc-name">${escapeHTML(acc.Nome)}</span>
+      </span>
+      <span class="acc-balance ${bClass}">${currencyFormatter.format(bal)}</span>
+      <span class="acc-share"><span class="acc-share-bar"><span style="width:${share}%"></span></span><small>${share}% do saldo</small></span>`;
     container.appendChild(card);
   });
 }

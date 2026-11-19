@@ -18,6 +18,28 @@ export async function loadTransactions() {
   }
 }
 
+// ── Rodapés dos cards do dashboard: comparação com o mês anterior ──
+function renderKpiFoots(current) {
+  const [y, m] = app.getSelectedYYYYMM().split('-').map(Number);
+  const prevDate = new Date(y, m - 2, 1);
+  const prevYm = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+  const previous = monthSummary(state.transactions.filter(t => t.Data && t.Data.slice(0, 7) === prevYm));
+
+  const setFoot = (id, now, before, upIsGood) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (!before) { el.className = 'kpi-foot kpi-neutral'; el.textContent = 'Sem dados no mês anterior'; return; }
+    const pct = Math.round((now - before) / before * 100);
+    const good = pct === 0 ? null : (pct > 0) === upIsGood;
+    el.className = `kpi-foot ${good === null ? 'kpi-neutral' : good ? 'kpi-good' : 'kpi-bad'}`;
+    el.innerHTML = `<i class="fas ${pct === 0 ? 'fa-equals' : pct > 0 ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down'}"></i> ${pct > 0 ? '+' : ''}${pct}% vs. mês anterior`;
+  };
+  setFoot('kpi-income-foot', current.income, previous.income, true);
+  setFoot('kpi-expense-foot', current.expense, previous.expense, false);
+  const accFoot = document.getElementById('kpi-accounts-foot');
+  if (accFoot) accFoot.textContent = `${state.accounts.length} conta(s) somadas`;
+}
+
 export function renderTransactions() {
   app.updateTransactionSummary();
   const selectedYYYYMM = app.getSelectedYYYYMM();
@@ -151,6 +173,7 @@ export function renderTransactions() {
   if (elements.totalIncome) elements.totalIncome.innerText = currencyFormatter.format(monthlySummary.income);
   if (elements.totalExpense) elements.totalExpense.innerText = currencyFormatter.format(monthlySummary.expense);
 
+  renderKpiFoots(monthlySummary);
   renderAccountBalances(activeTransactions());
   elements.transactionsContainer.innerHTML = '';
 
