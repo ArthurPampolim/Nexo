@@ -1,7 +1,7 @@
 import { db } from '../firebase.js';
 import { collection, addDoc, deleteDoc, doc } from 'firebase/firestore';
-import { state, currencyFormatter, escapeHTML, formatDateBR, getCurrentUserId, fetchUserScopedDocs, elements } from '../core.js';
-import { parseCurrencyMask } from '../finance.js';
+import { state, monthLabels, currencyFormatter, escapeHTML, formatDateBR, getCurrentUserId, fetchUserScopedDocs, elements } from '../core.js';
+import { parseCurrencyMask, isInvoiceClosed } from '../finance.js';
 import { app } from '../app.js';
 
 // --- CARTÃO DE CRÉDITO & FATURAS ---
@@ -282,7 +282,62 @@ export function renderCreditCardsPage() {
     }
   }
 
+  renderInvoicesList();
   if (state.ccDrawerCardId) renderCCDrawer();
+}
+
+// ── Faturas abertas / fechadas ──
+export function switchInvoiceTab(tab) {
+  state.invoiceTab = tab;
+  document.getElementById('btn-inv-abertas').classList.toggle('active', tab === 'ABERTAS');
+  document.getElementById('btn-inv-fechadas').classList.toggle('active', tab === 'FECHADAS');
+  app.moveSegPill('inv-seg');
+  renderInvoicesList();
+}
+
+function renderInvoicesList() {
+  const list = document.getElementById('cc-invoices-list');
+  if (!list) return;
+  const showClosed = state.invoiceTab === 'FECHADAS';
+
+  // Uma fatura = um cartão em um mês (MesFatura pode vir com sufixo, daí o slice)
+  const groups = new Map();
+  state.creditTransactions.forEach(ct => {
+    const cardId = String(ct.IdCartao || ct.CartaoID);
+    const mes = String(ct.MesFatura || '').slice(0, 7);
+    const card = state.creditCards.find(c => String(c.ID) === cardId);
+    if (!mes || !card) return;
+    const g = groups.get(`${cardId}|${mes}`) || { card, mes, total: 0, pending: 0 };
+    const valor = parseFloat(ct.Valor) || 0;
+    g.total += valor;
+    if (ct.Status !== 'Pago') g.pending += valor;
+    groups.set(`${cardId}|${mes}`, g);
+  });
+
+  const invoices = [...groups.values()]
+    .filter(g => isInvoiceClosed(g.mes, g.card.DiaFechamento) === showClosed)
+    .sort((a, b) => showClosed ? b.mes.localeCompare(a.mes) : a.mes.localeCompare(b.mes));
+
+  if (!invoices.length) {
+    list.innerHTML = `<li class="cc-drawer-empty">Nenhuma fatura ${showClosed ? 'fechada' : 'aberta'}.</li>`;
+    return;
+  }
+
+  list.innerHTML = invoices.map(g => {
+    const [ano, mes] = g.mes.split('-');
+    const mesNome = (monthLabels.find(m => m.number === Number(mes)) || {}).full || mes;
+    const [pillClass, pillText] = !showClosed ? ['goal-pill-neutral', 'Aberta']
+      : g.pending > 0 ? ['goal-pill-warning', 'A pagar'] : ['goal-pill-success', 'Paga'];
+    return `
+      <li class="inv-row">
+        <div>
+          <strong>${escapeHTML(g.card.Nome)} · ${escapeHTML(mesNome)} ${ano}</strong>
+          <small>Fecha dia ${escapeHTML(g.card.DiaFechamento || '--')} · Vence dia ${escapeHTML(g.card.DiaVencimento || '--')}</small>
+        </div>
+        <span class="goal-pill ${pillClass}">${pillText}</span>
+        <strong class="inv-row-value">${currencyFormatter.format(g.total)}</strong>
+      </li>`;
+  }).join('');
 }
 
 // --- DRAWER LATERAL DO CARTÃO (LANÇAMENTOS + PAGAR FATURA) ---

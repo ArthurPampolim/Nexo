@@ -5219,3 +5219,45 @@ html.modal-open {
 @media (max-width: 760px) {
   .privacy-grid { grid-template-columns: 1fr; }
 }
+
+/* ── Cartões › lista de faturas ── */
+.inv-list {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.inv-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+}
+
+.inv-row > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.inv-row strong {
+  display: block;
+  color: var(--text-main);
+  font-size: 14.5px;
+}
+
+.inv-row small {
+  color: var(--text-muted);
+  font-size: 12.5px;
+}
+
+.inv-row .inv-row-value {
+  min-width: 110px;
+  text-align: right;
+}

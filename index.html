@@ -563,6 +563,19 @@
               <div class="loading">Carregando cartões...</div>
             </div>
           </div>
+
+          <!-- Seção Faturas (abertas / fechadas) -->
+          <div style="margin-bottom: 30px;">
+            <h3 style="font-size: 18px; color: #333; margin-bottom: 15px;">Faturas</h3>
+            <div class="seg-control" id="inv-seg">
+              <span class="seg-pill" id="inv-seg-pill" aria-hidden="true"></span>
+              <button id="btn-inv-abertas" class="seg-btn active"
+                onclick="AppController.switchInvoiceTab('ABERTAS')">Abertas</button>
+              <button id="btn-inv-fechadas" class="seg-btn"
+                onclick="AppController.switchInvoiceTab('FECHADAS')">Fechadas</button>
+            </div>
+            <ul id="cc-invoices-list" class="inv-list"></ul>
+          </div>
         </div>
       </div>
 
@@ -860,7 +873,7 @@
 
             <div class="form-group" style="margin-bottom: 30px;">
               <label style="font-size: 16px; color: #333;">Quanto você ganha por mês?</label>
-              <input type="text" id="wiz-income" class="big-input text-primary" value="0,00"
+              <input autocomplete="off" type="text" id="wiz-income" class="big-input text-primary" value="0,00"
                 oninput="AppController.maskCurrency(this); AppController.calculateWizardBudget()">
             </div>
 
@@ -1401,7 +1414,7 @@
           <p class="tx-bulk-note">Só os campos preenchidos serão alterados.</p>
           <div class="form-group">
             <label for="tx-bulk-desc">Descrição</label>
-            <input type="text" id="tx-bulk-desc" placeholder="Manter atual">
+            <input autocomplete="off" type="text" id="tx-bulk-desc" placeholder="Manter atual">
           </div>
           <div class="form-group">
             <label for="tx-bulk-cat">Categoria</label>
@@ -1491,7 +1504,7 @@
               class="fas fa-times"></i></button>
         </div>
         <form id="cc-form" onsubmit="AppController.submitCC(event)">
-          <div class="form-group"><label>Nome do Cartão</label><input type="text" name="nome" required></div>
+          <div class="form-group"><label>Nome do Cartão</label><input autocomplete="off" type="text" name="nome" required></div>
           <div class="form-group"><label>Limite Total</label><input type="text" inputmode="numeric" name="limite" placeholder="R$ 0,00" autocomplete="off" oninput="AppController.maskCurrency(this)" required>
           </div>
           <div style="display: flex; gap: 15px;">
@@ -1518,7 +1531,7 @@
             </select></div>
           <div class="form-group"><label>Data da Compra</label><input type="date" id="cct-data" name="dataTransacao"
               required></div>
-          <div class="form-group"><label>Valor Total (R$)</label><input type="tel" name="valor" required
+          <div class="form-group"><label>Valor Total (R$)</label><input autocomplete="off" type="tel" name="valor" required
               autocomplete="off" oninput="AppController.maskCurrency(this)">
           </div>
           <div class="form-group">
@@ -1544,7 +1557,7 @@
               <option value="" disabled selected>Selecione...</option>
             </select>
           </div>
-          <div class="form-group"><label>Descrição</label><input type="text" name="descricao"></div>
+          <div class="form-group"><label>Descrição</label><input autocomplete="off" type="text" name="descricao"></div>
           <button type="submit" id="submit-cct-btn" class="btn-primary">Lançar na Fatura</button>
         </form>
       </div>
@@ -1613,7 +1626,7 @@
 
           <div class="form-group">
             <label for="tx-drawer-desc">Descrição</label>
-            <input type="text" id="tx-drawer-desc" name="descricao" required placeholder="Ex: Mercado, Aluguel...">
+            <input autocomplete="off" type="text" id="tx-drawer-desc" name="descricao" required placeholder="Ex: Mercado, Aluguel...">
           </div>
 
           <div class="form-row" style="display: flex; gap: 12px;">
@@ -1844,7 +1857,7 @@
             <label>Valor do objetivo</label>
             <div style="display: flex; align-items: center; border-bottom: 2px solid #333; padding-bottom: 5px;">
               <i class="fas fa-trophy" style="color: #999; margin-right: 10px; font-size: 18px;"></i>
-              <input type="text" name="valorAlvo" required placeholder="R$ 0,00"
+              <input autocomplete="off" type="text" name="valorAlvo" required placeholder="R$ 0,00"
                 autocomplete="off" oninput="AppController.maskCurrency(this)"
                 style="border: none; padding: 0; font-size: 24px; color: var(--primary-color);">
             </div>
@@ -1863,7 +1876,7 @@
             <label>Nome do objetivo</label>
             <div style="display: flex; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 5px;">
               <i class="far fa-bookmark" style="color: #999; margin-right: 10px; font-size: 18px;"></i>
-              <input type="text" id="goal-name-input" name="nome" required
+              <input autocomplete="off" type="text" id="goal-name-input" name="nome" required
                 style="border: none; padding: 0; font-size: 16px;">
             </div>
           </div>
@@ -1950,8 +1963,8 @@
               class="fas fa-times"></i></button>
         </div>
         <form id="fixed-cost-form" onsubmit="AppController.submitFixedCost(event)">
-          <div class="form-group"><label>Nome</label><input type="text" name="nome" required></div>
-          <div class="form-group"><label>Valor</label><input type="tel" name="valor" required
+          <div class="form-group"><label>Nome</label><input autocomplete="off" type="text" name="nome" required></div>
+          <div class="form-group"><label>Valor</label><input autocomplete="off" type="tel" name="valor" required
               autocomplete="off" oninput="AppController.maskCurrency(this)"></div>
           <div class="form-group"><label>Dia Vencimento</label><input type="number" name="diaVencimento" min="1"
               max="31" required></div>
@@ -1976,7 +1989,7 @@
 
           <div class="form-group">
             <label for="cat-name-input">Nome</label>
-            <input type="text" id="cat-name-input" name="nome" required maxlength="40"
+            <input autocomplete="off" type="text" id="cat-name-input" name="nome" required maxlength="40"
               oninput="AppController.updateCategoryPreview()">
           </div>
 
@@ -2025,7 +2038,7 @@
               class="fas fa-times"></i></button>
         </div>
         <form id="event-form" onsubmit="AppController.submitEvent(event)">
-          <div class="form-group"><label>Título</label><input type="text" name="titulo" required maxlength="80"></div>
+          <div class="form-group"><label>Título</label><input autocomplete="off" type="text" name="titulo" required maxlength="80"></div>
 
           <div class="form-group">
             <label>Tipo</label>
@@ -2052,7 +2065,7 @@
             <div class="form-group"><label>Fim</label><input type="time" name="fim"></div>
           </div>
 
-          <div class="form-group"><label>Local ou observação</label><input type="text" name="descricao" maxlength="80"></div>
+          <div class="form-group"><label>Local ou observação</label><input autocomplete="off" type="text" name="descricao" maxlength="80"></div>
 
           <div class="event-actions">
             <button type="button" id="event-delete-btn" class="btn-danger-outline hidden"

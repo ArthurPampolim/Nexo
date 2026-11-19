@@ -1,8 +1,23 @@
 import { describe, it, expect } from 'vitest';
 import {
   isSettled, settledTotals, accountBalances, monthSummary,
-  roundCents, parseCurrencyMask, isTransferTransaction, txAddMonths, parseLocalDate
+  roundCents, parseCurrencyMask, isTransferTransaction, txAddMonths, parseLocalDate, isInvoiceClosed
 } from './finance.js';
+
+describe('isInvoiceClosed', () => {
+  const hoje = new Date(2026, 10, 18); // 18/11/2026
+  it('aberta antes do dia de fechamento, fechada a partir dele', () => {
+    expect(isInvoiceClosed('2026-11', 20, hoje)).toBe(false);
+    expect(isInvoiceClosed('2026-11', 18, hoje)).toBe(true);
+  });
+  it('meses passados fecham, futuros ficam abertos', () => {
+    expect(isInvoiceClosed('2026-10', 28, hoje)).toBe(true);
+    expect(isInvoiceClosed('2026-12', 1, hoje)).toBe(false);
+  });
+  it('fechamento maior que o mês cai no último dia', () => {
+    expect(isInvoiceClosed('2026-02', 31, new Date(2026, 1, 28))).toBe(true);
+  });
+});
 
 // "Hoje" fixo para os testes não dependerem do relógio
 const NOW = new Date(2026, 5, 15, 10, 0, 0); // 15/06/2026

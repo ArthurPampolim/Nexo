@@ -74,6 +74,14 @@ export function accountBalances(accounts, txs, now = new Date()) {
   return balances;
 }
 
+// Fatura "AAAA-MM" recebe compras até o dia anterior ao fechamento do próprio mês (ver submitCCTrans);
+// a partir do dia de fechamento ela está fechada. Fechamento > último dia do mês cai no último dia.
+export function isInvoiceClosed(mesFatura, diaFechamento, today = new Date()) {
+  const [y, m] = String(mesFatura).split('-').map(Number);
+  const lastDay = new Date(y, m, 0).getDate();
+  return today >= new Date(y, m - 1, Math.min(parseInt(diaFechamento) || 31, lastDay));
+}
+
 // Receitas e despesas do mês: ignora transferências e transações marcadas como ignoradas
 export function monthSummary(txs) {
   return txs.reduce((acc, t) => {
