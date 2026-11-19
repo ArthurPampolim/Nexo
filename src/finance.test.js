@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   isSettled, settledTotals, accountBalances, monthSummary,
-  roundCents, parseCurrencyMask, isTransferTransaction, txAddMonths, parseLocalDate, isInvoiceClosed
+  roundCents, parseCurrencyMask, isTransferTransaction, txAddMonths, parseLocalDate, isInvoiceClosed, monthPerformance, fixedCostsPaid
 } from './finance.js';
 
 describe('isInvoiceClosed', () => {
@@ -140,5 +140,31 @@ describe('parseLocalDate', () => {
   it('não troca de dia por fuso horário', () => {
     const d = parseLocalDate('2026-03-05');
     expect([d.getFullYear(), d.getMonth(), d.getDate()]).toEqual([2026, 2, 5]);
+  });
+});
+
+describe('monthPerformance', () => {
+  const now = new Date(2026, 10, 30);
+  const txs = [
+    { Data: '2026-11-02', Tipo: 'RECEITA', Valor: 1000, Efetivado: true },
+    { Data: '2026-11-05', Tipo: 'DESPESA', Valor: 400, Efetivado: true },
+    { Data: '2026-11-06', Tipo: 'DESPESA', Valor: 50, Ignorar: true },
+    { Data: '2026-10-06', Tipo: 'DESPESA', Valor: 70, Efetivado: true }
+  ];
+  it('soma só o mês pedido, sem ignoradas', () => {
+    expect(monthPerformance(txs, '2026-11', now)).toEqual({ income: 1000, expense: 400, balance: 600 });
+    expect(monthPerformance(txs, '2026-10', now).balance).toBe(-70);
+  });
+});
+
+describe('fixedCostsPaid', () => {
+  const costs = [
+    { Valor: 100, MesesPagos: '2026-10,2026-11' },
+    { Valor: 200, MesesPagos: '2026-10', Excecoes: { '2026-11': { Valor: 999 } } },
+    { Valor: 50, MesesPagos: '2026-11', Excecoes: { '2026-11': { Valor: 80 } } }
+  ];
+  it('soma pagos do mês e respeita a exceção', () => {
+    expect(fixedCostsPaid(costs, '2026-11')).toBe(180);
+    expect(fixedCostsPaid(costs, '2026-10')).toBe(300);
   });
 });

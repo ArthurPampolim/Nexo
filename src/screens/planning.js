@@ -2,7 +2,7 @@ import { db } from '../firebase.js';
 import { collection, addDoc, deleteDoc, doc } from 'firebase/firestore';
 import { state, currencyFormatter, escapeHTML, getCurrentUserId, fetchUserScopedDocs, activeTransactions, monthPickerState, monthLabels } from '../core.js';
 import { inkFor } from '../categoryCatalog.js';
-import { isSettled, isTransferTransaction, parseLocalDate } from '../finance.js';
+import { isSettled, isTransferTransaction, parseLocalDate, parseCurrencyMask } from '../finance.js';
 import { getCategoryStyle, categoryIconHTML } from './categories.js';
 import { app } from '../app.js';
 
@@ -255,7 +255,7 @@ export async function copyPreviousPlanning() {
 
 export function calculateWizardBudget() {
   const incomeInput = document.getElementById('wiz-income').value;
-  const rawIncome = parseFloat(incomeInput.replace("R$ ", "").replace(/\./g, "").replace(",", ".")) || 0;
+  const rawIncome = parseCurrencyMask(incomeInput);
 
   const pctInput = parseFloat(document.getElementById('wiz-savings-pct').value) || 0;
   const safePct = Math.min(Math.max(pctInput, 0), 100); // Trava entre 0 e 100%
@@ -311,7 +311,7 @@ export function calculateWizardCategoryTotals() {
 
   inputs.forEach(input => {
     const catName = input.getAttribute('data-category');
-    const rawVal = parseFloat(input.value.replace("R$ ", "").replace(/\./g, "").replace(",", ".")) || 0;
+    const rawVal = parseCurrencyMask(input.value);
     wizardState.categories[catName] = rawVal;
     sum += rawVal;
   });

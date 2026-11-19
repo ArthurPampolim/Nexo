@@ -1,5 +1,5 @@
 import { db } from '../firebase.js';
-import { collection, addDoc, updateDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import { state, currencyFormatter, escapeHTML, formatDateBR, balanceClass, getCurrentUserId, fetchUserScopedDocs, elements, activeTransactions } from '../core.js';
 import { settledTotals, accountBalances, roundCents, parseCurrencyMask, txLocalISO } from '../finance.js';
 import { openDatePicker } from './transactions.js';
@@ -217,8 +217,113 @@ export function renderAccountsPage() {
             <div style="font-size:12px; color:#888; border-top:1px solid #f0f0f0; width:100%; padding-top:8px; margin-top:4px;">
               Saldo Inicial: <strong>${currencyFormatter.format(parseFloat(acc.SaldoInicial) || 0)}</strong>
             </div>`;
+        card.style.cursor = 'pointer';
+        card.tabIndex = 0;
+        card.setAttribute('role', 'button');
+        const open = () => openAccDrawer(acc.ID);
+        card.addEventListener('click', open);
+        card.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
+        });
         gridContainer.appendChild(card);
       });
     }
+  }
+  if (state.accDrawerId) renderAccDrawer();
+}
+
+// ── Painel lateral da conta (resumo, últimos lançamentos e exclusão) ──
+export function openAccDrawer(accId) {
+  state.accDrawerId = String(accId);
+  renderAccDrawer();
+  document.getElementById('acc-drawer-overlay').classList.add('open');
+  document.getElementById('acc-drawer').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+export function closeAccDrawer() {
+  state.accDrawerId = null;
+  document.getElementById('acc-drawer-overlay')?.classList.remove('open');
+  document.getElementById('acc-drawer')?.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+const accTxns = (acc) => state.transactions.filter(t => t.Conta === acc.Nome);
+
+function renderAccDrawer() {
+  const acc = state.accounts.find(a => String(a.ID) === String(state.accDrawerId));
+  const body = document.getElementById('acc-drawer-body');
+  const footer = document.getElementById('acc-drawer-footer');
+  if (!acc || !body || !footer) { closeAccDrawer(); return; }
+
+  const txs = accTxns(acc);
+  const totals = settledTotals(txs);
+  const initial = parseFloat(acc.SaldoInicial) || 0;
+  const balance = roundCents(initial + totals.income - totals.expense);
+  const recent = [...txs].sort((a, b) => String(b.Data).localeCompare(String(a.Data))).slice(0, 8);
+
+  document.getElementById('acc-drawer-title').innerText = acc.Nome;
+
+  const rows = recent.length === 0
+    ? '<li class="cc-drawer-empty">Nenhum lançamento nesta conta.</li>'
+    : recent.map(t => {
+      const isIncome = t.Tipo === 'RECEITA';
+      return `
+        <li class="cc-drawer-item">
+          <div class="cc-drawer-item-info">
+            <strong>${escapeHTML(t.Descricao || t.Categoria || 'Lançamento')}</strong>
+            <small>${escapeHTML(formatDateBR(t.Data) || t.Data || '')} · ${escapeHTML(t.Categoria || 'Outros')}</small>
+          </div>
+          <div class="cc-drawer-item-value ${isIncome ? 'text-green' : 'text-red'}">${isIncome ? '+' : '-'}${currencyFormatter.format(parseFloat(t.Valor) || 0)}</div>
+        </li>`;
+    }).join('');
+
+  body.innerHTML = `
+    <div class="tx-drawer-hero">
+      <div class="tx-drawer-amount-label">Saldo atual</div>
+      <div class="tx-drawer-amount ${balanceClass(balance)}">${currencyFormatter.format(balance)}</div>
+      <div class="tx-drawer-meta-pills">
+        <span class="goal-pill goal-pill-success"><i class="fas fa-check"></i> Ativa</span>
+      </div>
+    </div>
+    <div class="cc-drawer-limit">
+      <div><small>Saldo inicial</small><strong>${currencyFormatter.format(initial)}</strong></div>
+      <div><small>Lançamentos</small><strong>${txs.length}</strong></div>
+    </div>
+    <div class="cc-drawer-limit">
+      <div><small>Receitas efetivadas</small><strong class="text-green">${currencyFormatter.format(totals.income)}</strong></div>
+      <div><small>Despesas efetivadas</small><strong class="text-red">${currencyFormatter.format(totals.expense)}</strong></div>
+    </div>
+    <h3 class="cc-drawer-section-title">Últimos lançamentos <span>${recent.length} de ${txs.length}</span></h3>
+    <ul class="cc-drawer-list">${rows}</ul>`;
+
+  footer.innerHTML = `<button type="button" class="btn-danger-outline" id="acc-drawer-delete-btn"><i class="fas fa-trash"></i> Excluir conta</button>`;
+  document.getElementById('acc-drawer-delete-btn').addEventListener('click', () => deleteAccount(acc.ID));
+}
+
+async function deleteAccount(accId) {
+  const acc = state.accounts.find(a => String(a.ID) === String(accId));
+  if (!acc) return;
+  const txs = accTxns(acc);
+  if (!await app.confirmDialog({
+    title: 'Excluir conta?',
+    message: txs.length > 0
+      ? `Os ${txs.length} lançamento(s) desta conta também serão excluídos. Esta ação não pode ser desfeita.`
+      : 'Esta ação não pode ser desfeita.',
+    detail: acc.Nome,
+    confirmLabel: 'Excluir conta'
+  })) return;
+
+  try {
+    await Promise.all(txs.flatMap(t => [
+      deleteDoc(doc(db, "Transacoes", t.ID)),
+      ...(t.ComprovanteId ? [deleteDoc(doc(db, "Comprovantes", t.ComprovanteId))] : [])
+    ]));
+    await deleteDoc(doc(db, "Contas", acc.ID));
+    closeAccDrawer();
+    app.showToast('Conta excluída com sucesso!', 'success');
+    loadAccounts();
+  } catch (error) {
+    app.showToast('Erro ao excluir conta: ' + error.message, 'error');
   }
 }

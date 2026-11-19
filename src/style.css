@@ -5346,3 +5346,80 @@ html.modal-open {
   background: var(--primary-color);
   color: #fff;
 }
+
+/* ── Desempenho ── */
+.perf-wrap {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 15px 50px;
+}
+
+.perf-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 28px 0 12px;
+  font-size: 18px;
+  color: var(--text-main);
+}
+
+.perf-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--primary-color);
+}
+
+.perf-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 32px 36px;
+  min-height: 150px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+}
+
+.perf-text {
+  flex: 1;
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--text-main);
+}
+
+.perf-text strong {
+  font-size: 22px;
+}
+
+.perf-text-end {
+  text-align: right;
+}
+
+.perf-art {
+  flex: none;
+  font-size: 64px;
+  color: var(--border-strong);
+}
+
+@media (max-width: 760px) {
+  .perf-card-split { flex-direction: column; text-align: center; }
+  .perf-text-end { text-align: center; }
+}
+
+/* ── Planejamento › dica do assistente (segue o tema claro/escuro) ── */
+.wiz-tip {
+  background: var(--border-color);
+  border-radius: 8px;
+  padding: 15px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text-secondary, var(--text-muted));
+}
+
+.wiz-tip strong {
+  color: var(--text-main);
+}

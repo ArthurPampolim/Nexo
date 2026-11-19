@@ -92,3 +92,25 @@ export function monthSummary(txs) {
     return acc;
   }, { income: 0, expense: 0 });
 }
+
+// Receitas, despesas e balanço efetivados de um mês "AAAA-MM" (sem transferências nem ignoradas)
+export function monthPerformance(txs, ym, now = new Date()) {
+  const inMonth = txs.filter(t => {
+    if (!t.Data || t.Ignorar || isTransferTransaction(t)) return false;
+    const d = parseLocalDate(t.Data);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === ym;
+  });
+  const { income, expense } = settledTotals(inMonth, now);
+  return { income, expense, balance: income - expense };
+}
+
+// Soma dos custos fixos pagos no mês (a exceção do mês, se houver, sobrepõe o valor padrão)
+export function fixedCostsPaid(costs, ym) {
+  return costs.reduce((sum, c) => {
+    if (!String(c.MesesPagos || '').split(',').map(s => s.trim()).includes(ym)) return sum;
+    const base = parseFloat(c.Valor) || 0;
+    const ex = c.Excecoes && c.Excecoes[ym] && c.Excecoes[ym].Valor;
+    const val = ex !== undefined ? parseFloat(ex) : base;
+    return sum + (isNaN(val) ? base : val);
+  }, 0);
+}

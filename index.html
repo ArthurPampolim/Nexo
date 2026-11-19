@@ -313,6 +313,9 @@
         <button id="tab-btn-planning" class="app-tab-btn" onclick="AppController.switchTab('planning')">
           <i class="fas fa-route"></i> Planejamento
         </button>
+        <button id="tab-btn-performance" class="app-tab-btn" onclick="AppController.switchTab('performance')">
+          <i class="fas fa-chart-line"></i> Desempenho
+        </button>
         <button id="tab-btn-calendar" class="app-tab-btn" onclick="AppController.switchTab('calendar')">
           <i class="fas fa-calendar-alt"></i> Calendário
         </button>
@@ -576,6 +579,27 @@
             <h3 style="font-size: 18px; color: #333; margin-bottom: 15px;">Faturas</h3>
             <ul id="cc-invoices-list" class="inv-list"></ul>
           </div>
+        </div>
+      </div>
+
+      <!-- VIEW: DESEMPENHO -->
+      <div id="view-performance" class="app-view hidden">
+        <div class="dashboard-title-container">
+          <h2>Meu Desempenho</h2>
+        </div>
+        <div class="perf-wrap">
+          <h3 class="perf-title"><span class="perf-dot"></span> Economia</h3>
+          <section class="perf-card">
+            <p id="perf-saving" class="perf-text"></p>
+            <i class="fas fa-seedling perf-art" aria-hidden="true"></i>
+          </section>
+
+          <h3 class="perf-title"><span class="perf-dot"></span> Balanço mensal</h3>
+          <section class="perf-card perf-card-split">
+            <p id="perf-balance" class="perf-text"></p>
+            <i class="fas fa-piggy-bank perf-art" aria-hidden="true"></i>
+            <p id="perf-fixed" class="perf-text perf-text-end"></p>
+          </section>
         </div>
       </div>
 
@@ -942,8 +966,7 @@
                       <div id="wiz-sum-remaining" style="font-size: 13px; color: #888;">R$ 0,00 sem categorização</div>
                     </div>
                   </div>
-                  <div
-                    style="background: #f3e5f5; border-radius: 8px; padding: 15px; font-size: 13px; color: #555; line-height: 1.4;">
+                  <div class="wiz-tip">
                     <i class="fas fa-info-circle" style="color: var(--primary-color); margin-right: 5px;"></i>
                     <strong>Dica:</strong> Ajuste os valores acima até que o restante seja zero para criar um
                     planejamento
@@ -1613,6 +1636,22 @@
       </div>
       <div class="tx-drawer-body" id="cc-drawer-body"></div>
       <div class="tx-drawer-footer" id="cc-drawer-footer"></div>
+    </aside>
+
+    <div id="acc-drawer-overlay" class="tx-drawer-overlay" onclick="AppController.closeAccDrawer()" aria-hidden="true"></div>
+    <aside id="acc-drawer" class="tx-drawer" aria-labelledby="acc-drawer-title" aria-modal="true" role="dialog">
+      <div class="tx-grab-bar" aria-hidden="true"></div>
+      <div class="tx-drawer-header">
+        <div>
+          <span class="tx-drawer-badge badge-cartao">CONTA</span>
+          <h2 id="acc-drawer-title" class="tx-drawer-title">Conta</h2>
+        </div>
+        <button type="button" class="tx-drawer-close" onclick="AppController.closeAccDrawer()" aria-label="Fechar painel">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="tx-drawer-body" id="acc-drawer-body"></div>
+      <div class="tx-drawer-footer" id="acc-drawer-footer"></div>
     </aside>
 
     <div id="tx-drawer-overlay" class="tx-drawer-overlay" onclick="AppController.closeTxDrawer()" aria-hidden="true"></div>
